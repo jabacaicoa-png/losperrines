@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Los Perrines · Administración</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --olive:#4E5B3A; --olive-deep:#3A4529; --ball:#D9E15A; --bg:#F2F3EC; --card:#FFFFFF;
+  --ink:#1E2418; --muted:#5E6656; --line:#D9DCCF; --field:#F7F8F3; --on-olive:#F2F3EC;
+  --ok:#2F7A3E; --warn:#A86A12; --bad:#B4432F; --info:#2F5E8A;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --olive:#6E7D55; --olive-deep:#2A3220; --bg:#14170F; --card:#1D2217; --ink:#EEF0E6; --muted:#A5AD98;
+    --line:#323A28; --field:#181C13; --ok:#6CC27D; --warn:#E3A84B; --bad:#E27A66; --info:#7FB0DE; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --olive:#6E7D55; --olive-deep:#2A3220; --bg:#14170F; --card:#1D2217; --ink:#EEF0E6; --muted:#A5AD98;
+  --line:#323A28; --field:#181C13; --ok:#6CC27D; --warn:#E3A84B; --bad:#E27A66; --info:#7FB0DE; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--card)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ball);outline-offset:2px;border-radius:4px}
+.demo{background:var(--ball);color:#1E2418;font-size:.85rem;font-weight:600;text-align:center;padding:6px 12px}
+
+/* login */
+.login{min-height:100vh;display:grid;place-items:center;padding:24px}
+.login form{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px;width:min(380px,100%)}
+.login h1{margin:0 0 6px;font-size:1.6rem;letter-spacing:-.02em}
+.login p{margin:0 0 18px;color:var(--muted)}
+
+/* layout */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--card);border-bottom:1px solid var(--line)}
+.bar{max-width:1100px;margin:0 auto;padding:12px 16px 0;display:flex;justify-content:space-between;align-items:center}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.1rem}
+.brand svg{width:30px;height:30px}
+.brand small{font-weight:600;color:var(--muted);font-size:.85rem}
+nav.tabs{max-width:1100px;margin:0 auto;padding:0 8px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs button{flex:none;background:none;border:0;border-bottom:3px solid transparent;padding:12px 12px 10px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--olive)}
+nav.tabs .pill{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:999px;background:var(--ball);color:#1E2418;font-size:.75rem;line-height:20px;text-align:center}
+main{max-width:1100px;margin:0 auto;padding:18px 16px 60px}
+h2{font-size:1.35rem;margin:6px 0 12px;letter-spacing:-.02em}
+h3{font-size:1.05rem;margin:0 0 10px}
+.sub{color:var(--muted);margin:-6px 0 14px}
+
+/* stock hero */
+.stock{background:var(--olive);color:var(--on-olive);border-radius:20px;padding:20px;display:grid;gap:16px}
+@media(min-width:760px){.stock{grid-template-columns:auto 1fr;align-items:center;gap:28px}}
+.stock .avail b{display:block;font-size:4rem;line-height:.95;font-weight:800;letter-spacing:-.04em}
+.stock .avail span{opacity:.85}
+.meter{height:14px;border-radius:8px;background:rgba(242,243,236,.18);display:flex;overflow:hidden}
+.meter i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:.92rem}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+.alert{margin-top:12px;background:rgba(217,225,90,.18);border:1px solid rgba(217,225,90,.5);border-radius:12px;padding:10px 12px;font-weight:600}
+
+.cards{display:grid;gap:12px;margin-top:14px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:760px){.cards{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.kpi small{color:var(--muted);display:block}
+.kpi b{font-size:1.45rem;font-weight:800;letter-spacing:-.02em}
+.block{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px}
+
+/* orders */
+.filters{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;scrollbar-width:none}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-weight:600;cursor:pointer;font-size:.92rem}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.order{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.order .head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.order .who b{display:block}
+.order .who small,.order .meta{color:var(--muted);font-size:.9rem}
+.order .amt{text-align:right;white-space:nowrap}
+.order .amt b{display:block;font-size:1.1rem}
+.order .meta{margin-top:8px}
+.order .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.st{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:700;border:1.5px solid currentColor}
+.st.reserva{color:var(--warn)} .st.pagado{color:var(--ok)} .st.exportado{color:var(--info)} .st.despachado{color:var(--muted)} .st.vencido{color:var(--bad)}
+.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer}
+.btn.main{background:var(--olive);color:var(--on-olive)}
+.btn.ghost{background:transparent;border:1.5px solid var(--line)}
+.btn.big{padding:13px 18px;font-size:1.02rem}
+.btn:disabled{opacity:.5;cursor:default}
+.empty{color:var(--muted);padding:18px;text-align:center;border:1.5px dashed var(--line);border-radius:14px}
+
+/* forms */
+.f{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;font-size:.9rem;font-weight:600;color:var(--muted)}
+.f input,.f select{font:500 1rem "Bricolage Grotesque",sans-serif;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.85rem}
+td.n,th.n{text-align:right}
+.tw{overflow-x:auto}
+.pos{color:var(--ok);font-weight:700} .neg{color:var(--bad);font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+dialog{border:0;border-radius:18px;padding:0;width:min(560px,94vw);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(20,24,14,.5)}
+.dlg{padding:20px}
+.dlg .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.x{background:none;border:0;font-size:1.6rem;cursor:pointer;color:var(--muted)}
+
+[hidden]{display:none !important}
+.st.pendiente_mp{color:var(--warn)} .st.cancelado{color:var(--muted)}
+.inline{display:flex;gap:8px;margin-top:10px}
+.inline input{flex:1;min-width:0;font:500 1rem "Bricolage Grotesque",sans-serif;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:9px 12px}
+.store{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.store b{font-size:1.1rem}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:0}
+.cfg-row{border-top:1px solid var(--line);padding:12px 0}
+.cfg-row:first-child{border-top:0}
+.cfg-row small{display:block;color:var(--muted);margin:-2px 0 6px}
+.cfg-row input{width:100%;font:500 1rem "Bricolage Grotesque",sans-serif;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:9px 12px}
+.spinner{display:inline-block;width:18px;height:18px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.copy{word-break:break-all;background:var(--field);border:1.5px dashed var(--line);border-radius:10px;padding:10px 12px;font-size:.9rem}
+.err{color:var(--bad);font-weight:600;min-height:1.2em;margin:8px 0 0}
+</style>
+</head>
+<body>
+<div id="root"><div style="min-height:100vh;display:grid;place-items:center"><span class="spinner"></span></div></div>
+<dialog id="dlg"><div class="dlg" id="dlgIn"></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+/* ===== Pegá acá la URL de tu Apps Script (termina en /exec) ===== */
+var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDbptu4xiogljKkCeJQrGXh4rn7f0PsXDbypAZCxbVQ/exec";
+</script>
+<script>
+(function(){
+"use strict";
+var LOGO='<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="20" fill="#4E5B3A"/><ellipse cx="20" cy="25" rx="7" ry="6" fill="#D9E15A"/><circle cx="12" cy="16" r="3.2" fill="#D9E15A"/><circle cx="18" cy="11.5" r="3.2" fill="#D9E15A"/><circle cx="25" cy="12" r="3.2" fill="#D9E15A"/><circle cx="29.5" cy="17.5" r="3.2" fill="#D9E15A"/></svg>';
+var fmt=new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
+function money(v){return fmt.format(Math.round(v||0));}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function $(s,r){return (r||document).querySelector(s);}
+function toast(t){var e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(function(){e.classList.remove("show");},2600);}
+var S={token:sessionStorage.getItem("lp_token")||"", tab:"resumen", filtro:"activos", data:null, busy:false};
+var LABEL={reserva:"Reservado · espera transferencia",pendiente_mp:"Esperando pago con tarjeta",pagado:"Pagado · listo para exportar",exportado:"Exportado · falta el seguimiento",despachado:"Despachado",vencido:"Reserva vencida",cancelado:"Cancelado"};
+
+function api(accion,data){
+  var body=Object.assign({accion:accion,token:S.token},data||{});
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(j){
+      if(!j.ok){ if(j.error==="SESION"){ salir(); throw new Error("Tu sesión venció. Volvé a entrar."); } throw new Error(j.error||"Error"); }
+      return j; });
+}
+function salir(){ S.token=""; sessionStorage.removeItem("lp_token"); S.data=null; render(); }
+function cargar(msg){
+  return api("resumen").then(function(d){ S.data=d; render(); if(msg) toast(msg); }).catch(function(e){ toast(e.message); });
+}
+function accion(nombre,datos,msg,btn){
+  if(btn){ btn.disabled=true; btn.dataset.txt=btn.innerHTML; btn.innerHTML='<span class="spinner"></span>'; }
+  return api(nombre,datos).then(function(r){ return cargar(msg).then(function(){return r;}); })
+    .catch(function(e){ toast(e.message); if(btn&&document.body.contains(btn)){ btn.disabled=false; btn.innerHTML=btn.dataset.txt; } });
+}
+
+/* ---------- vistas ---------- */
+function render(){
+  var r=$("#root");
+  if(!/^https:\/\/script\.google\.com\//.test(API)){ r.innerHTML='<div class="login"><form><h1>Los Perrines</h1><p>Falta configurar la dirección del Apps Script en este archivo (variable API).</p></form></div>'; return; }
+  if(!S.token){
+    r.innerHTML='<div class="login"><form id="login"><h1>Los Perrines</h1><p>Panel de administración</p>'
+      +'<label class="f">Contraseña<input type="password" id="pw" autocomplete="current-password" required></label>'
+      +'<button class="btn main big" style="width:100%" id="loginBtn">Entrar</button><p class="err" id="lerr"></p></form></div>';
+    return;
+  }
+  if(!S.data){ r.innerHTML='<div style="min-height:100vh;display:grid;place-items:center"><span class="spinner"></span></div>'; cargar(); return; }
+  var d=S.data, P=d.pedidos;
+  var nRes=P.filter(function(p){return p.estado==="reserva";}).length, nPag=P.filter(function(p){return p.estado==="pagado";}).length, nExp=P.filter(function(p){return p.estado==="exportado";}).length;
+  var tabs=[["resumen","Resumen",0],["pedidos","Pedidos",nRes+nPag+nExp],["stock","Stock",0],["envios","Envíos",nPag+nExp],["config","Configuración",0]];
+  var h='<header class="top"><div class="bar"><div class="brand">'+LOGO+'<span>Los Perrines <small>Administración</small></span></div>'
+    +'<div style="display:flex;gap:8px"><button class="btn ghost" data-a="refrescar" aria-label="Actualizar">↻</button><button class="btn ghost" data-a="salir">Salir</button></div></div><nav class="tabs" role="tablist">'
+    +tabs.map(function(t){return '<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+t[1]+(t[2]?'<span class="pill">'+t[2]+'</span>':'')+'</button>';}).join("")
+    +'</nav></header><main>';
+  h+= S.tab==="resumen"?vResumen(d) : S.tab==="pedidos"?vPedidos(d) : S.tab==="stock"?vStock(d) : S.tab==="envios"?vEnvios(d) : vConfig(d);
+  r.innerHTML=h+'</main>';
+}
+function stockHero(s,min){
+  var tot=Math.max(s.ingresado+s.ajustes,1);
+  return '<div class="stock"><div class="avail"><b>'+Math.max(0,s.disponible)+'</b><span>disponibles para vender</span></div><div>'
+    +'<div class="meter" aria-hidden="true"><i style="width:'+(s.vendidas/tot*100)+'%;background:#F2F3EC"></i><i style="width:'+(s.reservadas/tot*100)+'%;background:#E3A84B"></i><i style="width:'+(Math.max(0,s.disponible)/tot*100)+'%;background:#D9E15A"></i></div>'
+    +'<div class="legend"><span style="--c:#F2F3EC">'+s.vendidas+' vendidas</span><span style="--c:#E3A84B">'+s.reservadas+' reservadas</span><span style="--c:#D9E15A">'+Math.max(0,s.disponible)+' disponibles</span><span style="--c:transparent">'+s.ingresado+' ingresadas'+(s.ajustes?', '+s.ajustes+' por ajustes':'')+'</span></div>'
+    +(s.ingresado>0&&s.disponible<=min?'<div class="alert">Quedan '+Math.max(0,s.disponible)+' unidades. Es momento de encargar el próximo lote.</div>':'')
+    +(s.ingresado===0?'<div class="alert">Todavía no cargaste stock. Andá a la pestaña Stock y cargá el primer lote.</div>':'')
+    +'</div></div>';
+}
+function vResumen(d){
+  var c=d.config, abierta=c.tienda_abierta==="SI", v=d.ventasMes, P=d.pedidos;
+  var h='<h2>Resumen</h2>'
+    +'<div class="block store" style="margin-top:0;margin-bottom:14px"><div><b><span class="dot" style="background:'+(abierta?'var(--ok)':'var(--bad)')+'"></span>Tienda '+(abierta?'abierta al público':'cerrada')+'</b>'
+    +'<div class="sub" style="margin:4px 0 0">'+(abierta?'Cualquiera puede comprar en la web.':'El público ve "Muy pronto". Vos la ves con el link de vista previa.')+'</div></div>'
+    +'<button class="btn '+(abierta?'ghost':'main')+'" data-a="tienda" data-v="'+(abierta?'NO':'SI')+'">'+(abierta?'Cerrar tienda':'Abrir tienda')+'</button></div>'
+    +(!abierta?'<div class="block" style="margin-top:0;margin-bottom:14px"><h3>Link de vista previa</h3><div class="copy">'+esc(d.urlVista)+'</div><p class="sub" style="margin:8px 0 0">Abrilo en tu celular para ver y probar la tienda completa. Las compras que hagas son reales.</p></div>':'')
+    +stockHero(d.stock,Number(c.stock_minimo))
+    +'<div class="cards"><div class="kpi"><small>Vendidas este mes</small><b>'+v.unidades+'</b></div>'
+    +'<div class="kpi"><small>Cobrado este mes</small><b>'+money(v.total)+'</b></div>'
+    +'<div class="kpi"><small>Por transferencia</small><b>'+money(v.transferencia)+'</b></div>'
+    +'<div class="kpi"><small>Con tarjeta</small><b>'+money(v.tarjeta)+'</b></div></div>';
+  var res=P.filter(function(p){return p.estado==="reserva";}).length, pag=P.filter(function(p){return p.estado==="pagado";}).length, exp=P.filter(function(p){return p.estado==="exportado";}).length;
+  var todo=[];
+  if(res) todo.push('<li>'+res+' transferencia'+(res>1?'s':'')+' esperando pago. <button class="btn ghost" data-go="pedidos" data-f="reserva">Ver</button></li>');
+  if(pag) todo.push('<li>'+pag+' pedido'+(pag>1?'s':'')+' pagado'+(pag>1?'s':'')+' para exportar a Andreani. <button class="btn ghost" data-go="envios">Exportar</button></li>');
+  if(exp) todo.push('<li>'+exp+' envío'+(exp>1?'s':'')+' exportado'+(exp>1?'s':'')+' sin número de seguimiento. <button class="btn ghost" data-go="envios">Cargar</button></li>');
+  if(d.avisos.length && d.stock.disponible>0) todo.push('<li>'+d.avisos.length+' persona'+(d.avisos.length>1?'s':'')+' esperan aviso de stock. <button class="btn ghost" data-go="stock">Ver</button></li>');
+  var falta=[]; if(!c.alias&&!c.cbu) falta.push("alias o CBU"); if(!c.email_aviso) falta.push("tu email"); if(!c.whatsapp||c.whatsapp.length<8) falta.push("WhatsApp"); if(!d.tokenMP) falta.push("token de Mercado Pago"); if(!c.plantilla_andreani_id) falta.push("plantilla de Andreani");
+  if(falta.length) todo.unshift('<li>Falta configurar: '+falta.join(", ")+'. <button class="btn ghost" data-go="config">Configurar</button></li>');
+  return h+'<div class="block"><h3>Para hacer</h3>'+(todo.length?'<ul style="margin:0;padding-left:18px;display:grid;gap:10px">'+todo.join("")+'</ul>':'<p class="sub" style="margin:0">Todo al día.</p>')+'</div>';
+}
+function tarjetaPedido(p){
+  var dest=p.entrega==="sucursal"?'Retira en sucursal '+p.sucursal:(p.calle+' '+p.numero+(p.piso?' piso '+p.piso:'')+(p.depto?' '+p.depto:'')+' · '+p.prov_loc_cp);
+  var acts='';
+  if(p.estado==="reserva"||p.estado==="vencido"||p.estado==="pendiente_mp"){
+    if(p.estado==="reserva"){ var hs=Math.max(0,Math.ceil((p._vence_ts-Date.now())/3600000)); acts+='<span class="sub" style="margin:0;align-self:center">Vence en '+hs+' h</span>'; }
+    acts+='<button class="btn main" data-a="pagado" data-id="'+p.id+'">Marcar como pagado</button><button class="btn ghost" data-a="cancelar" data-id="'+p.id+'">Cancelar</button>';
+  }
+  if(p.estado==="pagado"||p.estado==="exportado"){
+    acts+='<div class="inline" style="width:100%"><input inputmode="numeric" placeholder="N° de seguimiento Andreani" id="tr-'+p.id+'"><button class="btn main" data-a="despachar" data-id="'+p.id+'">Despachar</button></div>';
+  }
+  if(["reserva","pagado","exportado","despachado"].indexOf(p.estado)>=0) acts+='<button class="btn ghost" data-a="reenviar" data-id="'+p.id+'">Reenviar mail</button>';
+  return '<article class="order"><div class="head"><div class="who"><b>'+esc(p.nombre+" "+p.apellido)+'</b><small>'+esc(p.id)+' · '+esc(p.fecha)+'</small></div>'
+    +'<div class="amt"><b>'+money(p.total)+'</b><small class="meta">'+(p.pago==="transferencia"?"Transferencia":"Tarjeta")+' · '+p.cantidad+' u.</small></div></div>'
+    +'<div class="meta"><span class="st '+p.estado+'">'+(LABEL[p.estado]||p.estado)+'</span></div>'
+    +'<div class="meta">'+esc(dest)+'</div><div class="meta">DNI '+esc(p.dni)+' · '+esc(p.email)+' · '+esc(p.cel_cod+" "+p.cel_num)+'</div>'
+    +(p.tracking?'<div class="meta">Seguimiento: <a href="https://www.andreani.com/envio/'+esc(p.tracking)+'" target="_blank" rel="noopener">'+esc(p.tracking)+'</a></div>':'')
+    +(p.notas?'<div class="meta">Nota: '+esc(p.notas)+'</div>':'')
+    +'<div class="acts">'+acts+'</div></article>';
+}
+function vPedidos(d){
+  var fs=[["activos","Para atender"],["reserva","Esperan pago"],["pagado","Pagados"],["exportado","Exportados"],["despachado","Despachados"],["vencido","Vencidos"],["todos","Todos"]];
+  var act=["reserva","pendiente_mp","pagado","exportado"];
+  var list=d.pedidos.filter(function(p){ return S.filtro==="todos"?true:S.filtro==="activos"?act.indexOf(p.estado)>=0:p.estado===S.filtro; });
+  var h='<h2>Pedidos</h2><div class="filters">'+fs.map(function(f){return '<button class="chip" data-f="'+f[0]+'" aria-pressed="'+(S.filtro===f[0])+'">'+f[1]+'</button>';}).join("")+'</div>';
+  return h+(list.length?list.map(tarjetaPedido).join(""):'<div class="empty">No hay pedidos en este estado.</div>');
+}
+function vStock(d){
+  var h='<h2>Stock</h2>'+stockHero(d.stock,Number(d.config.stock_minimo));
+  h+='<div class="block"><h3>Cargar un movimiento</h3><div class="g2">'
+    +'<label class="f">Tipo<select id="mvTipo"><option value="ingreso">Ingreso (lote nuevo)</option><option value="ajuste-">Ajuste: resta (fallada, regalo)</option><option value="ajuste+">Ajuste: suma (devolución)</option></select></label>'
+    +'<label class="f">Cantidad<input id="mvCant" type="number" min="1" step="1" inputmode="numeric" value="1"></label></div>'
+    +'<label class="f">Motivo<input id="mvMot" placeholder="Ej. Lote 1, entregado por Susana"></label>'
+    +'<button class="btn main" data-a="mov">Guardar movimiento</button></div>';
+  h+='<div class="block"><h3>Historial</h3>'+(d.movimientos.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th class="n">Cantidad</th></tr></thead><tbody>'
+    +d.movimientos.map(function(m){return '<tr><td>'+esc(m.fecha)+'</td><td>'+esc(m.motivo)+'</td><td class="n '+(m.cantidad>0?'pos':'neg')+'">'+(m.cantidad>0?'+':'')+m.cantidad+'</td></tr>';}).join("")
+    +'</tbody></table></div>':'<p class="sub" style="margin:0">Sin movimientos todavía.</p>')+'<p class="sub" style="margin:10px 0 0">Las ventas se descuentan solas desde los pedidos.</p></div>';
+  h+='<div class="block"><h3>Avisame cuando vuelva</h3>'+(d.avisos.length?'<p class="sub" style="margin:0 0 10px">'+d.avisos.length+' personas esperan aviso.</p><ul style="margin:0 0 12px;padding-left:18px">'+d.avisos.map(function(a){return '<li>'+esc(a)+'</li>';}).join("")+'</ul><button class="btn main" data-a="avisar"'+(d.stock.disponible>0?'':' disabled')+'>Avisarles que hay stock</button>':'<p class="sub" style="margin:0">Nadie en espera.</p>')+'</div>';
+  return h;
+}
+function vEnvios(d){
+  var pag=d.pedidos.filter(function(p){return p.estado==="pagado";}), exp=d.pedidos.filter(function(p){return p.estado==="exportado";});
+  var h='<h2>Envíos</h2><p class="sub">Exportá los pedidos pagados, subí el Excel en andreani.com y después cargá el número de seguimiento de cada uno: al cliente le llega el mail con el link.</p>';
+  h+='<div class="block"><h3>1. Para exportar ('+pag.length+')</h3>';
+  if(pag.length){
+    h+='<div class="tw"><table><thead><tr><th>Pedido</th><th>Destinatario</th><th>Destino</th></tr></thead><tbody>'
+      +pag.map(function(p){return '<tr><td>'+esc(p.id)+'</td><td>'+esc(p.nombre+" "+p.apellido)+'</td><td>'+(p.entrega==="sucursal"?'Sucursal '+esc(p.sucursal):esc(p.prov_loc_cp))+'</td></tr>';}).join("")
+      +'</tbody></table></div><div style="margin-top:14px"><button class="btn main big" data-a="exportar">Exportar planilla para Andreani</button></div>';
+  } else h+='<p class="sub" style="margin:0">No hay pedidos pagados pendientes.</p>';
+  h+='</div><div class="block"><h3>2. Cargar seguimiento ('+exp.length+')</h3>'+(exp.length?exp.map(tarjetaPedido).join(""):'<p class="sub" style="margin:0">Nada pendiente.</p>')+'</div>';
+  return h;
+}
+var CFG_ORDEN=["alias","cbu","titular","banco","whatsapp","email_aviso","precio_tarjeta","precio_transferencia","cuotas_max","stock_minimo","reserva_transferencia_horas","reserva_tarjeta_horas","plantilla_andreani_id","peso_gr","alto_cm","ancho_cm","profundidad_cm","valor_declarado","url_web","producto","clave_vista"];
+var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",precio_tarjeta:"Precio con tarjeta",precio_transferencia:"Precio por transferencia",cuotas_max:"Cuotas sin interés (máximo)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto",clave_vista:"Clave de vista previa"};
+function vConfig(d){
+  var c=d.config;
+  return '<h2>Configuración</h2>'
+    +'<div class="block" style="margin-top:0"><b>Mercado Pago:</b> '+(d.tokenMP?'<span class="pos">conectado</span>':'<span class="neg">falta el Access Token</span> (se carga en Apps Script → Propiedades del script).')+'</div>'
+    +'<div class="block"><form id="cfg">'+CFG_ORDEN.map(function(k){return '<div class="cfg-row"><label class="f" style="margin:0">'+esc(CFG_LBL[k]||k)+'<input name="'+k+'" value="'+esc(c[k]||"")+'"></label></div>';}).join("")
+    +'</form><button class="btn main big" data-a="guardarCfg" style="margin-top:12px">Guardar cambios</button></div>';
+}
+function dlg(html){ $("#dlgIn").innerHTML=html; $("#dlg").showModal(); }
+
+/* ---------- eventos ---------- */
+document.addEventListener("submit",function(e){
+  if(e.target.id!=="login") return; e.preventDefault();
+  var b=$("#loginBtn"); b.disabled=true; b.innerHTML='<span class="spinner"></span>';
+  api("login",{password:$("#pw").value}).then(function(r){ S.token=r.token; sessionStorage.setItem("lp_token",r.token); S.data=null; render(); })
+    .catch(function(x){ $("#lerr").textContent=x.message; b.disabled=false; b.textContent="Entrar"; });
+});
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button"); if(!t||t.disabled) return;
+  if(t.dataset.tab){ S.tab=t.dataset.tab; render(); window.scrollTo(0,0); return; }
+  if(t.dataset.go){ S.tab=t.dataset.go; if(t.dataset.f) S.filtro=t.dataset.f; render(); window.scrollTo(0,0); return; }
+  if(t.classList.contains("chip")){ S.filtro=t.dataset.f; render(); return; }
+  var a=t.dataset.a, id=t.dataset.id;
+  if(a==="salir") salir();
+  else if(a==="refrescar") cargar("Actualizado");
+  else if(a==="tienda"){ if(t.dataset.v==="SI" && !confirm("¿Abrir la tienda al público? Cualquiera va a poder comprar.")) return; accion("guardarConfig",{valores:{tienda_abierta:t.dataset.v}},t.dataset.v==="SI"?"Tienda abierta":"Tienda cerrada",t); }
+  else if(a==="pagado"){ if(confirm("¿Confirmás que recibiste el pago del pedido "+id+"? Le llega un mail al cliente.")) accion("pagado",{id:id},"Pedido marcado como pagado",t); }
+  else if(a==="cancelar"){ if(confirm("¿Cancelar el pedido "+id+"? Se libera el stock.")) accion("cancelar",{id:id},"Pedido cancelado",t); }
+  else if(a==="reenviar") accion("reenviar",{id:id},"Mail reenviado",t);
+  else if(a==="despachar"){ var v=($("#tr-"+CSS.escape(id))||{}).value||""; if(!v.trim()){ toast("Poné el número de seguimiento."); return; } accion("despachar",{id:id,tracking:v},"Despachado: le avisamos al cliente",t); }
+  else if(a==="mov"){
+    var tipo=$("#mvTipo").value, cant=parseInt($("#mvCant").value,10), mot=$("#mvMot").value.trim();
+    if(!(cant>0)){ toast("Poné una cantidad mayor a cero."); return; } if(!mot){ toast("Escribí el motivo."); return; }
+    accion("movimiento",{tipo:tipo==="ingreso"?"ingreso":"ajuste",cantidad:tipo==="ajuste-"?-cant:cant,motivo:mot},"Movimiento guardado",t);
+  }
+  else if(a==="avisar") accion("avisar",{},"Avisos enviados",t);
+  else if(a==="guardarCfg"){ var vals={}; new FormData($("#cfg")).forEach(function(v,k){vals[k]=v;}); accion("guardarConfig",{valores:vals},"Configuración guardada",t); }
+  else if(a==="exportar"){
+    accion("exportar",{},null,t).then(function(r){ if(!r) return;
+      dlg('<div class="row"><h3 style="margin:0">Planilla lista</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
+        +'<p class="sub" style="margin:0 0 12px">'+r.cantidad+' envíos ('+r.domicilio+' a domicilio, '+r.sucursal+' a sucursal). Descargala y subila en andreani.com.</p>'
+        +'<a class="btn main big" style="display:block;text-align:center;text-decoration:none" href="'+esc(r.url)+'" target="_blank" rel="noopener">Descargar Excel</a>'
+        +'<p class="sub" style="margin:12px 0 0">También queda guardada en tu Drive, en la carpeta "Los Perrines - Envíos Andreani".</p>'); });
+  }
+  else if(a==="cerrar") $("#dlg").close();
+});
+$("#dlg").addEventListener("click",function(e){ if(e.target===this) this.close(); });
+render();
+})();
+</script>
+</body>
+</html>
