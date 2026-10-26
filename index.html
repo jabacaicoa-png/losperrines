@@ -174,6 +174,19 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .ship{font-size:1.02rem;padding:8px 16px}
 .tachado{color:var(--muted);text-decoration:line-through;font-weight:500;margin-right:6px}
 .gratis{color:var(--ok);font-weight:800}
+.tela .grid4{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:620px){.tela .grid4{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:960px){.tela .grid4{grid-template-columns:repeat(4,1fr)}}
+.tcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+.tcard svg{width:44px;height:44px;margin-bottom:10px}
+.tcard h3{margin:0 0 6px;font-size:1.12rem;line-height:1.2}
+.tcard p{margin:0;color:var(--muted);font-size:.97rem}
+.versus{margin-top:18px;display:grid;gap:10px;grid-template-columns:1fr}
+@media(min-width:760px){.versus{grid-template-columns:1fr 1.4fr}}
+.vs{border-radius:16px;padding:16px 18px;font-size:1rem}
+.vs.no{border:1.5px dashed var(--line);color:var(--muted)}
+.vs.si{background:var(--olive);color:var(--on-olive);font-weight:700}
+.vs b{display:block;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;opacity:.75;margin-bottom:2px}
 .illus{overflow:hidden}
 .illus .foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:28px}
 .gallery{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
@@ -229,7 +242,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
   <div class="wrap grid">
     <div>
       <h1>Tu mascota atrás, el auto limpio.</h1>
-      <p class="lead">Una funda tipo canasto: cerrada adelante, atrás y en las puertas. Acolchada de los dos lados e impermeable. Se coloca en dos minutos.</p>
+      <p class="lead">Una funda tipo canasto de tela trucker matelaseada: acolchada, doble faz e impermeable. Cerrada adelante, atrás y en las puertas.</p>
       <div class="price-box">
         <div class="price-transfer"><strong data-p="tarjeta">$80.000</strong><span data-p="cuotastxt">en 1 pago o hasta 3 cuotas</span></div>
         <p class="price-list"><b data-p="transfer">$72.000</b> pagando por transferencia (<span data-p="desc">10</span>% off)</p>
@@ -317,6 +330,23 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
           <li>Acolchado doble faz e impermeable</li>
         </ul>
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="tela">
+  <div class="wrap">
+    <h2>No es una tela cualquiera</h2>
+    <p class="sub">La mayoría de las fundas son una capa de tela fina apoyada sobre el asiento. La nuestra está hecha con una tela técnica, acolchada y con las dos caras terminadas.</p>
+    <div class="grid4">
+      <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M10 16l6 6-6 6M22 10l6 6-6 6M22 22l6 6-6 6M34 16l-6 6 6 6" stroke="#D9E15A" stroke-width="2.4" fill="none" stroke-linejoin="round"/></svg><h3>Trucker matelaseado impermeable</h3><p>Una tela técnica, firme y resistente al roce de las patas, con tratamiento impermeable. Barro, agua o un accidente no llegan al tapizado.</p></div>
+      <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M13 17h16l-4-4M31 27H15l4 4" stroke="#D9E15A" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Doble faz: las dos caras iguales</h3><p>No tiene un “revés” de plástico ni una cara fea. Las dos caras tienen la misma terminación: si una se ensucia en el viaje, la das vuelta y seguís.</p></div>
+      <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M13 29h18a5 5 0 0 0 0-10 7 7 0 0 0-13-2 5 5 0 0 0-5 12z" fill="#D9E15A"/></svg><h3>Acolchada</h3><p>Entre las dos capas lleva guata. Tu mascota viaja cómoda en los viajes largos, y el asiento queda protegido de la presión de las patas.</p></div>
+      <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M11 22h22" stroke="#D9E15A" stroke-width="2.6" stroke-dasharray="4 3"/><path d="M11 14h22M11 30h22" stroke="#F2F3EC" stroke-width="2.6" stroke-linecap="round"/></svg><h3>Terminaciones que se notan</h3><p>Bordes con bies de poliamida, costuras reforzadas en cada correa y cierres en las cuatro esquinas. Confeccionada a mano en San Luis.</p></div>
+    </div>
+    <div class="versus">
+      <div class="vs no"><b>Funda común</b>Una capa de tela fina.</div>
+      <div class="vs si"><b>Funda tipo canasto</b>Tela técnica doble faz, acolchada e impermeable.</div>
     </div>
   </div>
 </section>
