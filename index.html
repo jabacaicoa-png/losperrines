@@ -160,6 +160,20 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 
 /* ---- agregados web definitiva ---- */
 [hidden]{display:none !important}
+.anuncio{background:var(--ball);color:#1E2418;text-align:center;font-weight:700;font-size:.92rem;padding:8px 12px;letter-spacing:.01em}
+.anuncio span{font-weight:600}
+.beneficios{padding:8px 0 40px}
+.beneficios .grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:760px){.beneficios .grid4{grid-template-columns:repeat(4,1fr)}}
+.ben{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;gap:12px;align-items:flex-start}
+.ben svg{flex:none;width:36px;height:36px}
+.ben b{display:block;font-size:1rem;line-height:1.2}
+.ben small{color:var(--muted);font-size:.85rem;line-height:1.3;display:block;margin-top:2px}
+.ben.dest{background:var(--olive);color:var(--on-olive);border-color:var(--olive)}
+.ben.dest small{color:var(--on-olive);opacity:.85}
+.ship{font-size:1.02rem;padding:8px 16px}
+.tachado{color:var(--muted);text-decoration:line-through;font-weight:500;margin-right:6px}
+.gratis{color:var(--ok);font-weight:800}
 .illus{overflow:hidden}
 .illus .foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:28px}
 .gallery{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
@@ -203,6 +217,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 <div id="tienda" hidden>
 <div class="preview-bar" id="previewBar" hidden>Vista previa: la tienda está cerrada al público. Las compras que hagas son reales.</div>
 <header class="top">
+  <div class="anuncio">🚚 ENVÍO GRATIS A TODA ARGENTINA <span>· <span data-p="desc">10</span>% off por transferencia</span></div>
   <div class="wrap">
     <a class="logo" href="#inicio" aria-label="Los Perrines, inicio"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="20" fill="#4E5B3A"/><ellipse cx="20" cy="25" rx="7" ry="6" fill="#D9E15A"/><circle cx="12" cy="16" r="3.2" fill="#D9E15A"/><circle cx="18" cy="11.5" r="3.2" fill="#D9E15A"/><circle cx="25" cy="12" r="3.2" fill="#D9E15A"/><circle cx="29.5" cy="17.5" r="3.2" fill="#D9E15A"/></svg> Los Perrines</a>
     <button class="cart-btn" id="openCart" aria-label="Abrir carrito">Carrito <b id="cartCount">0</b></button>
@@ -218,7 +233,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
       <div class="price-box">
         <div class="price-transfer"><strong data-p="tarjeta">$80.000</strong><span data-p="cuotastxt">en 1 pago o hasta 3 cuotas</span></div>
         <p class="price-list"><b data-p="transfer">$72.000</b> pagando por transferencia (<span data-p="desc">10</span>% off)</p>
-        <span class="ship">Envío gratis a toda Argentina</span>
+        <span class="ship">🚚 Envío gratis · a tu casa o sucursal Andreani</span>
         <p class="price-list" style="margin-top:10px">Hecho en San Luis para toda Argentina.</p>
         <p class="stockline" id="stockLine" hidden></p>
         <div class="buy-row">
@@ -270,6 +285,15 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
   </div>
 </section>
 
+
+<section class="beneficios">
+  <div class="wrap grid4">
+    <div class="ben dest"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="21" height="15" rx="2" fill="#D9E15A"/><path d="M24 15h7l5 6v5H24z" fill="#D9E15A"/><circle cx="11" cy="29" r="4" fill="#F2F3EC" stroke="#4E5B3A" stroke-width="2"/><circle cx="30" cy="29" r="4" fill="#F2F3EC" stroke="#4E5B3A" stroke-width="2"/></svg><div><b>Envío gratis</b><small>A toda Argentina, a domicilio o sucursal Andreani</small></div></div>
+    <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 35 11v18L20 36 5 29V11z" fill="#4E5B3A"/><path d="M5 11l15 7 15-7M20 18v18" stroke="#D9E15A" stroke-width="2.5" fill="none"/></svg><div><b>Despacho en 48 hs</b><small>Con número de seguimiento por mail</small></div></div>
+    <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="9" width="34" height="23" rx="4" fill="#4E5B3A"/><rect x="3" y="14" width="34" height="5" fill="#D9E15A"/><rect x="8" y="24" width="10" height="3" rx="1.5" fill="#F2F3EC"/></svg><div><b>Hasta <span data-p="ncuotas">3</span> cuotas</b><small>Con tarjeta, por Mercado Pago</small></div></div>
+    <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="#4E5B3A"/><path d="M13 20a7 7 0 1 0 2-5" stroke="#D9E15A" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M11 11v6h6" stroke="#D9E15A" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>10 días</b><small>Para arrepentirte de tu compra</small></div></div>
+  </div>
+</section>
 <section id="canasto" class="band">
   <div class="wrap">
     <h2>Por qué canasto y no una funda común</h2>
@@ -398,7 +422,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 </footer>
 
 <div class="buybar">
-  <div class="p"><strong data-p="tarjeta">$80.000</strong> <small><span data-p="cuotasmini">hasta 3 cuotas</span> · <span data-p="transfer">$72.000</span> transferencia</small></div>
+  <div class="p"><strong data-p="tarjeta">$80.000</strong> <small><span data-p="cuotasmini">hasta 3 cuotas</span> · <b class="gratis">envío gratis</b></small></div>
   <button class="btn btn-main" data-add>Comprar</button>
 </div>
 <a class="wa" href="#" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp">
@@ -468,6 +492,7 @@ function pintarPrecios(){
   $$('[data-p="cuotas"]').forEach(function(e){e.textContent=C.cuotas;});
   $$('[data-p="cuota"]').forEach(function(e){e.textContent=money(C.precio_tarjeta/Math.max(C.cuotas,1));});
   $$('[data-p="desc"]').forEach(function(e){e.textContent=d;});
+  $$('[data-p="ncuotas"]').forEach(function(e){e.textContent=C.cuotas;});
   $$('[data-p="cuotastxt"]').forEach(function(e){ e.textContent = CUOTAS_SIN_INTERES
     ? 'o '+C.cuotas+' cuotas sin interés de '+money(C.precio_tarjeta/Math.max(C.cuotas,1))
     : 'en 1 pago o hasta '+C.cuotas+' cuotas'; });
@@ -507,7 +532,7 @@ function render(){
       +'<div class="totals"><div class="r big"><span>Total</span><span>'+money(C.precio_tarjeta*qty)+'</span></div>'
       +'<div class="r"><span>Por transferencia</span><span style="color:var(--ok);font-weight:700">'+money(C.precio_transferencia*qty)+'</span></div>'
       +(CUOTAS_SIN_INTERES?'<div class="r"><span>En '+C.cuotas+' cuotas sin interés</span><span>'+C.cuotas+' × '+money(C.precio_tarjeta*qty/C.cuotas)+'</span></div>':'<div class="r"><span>Hasta '+C.cuotas+' cuotas</span><span>con interés de la tarjeta</span></div>')
-      +'<div class="r"><span>Envío</span><span style="color:var(--ok);font-weight:700">Gratis</span></div></div>'
+      +'<div class="r"><span>Envío</span><span>'+(C.valor_envio?'<span class="tachado">'+money(C.valor_envio)+'</span>':'')+'<span class="gratis">GRATIS</span></span></div></div>'
       +(qty>=maxQ()?'<p class="hint">Máximo '+maxQ()+' por compra.</p>':'');
     dFoot.innerHTML='<button class="btn btn-main" data-go="datos">Continuar</button>';
   } else if(step==="datos"){
@@ -518,7 +543,7 @@ function render(){
       +'<div class="g2"><label class="f">DNI<input name="dni" required inputmode="numeric" maxlength="10" value="'+esc(g.dni)+'"></label><label class="f">Email<input name="email" type="email" required autocomplete="email" value="'+esc(g.email)+'"></label></div>'
       +'<div class="g2" style="grid-template-columns:1fr 2fr"><label class="f">Cód. área<input name="cel_cod" required inputmode="numeric" maxlength="5" placeholder="266" value="'+esc(g.cel_cod)+'"></label><label class="f">Celular<input name="cel_num" required inputmode="numeric" maxlength="9" placeholder="4123456" value="'+esc(g.cel_num)+'"></label></div>'
       +'<p class="hint">Sin 0 ni 15. Ej: 266 4123456.</p>'
-      +'<fieldset><legend>Envío gratis por Andreani</legend>'
+      +'<fieldset><legend>Envío '+(C.valor_envio?'<span class="tachado">'+money(C.valor_envio)+'</span>':'')+'<span class="gratis">GRATIS</span> por Andreani</legend>'
       +'<label class="pay"><input type="radio" name="entrega" value="domicilio" '+(g.entrega!=="sucursal"?"checked":"")+'><span><b>A domicilio</b><small>Te lo llevan a tu casa</small></span></label>'
       +'<label class="pay"><input type="radio" name="entrega" value="sucursal" '+(g.entrega==="sucursal"?"checked":"")+'><span><b>Retiro en sucursal Andreani</b><small>Lo retirás en la sucursal que elijas</small></span></label></fieldset>'
       +'<div id="domicilio"><div class="g2" style="grid-template-columns:2fr 1fr"><label class="f">Calle<input name="calle" autocomplete="address-line1" value="'+esc(g.calle)+'"></label><label class="f">Número<input name="numero" inputmode="numeric" value="'+esc(g.numero)+'"></label></div>'
