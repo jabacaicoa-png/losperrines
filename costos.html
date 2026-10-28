@@ -33,6 +33,16 @@ body{margin:0;background:var(--bg);color:var(--ink);font:500 16px/1.4 "Manrope",
 .wrap{max-width:640px;margin:0 auto;padding:12px 14px 40px}
 button{font:inherit;color:inherit}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px 12px}
+.ptabs{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
+.ptab{flex:none;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font:700 .92rem inherit;cursor:pointer;font-family:inherit}
+.ptab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ptab.add{border-style:dashed;color:var(--muted)}
+.ptitle{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.ptitle .eyebrow{display:block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.ptitle h1{margin:0;font-size:1.4rem;line-height:1.2;letter-spacing:-.02em}
+.pacts{display:flex;gap:6px;flex-wrap:wrap}
+.pbtn{border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;padding:6px 10px;font:600 .88rem inherit;font-family:inherit;cursor:pointer}
+.pbtn.danger{color:#B4432F}
 .prod-btn{display:flex;align-items:center;gap:8px;background:none;border:0;padding:6px 4px;cursor:pointer;text-align:left;min-width:0}
 .prod-btn .eyebrow{display:block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .prod-btn .name{display:block;font-size:1.25rem;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -251,7 +261,11 @@ function render(){
     return;
   }
   var compras=p.items.filter(function(i){return i.clase!=="fijo";}), fijos=p.items.filter(function(i){return i.clase==="fijo";});
-  var h='<div class="topbar"><button class="prod-btn" data-a="prods" aria-label="Cambiar producto"><span style="min-width:0"><span class="eyebrow">Ficha de costos</span><span class="name">'+esc(p.nombre||"Producto")+'</span></span><span class="chev">▾</span></button><div class="sync" id="sync">'+esc(store.syncTxt||"")+'</div></div>';
+  var h='<div class="ptabs" role="tablist">'+state.productos.map(function(x){return '<button class="ptab'+(x.id===p.id?' on':'')+'" role="tab" aria-selected="'+(x.id===p.id)+'" data-a="pick" data-id="'+esc(x.id)+'">'+esc(x.nombre||"Producto")+'</button>';}).join("")
+    +'<button class="ptab add" data-a="np">+ Producto</button></div>'
+    +'<div class="ptitle"><div style="min-width:0"><span class="eyebrow">Ficha de costos</span><h1>'+esc(p.nombre||"Producto")+'</h1></div>'
+    +'<div class="pacts"><button class="pbtn" data-a="ren">✏️ Nombre</button><button class="pbtn" data-a="dup2">⧉ Duplicar</button><button class="pbtn danger" data-a="del-prod">Eliminar</button></div></div>'
+    +'<div class="sync" id="sync" style="margin:0 0 10px">'+esc(store.syncTxt||"")+'</div>';
   h+='<div class="hero" id="hero">'+heroHTML(p)+'</div>';
   h+='<div class="sec"><div class="sec-h"><h2>Materiales</h2><span class="tot" id="tot-mat"></span></div><div class="list">';
   if(!compras.length) h+='<div class="empty">Cargá lo que comprás: tela, cierres, hebillas…</div>';
@@ -448,6 +462,21 @@ document.addEventListener("click",function(e){
   if(a==="del-item"){ if(confirm("¿Eliminar "+(draft.concepto||"este renglón")+"?")){ p.items=p.items.filter(function(x){return x.id!==draft.id;}); draft=null; closeSheet(); save(); render(); toast("Eliminado"); } return; }
   if(a==="close"){ draft=null; closeSheet(); return; }
   if(a==="prods"){ prodsSheet(); return; }
+  if(a==="np"){ openSheet('<div class="sh-h"><h3>Nuevo producto</h3><button class="x" data-a="close" aria-label="Cerrar">×</button></div>'
+      +'<label class="f">Nombre<input id="np-name" placeholder="Ej. Funda tipo canasto individual"></label>'
+      +'<label class="f">Empezar desde<select id="np-base"><option value="">Vacío (sin materiales)</option>'+state.productos.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===p.id?' selected':'')+'>Copia de '+esc(x.nombre||"Producto")+'</option>';}).join("")+'</select></label>'
+      +'<p class="mini">Copiar te ahorra cargar de nuevo materiales y proveedores: después ajustás cantidades y precios.</p>'
+      +'<div class="sh-actions"><button class="btn" data-a="close">Cancelar</button><button class="btn pri" data-a="np-ok">Crear producto</button></div>'); return; }
+  if(a==="np-ok"){ var nn=($("#np-name").value||"").trim(); if(!nn){ toast("Poné un nombre"); return; }
+    var base=$("#np-base").value, src=state.productos.find(function(x){return x.id===base;}), np2;
+    if(src){ np2=JSON.parse(JSON.stringify(src)); np2.items.forEach(function(x){x.id=uid();}); } else np2={lote:1,precio:0,items:[]};
+    np2.id=uid(); np2.nombre=nn; state.productos.push(np2); state.activo=np2.id; closeSheet(); save(); render(); toast("Producto creado"); return; }
+  if(a==="ren"){ openSheet('<div class="sh-h"><h3>Nombre del producto</h3><button class="x" data-a="close" aria-label="Cerrar">×</button></div>'
+      +'<label class="f">Nombre<input id="rn-name" value="'+esc(p.nombre||"")+'"></label>'
+      +'<div class="sh-actions"><button class="btn" data-a="close">Cancelar</button><button class="btn pri" data-a="rn-ok">Guardar</button></div>'); return; }
+  if(a==="rn-ok"){ var rn=($("#rn-name").value||"").trim(); if(!rn){ toast("Poné un nombre"); return; } p.nombre=rn; closeSheet(); save(); render(); toast("Nombre guardado"); return; }
+  if(a==="dup2"){ var cp2=JSON.parse(JSON.stringify(p)); cp2.id=uid(); cp2.nombre=(p.nombre||"Producto")+" (copia)"; cp2.items.forEach(function(x){x.id=uid();}); state.productos.push(cp2); state.activo=cp2.id; save(); render();
+    openSheet('<div class="sh-h"><h3>Nombre de la copia</h3><button class="x" data-a="close" aria-label="Cerrar">×</button></div><label class="f">Nombre<input id="rn-name" value="'+esc(cp2.nombre)+'"></label><div class="sh-actions"><button class="btn" data-a="close">Más tarde</button><button class="btn pri" data-a="rn-ok">Guardar</button></div>'); return; }
   if(a==="pick"){ state.activo=b.dataset.id; closeSheet(); save(); render(); return; }
   if(a==="new-prod"){ var np={id:uid(),nombre:"Nuevo producto",lote:1,precio:0,items:[]}; state.productos.push(np); state.activo=np.id; closeSheet(); save(); render(); return; }
   if(a==="dup"){ var cp=JSON.parse(JSON.stringify(p)); cp.id=uid(); cp.nombre=(p.nombre||"Producto")+" (copia)"; cp.items.forEach(function(x){x.id=uid();}); state.productos.push(cp); state.activo=cp.id; closeSheet(); save(); render(); toast("Producto duplicado"); return; }
