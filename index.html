@@ -248,7 +248,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
       <div class="price-box">
         <div class="price-transfer"><strong data-p="tarjeta">$80.000</strong><span data-p="cuotastxt">en 1 pago o hasta 3 cuotas</span></div>
         <p class="price-list"><b data-p="transfer">$72.000</b> pagando por transferencia (<span data-p="desc">10</span>% off)</p>
-        <span class="ship">🚚 Envío <span class="tachado" data-p="envio"></span><span class="gratis">GRATIS</span> por Andreani</span>
+        <span class="ship">🚚 Envío gratis por Andreani · sale al día siguiente del pago</span>
         <p class="price-list" style="margin-top:10px">Hecho en San Luis para toda Argentina.</p>
         <p class="stockline" id="stockLine" hidden></p>
         <div class="buy-row">
@@ -524,7 +524,6 @@ function pintarPrecios(){
   $$('[data-p="cuotas"]').forEach(function(e){e.textContent=C.cuotas;});
   $$('[data-p="cuota"]').forEach(function(e){e.textContent=money(C.precio_tarjeta/Math.max(C.cuotas,1));});
   $$('[data-p="desc"]').forEach(function(e){e.textContent=d;});
-  $$('[data-p="envio"]').forEach(function(e){ e.textContent=C.valor_envio?money(C.valor_envio):''; e.style.display=C.valor_envio?'inline':'none'; });
   $$('[data-p="ncuotas"]').forEach(function(e){e.textContent=C.cuotas;});
   $$('[data-p="cuotastxt"]').forEach(function(e){ e.textContent = CUOTAS_SIN_INTERES
     ? 'o '+C.cuotas+' cuotas sin interés de '+money(C.precio_tarjeta/Math.max(C.cuotas,1))
