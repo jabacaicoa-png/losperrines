@@ -433,7 +433,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
   <div class="wrap">
     <h2>Preguntas frecuentes</h2>
     <details><summary>¿Cuánto tarda en llegar?</summary><p>Lo despachamos por <b>Andreani</b> el <b>día hábil siguiente</b> a tu pago, así que no tenés que esperar a que lo preparemos. Ese mismo día te mandamos por mail el número de seguimiento, para que veas en todo momento dónde está tu pedido. El tiempo de entrega depende de tu localidad, y el envío es gratis a toda Argentina, a tu casa o a una sucursal Andreani.</p></details>
-    <details><summary>¿Cómo pago?</summary><p>Con tarjeta a <span data-p="tarjeta">$80.000</span>, en 1 pago o <span data-p="cuotasmini">hasta 3 cuotas</span>, a través de Mercado Pago. O por transferencia con descuento: <span data-p="transfer">$72.000</span>.</p></details>
+    <details><summary>¿Cómo pago?</summary><p>Con tarjeta a <span data-p="tarjeta">$80.000</span>, <span data-p="cuotastxt">en 1 pago o hasta 3 cuotas</span>, a través de Mercado Pago (si elegís cuotas, se suma el interés de tu tarjeta). O por transferencia con descuento: <span data-p="transfer">$72.000</span>.</p></details>
     <details><summary>¿Entra en mi auto?</summary><p>Funciona en autos y camionetas con asiento trasero corrido. Si tenés dudas, escribinos por WhatsApp con el modelo de tu auto.</p></details>
     <details><summary>¿Lo puedo lavar?</summary><p>Sí. A mano o en lavarropas con programa delicado y agua fría. Dejalo secar a la sombra.</p></details>
     <details><summary>¿Y si no me convence?</summary><p>Tenés 10 días corridos desde que lo recibís para arrepentirte de la compra, con el botón de arrepentimiento de abajo.</p></details>
@@ -482,7 +482,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 <script>
 /* ===== Pegá acá la URL de tu Apps Script (termina en /exec) ===== */
 /* Cuotas: true = sin interés (tenés que activarlas en Mercado Pago, en Costos y cuotas). false = con el interés de Mercado Pago a cargo del cliente. */
-var CUOTAS_SIN_INTERES = true;
+var CUOTAS_SIN_INTERES = false;
 var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDbptu4xiogljKkCeJQrGXh4rn7f0PsXDbypAZCxbVQ/exec";
 </script>
 <script>
