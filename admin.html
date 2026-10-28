@@ -180,12 +180,12 @@ function render(){
   if(!S.data){ r.innerHTML='<div style="min-height:100vh;display:grid;place-items:center"><span class="spinner"></span></div>'; cargar(); return; }
   var d=S.data, P=d.pedidos;
   var nRes=P.filter(function(p){return p.estado==="reserva";}).length, nPag=P.filter(function(p){return p.estado==="pagado";}).length, nExp=P.filter(function(p){return p.estado==="exportado";}).length;
-  var tabs=[["resumen","Resumen",0],["pedidos","Pedidos",nRes+nPag+nExp],["stock","Stock",0],["envios","Envíos",nPag+nExp],["pagos","Pagos",0],["costos","Costos",0],["config","Configuración",0]];
+  var tabs=[["resumen","Resumen",0],["pedidos","Pedidos",nRes+nPag+nExp],["stock","Stock",0],["envios","Envíos",nPag+nExp],["pagos","Pagos",0],["costos","Costos",0],["corte","Corte",0],["config","Configuración",0]];
   var h='<header class="top"><div class="bar"><div class="brand">'+LOGO+'<span>Los Perrines <small>Administración</small></span></div>'
     +'<div style="display:flex;gap:8px"><button class="btn ghost" data-a="refrescar" aria-label="Actualizar">↻</button><button class="btn ghost" data-a="salir">Salir</button></div></div><nav class="tabs" role="tablist">'
     +tabs.map(function(t){return '<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+t[1]+(t[2]?'<span class="pill">'+t[2]+'</span>':'')+'</button>';}).join("")
     +'</nav></header><main>';
-  h+= S.tab==="resumen"?vResumen(d) : S.tab==="pedidos"?vPedidos(d) : S.tab==="stock"?vStock(d) : S.tab==="envios"?vEnvios(d) : S.tab==="pagos"?vPagos() : S.tab==="costos"?vCostos() : vConfig(d);
+  h+= S.tab==="resumen"?vResumen(d) : S.tab==="pedidos"?vPedidos(d) : S.tab==="stock"?vStock(d) : S.tab==="envios"?vEnvios(d) : S.tab==="pagos"?vPagos() : S.tab==="costos"?vCostos() : S.tab==="corte"?vCorte() : vConfig(d);
   r.innerHTML=h+'</main>';
 }
 function nombreProd(d,id){ var p=(d.productos||[]).filter(function(x){return x.id===id;})[0]; return p?p.nombre:(id==="individual"?"Individual":"Doble"); }
@@ -284,6 +284,7 @@ function vConfig(d){
     +'</form><button class="btn main big" data-a="guardarCfg" style="margin-top:12px">Guardar cambios</button></div>';
 }
 function vPagos(){ return '<iframe src="pagos.html" title="Pagos" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
+function vCorte(){ return '<iframe src="corte.html" title="Calculadora de corte" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function vCostos(){ return '<iframe src="costos.html" title="Costos" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function dlg(html){ $("#dlgIn").innerHTML=html; $("#dlg").showModal(); }
 

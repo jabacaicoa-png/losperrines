@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Los Perrines · Calculadora de corte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{--olive:#4E5B3A;--ball:#D9E15A;--bg:#F2F3EC;--card:#FFFFFF;--ink:#1E2418;--muted:#5E6656;--line:#D9DCCF;--field:#F7F8F3;--ok:#2F7A3E;--warn:#A86A12;--bad:#B4432F;--teal:#9FE1CB;--teal-s:#0F6E56;--amber:#FAC775;--amber-s:#854F0B;--gray:#E4E6DD;color-scheme:light;box-sizing:border-box}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--olive:#6E7D55;--bg:#14170F;--card:#1D2217;--ink:#EEF0E6;--muted:#A5AD98;--line:#323A28;--field:#181C13;--ok:#6CC27D;--warn:#E3A84B;--bad:#E27A66;--teal:#0F6E56;--teal-s:#9FE1CB;--amber:#854F0B;--amber-s:#FAC775;--gray:#2A3020;color-scheme:dark}}
+:root[data-theme="dark"]{--olive:#6E7D55;--bg:#14170F;--card:#1D2217;--ink:#EEF0E6;--muted:#A5AD98;--line:#323A28;--field:#181C13;--ok:#6CC27D;--warn:#E3A84B;--bad:#E27A66;--teal:#0F6E56;--teal-s:#9FE1CB;--amber:#854F0B;--amber-s:#FAC775;--gray:#2A3020;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ball);outline-offset:2px;border-radius:4px}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:4px 0 4px;letter-spacing:-.02em}
+h2{font-size:1.1rem;margin:0 0 10px}
+.sub{color:var(--muted);margin:0 0 14px;font-size:.95rem}
+.grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:860px){.grid{grid-template-columns:1fr 1fr}}
+.block{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.f{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:600;color:var(--muted)}
+.f input{font:600 1.05rem "Bricolage Grotesque",sans-serif;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;width:100%}
+.row{display:grid;gap:10px;grid-template-columns:repeat(2,1fr);margin-bottom:10px}
+.row3{grid-template-columns:repeat(3,1fr)}
+.row4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:520px){.row4{grid-template-columns:repeat(2,1fr)}}
+.legend-s{font-size:.8rem;color:var(--muted);margin:-2px 0 10px}
+.res{background:var(--olive);color:#F2F3EC;border-radius:16px;padding:16px;margin-bottom:14px}
+.res .big{font-size:2.6rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+.res .big small{font-size:1rem;font-weight:600;opacity:.85}
+.res p{margin:6px 0 0}
+.res .note{background:rgba(217,225,90,.18);border:1px solid rgba(217,225,90,.5);border-radius:10px;padding:8px 10px;margin-top:10px;font-weight:600;font-size:.92rem}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+.kpis div{background:rgba(242,243,236,.12);border-radius:10px;padding:8px 10px}
+.kpis small{display:block;opacity:.8;font-size:.8rem}
+.kpis b{font-size:1.15rem}
+.svgw{overflow-x:auto}
+.svgw svg{width:100%;max-width:440px;height:auto;display:block;margin:0 auto}
+.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer}
+.btn.main{background:var(--olive);color:#F2F3EC}
+.btn.ghost{background:transparent;border:1.5px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--muted);font-weight:600;font-size:.8rem}
+td.n,th.n{text-align:right;white-space:nowrap}
+td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;text-align:right}
+.x{background:none;border:0;cursor:pointer;color:var(--muted);font-size:1.1rem}
+.tw{overflow-x:auto}
+.pos{color:var(--ok);font-weight:700}.neg{color:var(--bad);font-weight:700}.warn{color:var(--warn);font-weight:600}
+.tot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-weight:700}
+.linkbtn{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;color:var(--ink);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <h1>Calculadora de corte</h1>
+  <p class="sub">Poné las medidas terminadas del modelo y te digo cuánta tela usa cada unidad, cómo conviene cortarlo y cuántas salen del rollo.</p>
+  <div class="grid">
+    <div>
+      <div class="block">
+        <h2>Rollo</h2>
+        <div class="row row4">
+          <label class="f">Ancho (cm)<input id="rw" inputmode="decimal" value="150"></label>
+          <label class="f">Largo (m)<input id="rl" inputmode="decimal" value="60"></label>
+          <label class="f">$ por metro<input id="rp" inputmode="numeric" value="7000"></label>
+          <label class="f">Costura (cm)<input id="mg" inputmode="decimal" value="1"></label>
+        </div>
+        <p class="legend-s">La costura se suma en los bordes que se unen o llevan cierre. Los bordes con bies no llevan margen.</p>
+      </div>
+      <div class="block">
+        <h2>Modelo</h2>
+        <label class="f" style="margin-bottom:10px">Nombre<input id="nom" value="Doble"></label>
+        <div class="row">
+          <label class="f">Ancho del canasto (cm)<input id="an" inputmode="decimal" value="125"></label>
+          <label class="f">Laterales por unidad<input id="nl" inputmode="numeric" value="2"></label>
+        </div>
+        <div class="row row3">
+          <label class="f">Resp. trasero<input id="t1" inputmode="decimal" value="48"></label>
+          <label class="f">Asiento<input id="t2" inputmode="decimal" value="40"></label>
+          <label class="f">Resp. delantero<input id="t3" inputmode="decimal" value="38"></label>
+        </div>
+        <div class="row">
+          <label class="f">Lateral: ancho (cm)<input id="la" inputmode="decimal" value="40"></label>
+          <label class="f">Lateral: alto (cm)<input id="lb" inputmode="decimal" value="38"></label>
+        </div>
+        <p class="legend-s">El ancho del lateral es el lado que se cose al asiento.</p>
+        <button class="btn main" id="guardar">Guardar modelo</button>
+      </div>
+    </div>
+    <div>
+      <div class="res" id="res"></div>
+      <div class="block"><h2>Cómo cortarlo</h2><div class="svgw" id="dib"></div><p class="legend-s" id="dibtxt" style="margin-top:8px"></p></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h2>Modelos guardados y planificación de una tanda</h2>
+    <p class="sub" style="margin-bottom:8px">Poné cuántas unidades querés hacer de cada uno y te digo cuánta tela usan y cuánto queda del rollo.</p>
+    <div class="tw"><table><thead><tr><th>Modelo</th><th class="n">Uso por unidad</th><th class="n">Cortar de a</th><th class="n">Cantidad</th><th class="n">Metros</th><th></th></tr></thead><tbody id="lista"></tbody></table></div>
+    <div class="tot" id="tot"></div>
+  </div>
+</main>
+<script>
+(function(){
+"use strict";
+var LS="lp-corte";
+function $(s){return document.querySelector(s);}
+function num(id){var v=parseFloat(String($(id).value).replace(",","."));return isFinite(v)?v:0;}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+var fmt=new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
+function m2(cm){return (cm/100).toLocaleString("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function up2(x){return Math.ceil(x*100-1e-9)/100;}
+
+/* ---------- cálculo ---------- */
+function piezas(md,mg){
+  return {CW:md.an+2*mg, CL:md.t1+md.t2+md.t3, LA:md.la+2*mg, LB:md.lb+mg, nl:Math.max(0,Math.round(md.nl))};
+}
+function fit(w,l,LA,LB){ // cuántos laterales entran en un área w × l (w a lo ancho)
+  var a=Math.floor(w/LA)*Math.floor(l/LB), b=Math.floor(w/LB)*Math.floor(l/LA);
+  return a>=b?{n:a,x:LA,y:LB}:{n:b,x:LB,y:LA};
+}
+function bloque(n,P,RW,giro){ // largo de rollo para n unidades
+  var cA=giro?P.CL:P.CW, cL=giro?P.CW:P.CL;
+  if(cA>RW||cA<=0||cL<=0) return null;
+  var k=Math.floor(RW/cA), filas=[], resta=n;
+  while(resta>0){ var m=Math.min(k,resta); filas.push(m); resta-=m; }
+  var need=n*P.nl, cap=0, filasInfo=[];
+  filas.forEach(function(m){ var f=fit(RW-m*cA,cL,P.LA,P.LB); var usa=Math.min(f.n,Math.max(0,need-cap)); cap+=usa; filasInfo.push({m:m,lat:usa,fx:f.x,fy:f.y}); });
+  var rem=Math.max(0,need-cap), fr={per:0,x:0,y:0};
+  if(rem>0){
+    var o1={per:Math.floor(RW/P.LA),x:P.LA,y:P.LB}, o2={per:Math.floor(RW/P.LB),x:P.LB,y:P.LA};
+    var c1=o1.per?o1.y/o1.per:1e9, c2=o2.per?o2.y/o2.per:1e9; fr=c1<=c2?o1:o2;
+    if(!fr.per) return null;
+  }
+  var nfr=rem>0?Math.ceil(rem/fr.per):0;
+  return {n:n,len:filas.length*cL+nfr*fr.y,cA:cA,cL:cL,giro:giro,filas:filasInfo,rem:rem,fr:fr,nfr:nfr};
+}
+function mejor(n,P,RW){ var a=bloque(n,P,RW,false), b=bloque(n,P,RW,true); if(!a) return b; if(!b) return a; return b.len<a.len?b:a; }
+function analizar(md,RW,mg){
+  var P=piezas(md,mg), tabla={}, best=null;
+  for(var n=1;n<=12;n++){ var b=mejor(n,P,RW); tabla[n]=b; if(b&&(!best||b.len/n<best.len/best.n-1e-9)) best=b; }
+  return {P:P,tabla:tabla,best:best};
+}
+function largoPara(q,A){ // cm para q unidades, usando bloques óptimos
+  if(!A.best||q<=0) return 0; var bn=A.best.n, full=Math.floor(q/bn), r=q%bn;
+  return full*A.best.len+(r?A.tabla[r].len:0);
+}
+function porRollo(A,RLcm){
+  if(!A.best) return 0; var bn=A.best.n, u=Math.floor(RLcm/A.best.len)*bn, rest=RLcm-Math.floor(RLcm/A.best.len)*A.best.len;
+  for(var n=bn-1;n>=1;n--){ if(A.tabla[n]&&A.tabla[n].len<=rest){ u+=n; break; } }
+  return u;
+}
+
+/* ---------- dibujo ---------- */
+function dibujar(b,RW){
+  if(!b) return '';
+  var S=2.2, W=RW*S, H=b.len*S, pad=30, svg=['<svg viewBox="0 0 '+(W+pad*2+70)+' '+(H+pad*2)+'" role="img" aria-label="Plano de corte de un bloque">'];
+  function rect(x,y,w,h,fill,stroke,txt,txt2){ svg.push('<rect x="'+(pad+x*S)+'" y="'+(pad+y*S)+'" width="'+(w*S)+'" height="'+(h*S)+'" rx="3" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1"/>');
+    if(txt) svg.push('<text x="'+(pad+(x+w/2)*S)+'" y="'+(pad+(y+h/2)*S-(txt2?6:0))+'" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="'+stroke+'">'+txt+'</text>');
+    if(txt2) svg.push('<text x="'+(pad+(x+w/2)*S)+'" y="'+(pad+(y+h/2)*S+9)+'" text-anchor="middle" dominant-baseline="central" font-size="11" fill="'+stroke+'">'+txt2+'</text>'); }
+  rect(0,0,RW,b.len,"var(--gray)","var(--muted)");
+  var y=0, cnum=0;
+  b.filas.forEach(function(f){
+    for(var i=0;i<f.m;i++){ cnum++; rect(i*b.cA,y,b.cA,b.cL,"var(--teal)","var(--teal-s)","Cuerpo "+cnum,Math.round(b.cA)+" × "+Math.round(b.cL)); }
+    if(f.lat>0){ var x0=f.m*b.cA, cols=Math.floor((RW-x0)/f.fx), k=0;
+      for(var r=0;k<f.lat;r++){ for(var c=0;c<cols&&k<f.lat;c++){ rect(x0+c*f.fx,y+r*f.fy,f.fx,f.fy,"var(--amber)","var(--amber-s)","Lat."); k++; } } }
+    svg.push('<text x="'+(pad+W+6)+'" y="'+(pad+(y+b.cL/2)*S)+'" font-size="12" fill="var(--muted)" dominant-baseline="central">'+Math.round(b.cL)+' cm</text>');
+    y+=b.cL;
+  });
+  var left=b.rem;
+  for(var j=0;j<b.nfr;j++){ for(var c2=0;c2<b.fr.per&&left>0;c2++){ rect(c2*b.fr.x,y,b.fr.x,b.fr.y,"var(--amber)","var(--amber-s)","Lateral"); left--; }
+    svg.push('<text x="'+(pad+W+6)+'" y="'+(pad+(y+b.fr.y/2)*S)+'" font-size="12" fill="var(--muted)" dominant-baseline="central">'+Math.round(b.fr.y)+' cm</text>'); y+=b.fr.y; }
+  svg.push('<text x="'+(pad+W/2)+'" y="18" text-anchor="middle" font-size="12" fill="var(--muted)">Ancho del rollo: '+RW+' cm</text>');
+  svg.push('</svg>'); return svg.join("");
+}
+
+/* ---------- estado ---------- */
+var S={modelos:[]};
+try{ var raw=localStorage.getItem(LS); if(raw) S=JSON.parse(raw); }catch(e){}
+if(!S.modelos||!S.modelos.length){ S={modelos:[
+  {id:"m1",nom:"Doble (actual)",an:125,t1:48,t2:40,t3:38,la:40,lb:38,nl:2,q:9},
+  {id:"m2",nom:"Individual (actual)",an:60,t1:48,t2:40,t3:38,la:40,lb:38,nl:2,q:3},
+  {id:"m3",nom:"Doble rediseño",an:125,t1:54,t2:40,t3:38,la:40,lb:38,nl:2,q:0}
+]}; }
+function guardarLS(){ try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){} }
+function leerForm(){ return {nom:$("#nom").value.trim()||"Modelo",an:num("#an"),t1:num("#t1"),t2:num("#t2"),t3:num("#t3"),la:num("#la"),lb:num("#lb"),nl:num("#nl")}; }
+function cargarForm(m){ ["nom","an","t1","t2","t3","la","lb","nl"].forEach(function(k){ $("#"+k).value=m[k]; }); calcular(); window.scrollTo({top:0,behavior:"smooth"}); }
+
+function calcular(){
+  var RW=num("#rw"), RL=num("#rl")*100, PR=num("#rp"), mg=num("#mg"), md=leerForm(), A=analizar(md,RW,mg), b=A.best;
+  if(!b){ $("#res").innerHTML='<p class="big" style="font-size:1.4rem">Las piezas no entran en el ancho del rollo.</p>'; $("#dib").innerHTML=""; $("#dibtxt").textContent=""; return; }
+  var uso=up2(b.len/b.n/100), pr=porRollo(A,RL);
+  $("#res").innerHTML='<small style="opacity:.85">Uso por unidad · '+esc(md.nom)+'</small><div class="big">'+uso.toLocaleString("es-AR",{minimumFractionDigits:2})+' m <small>de rollo</small></div>'
+    +'<p>Tela por unidad: <b>'+fmt.format(uso*PR)+'</b></p>'
+    +'<div class="kpis"><div><small>Conviene cortar de a</small><b>'+b.n+' unidades</b></div><div><small>Ese bloque ocupa</small><b>'+m2(b.len)+' m</b></div>'
+    +'<div><small>Por rollo de '+(RL/100)+' m</small><b>hasta '+pr+'</b></div><div><small>Piezas de corte</small><b>'+Math.round(A.P.CW)+'×'+Math.round(A.P.CL)+' · '+Math.round(A.P.LA)+'×'+Math.round(A.P.LB)+'</b></div></div>'
+    +'<div class="note">En Costos: tela por metro a '+fmt.format(PR)+', uso por unidad <b>'+uso.toLocaleString("es-AR")+'</b>.</div>';
+  $("#dib").innerHTML=dibujar(b,RW);
+  $("#dibtxt").textContent=(b.giro?"El cuerpo va girado: el largo de los tramos ("+Math.round(A.P.CL)+" cm) a lo ancho del rollo. ":"El ancho del canasto ("+Math.round(A.P.CW)+" cm) va a lo ancho del rollo. ")+"Celeste: cuerpos · naranja: laterales · gris: sobrante.";
+  renderLista();
+}
+function renderLista(){
+  var RW=num("#rw"), RL=num("#rl")*100, mg=num("#mg"), totcm=0;
+  $("#lista").innerHTML=S.modelos.map(function(m){
+    var A=analizar(m,RW,mg), b=A.best; if(!b) return '<tr><td>'+esc(m.nom)+'</td><td colspan="5" class="neg">No entra en el rollo</td></tr>';
+    var q=Math.max(0,Math.round(m.q||0)), cm=largoPara(q,A); totcm+=cm;
+    var aviso=q&&q%b.n?'<br><small class="warn">Mejor de a '+b.n+'</small>':'';
+    return '<tr><td><button class="linkbtn" data-ver="'+m.id+'">'+esc(m.nom)+'</button><br><small style="color:var(--muted)">'+m.an+' · '+m.t1+'/'+m.t2+'/'+m.t3+' · lat. '+m.la+'×'+m.lb+'</small></td>'
+      +'<td class="n">'+up2(b.len/b.n/100).toLocaleString("es-AR")+' m</td><td class="n">'+b.n+'</td>'
+      +'<td class="n"><input inputmode="numeric" data-q="'+m.id+'" value="'+q+'" aria-label="Cantidad de '+esc(m.nom)+'"></td>'
+      +'<td class="n">'+m2(cm)+' m'+aviso+'</td><td><button class="x" data-del="'+m.id+'" aria-label="Borrar '+esc(m.nom)+'">×</button></td></tr>';
+  }).join("");
+  var queda=RL-totcm;
+  $("#tot").innerHTML='<span>Tela de la tanda: '+m2(totcm)+' m</span><span class="'+(queda<0?'neg':'pos')+'">'+(queda<0?'Faltan '+m2(-queda)+' m':'Quedan '+m2(queda)+' m en el rollo')+'</span>';
+}
+document.addEventListener("input",function(e){
+  if(e.target.dataset.q){ var m=S.modelos.find(function(x){return x.id===e.target.dataset.q;}); m.q=parseFloat(e.target.value)||0; guardarLS();
+    var pos=e.target.selectionStart, id=e.target.dataset.q; renderLista(); var el=document.querySelector('[data-q="'+id+'"]'); if(el){ el.focus(); try{el.setSelectionRange(pos,pos);}catch(x){} } return; }
+  if(e.target.closest(".block")||e.target.id) calcular();
+});
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button"); if(!t) return;
+  if(t.id==="guardar"){ var md=leerForm(), ex=S.modelos.find(function(x){return x.nom.toLowerCase()===md.nom.toLowerCase();});
+    if(ex){ Object.assign(ex,md); } else { md.id="m"+Date.now().toString(36); md.q=0; S.modelos.push(md); } guardarLS(); renderLista(); t.textContent="Guardado ✓"; setTimeout(function(){t.textContent="Guardar modelo";},1500); }
+  else if(t.dataset.ver){ cargarForm(S.modelos.find(function(x){return x.id===t.dataset.ver;})); }
+  else if(t.dataset.del){ if(confirm("¿Borrar este modelo?")){ S.modelos=S.modelos.filter(function(x){return x.id!==t.dataset.del;}); guardarLS(); renderLista(); } }
+});
+calcular();
+})();
+</script>
+</body>
+</html>
