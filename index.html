@@ -564,7 +564,7 @@ function render(){
       +'<div class="qty"><button data-q="-1" aria-label="Quitar uno">−</button><span>'+qty+'</span><button data-q="1" aria-label="Agregar uno">+</button></div></div>'
       +'<div class="totals"><div class="r big"><span>Total</span><span>'+money(C.precio_tarjeta*qty)+'</span></div>'
       +'<div class="r"><span>Por transferencia</span><span style="color:var(--ok);font-weight:700">'+money(C.precio_transferencia*qty)+'</span></div>'
-      +(CUOTAS_SIN_INTERES?'<div class="r"><span>En '+C.cuotas+' cuotas sin interés</span><span>'+C.cuotas+' × '+money(C.precio_tarjeta*qty/C.cuotas)+'</span></div>':'<div class="r"><span>Hasta '+C.cuotas+' cuotas</span><span>con interés de la tarjeta</span></div>')
+      +(CUOTAS_SIN_INTERES?'<div class="r"><span>En '+C.cuotas+' cuotas sin interés</span><span>'+C.cuotas+' × '+money(C.precio_tarjeta*qty/C.cuotas)+'</span></div>':'<div class="r"><span>Hasta '+C.cuotas+' cuotas</span><span>sin interés</span></div>')
       +'<div class="r"><span>Envío</span><span>'+(C.valor_envio?'<span class="tachado">'+money(C.valor_envio)+'</span>':'')+'<span class="gratis">GRATIS</span></span></div></div>'
       +(qty>=maxQ()?'<p class="hint">Máximo '+maxQ()+' por compra.</p>':'');
     dFoot.innerHTML='<button class="btn btn-main" data-go="datos">Continuar</button>';
