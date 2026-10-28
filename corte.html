@@ -53,6 +53,33 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
 .tw{overflow-x:auto}
 .pos{color:var(--ok);font-weight:700}.neg{color:var(--bad);font-weight:700}.warn{color:var(--warn);font-weight:600}
 .tot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-weight:700}
+.fichabar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+#print{display:none}
+@media print{
+  :root,:root:not([data-theme="light"]){--teal:#9FE1CB !important;--teal-s:#0F6E56 !important;--amber:#FAC775 !important;--amber-s:#854F0B !important;--gray:#E4E6DD !important;--muted:#5E6656 !important;color-scheme:light}
+  @page{size:A4;margin:14mm 13mm}
+  body{background:#fff;color:#1E2418}
+  main{display:none!important}
+  #print{display:block;font-size:10.5pt;line-height:1.4}
+  #print h1{font-size:19pt;margin:0 0 4px}
+  #print h2{font-size:13pt;color:#4E5B3A;margin:14px 0 6px;break-after:avoid}
+  #print h3{font-size:11pt;margin:10px 0 4px;break-after:avoid}
+  #print table{width:100%;border-collapse:collapse;margin:4px 0 8px;break-inside:avoid}
+  #print th,#print td{border-bottom:1px solid #C9CDBF;padding:4px 6px;text-align:left;vertical-align:top}
+  #print th{background:#DDE3D3;font-weight:700}
+  #print .pg{break-before:page}
+  #print .top{display:flex;justify-content:space-between;align-items:center;background:#4E5B3A;color:#fff;padding:6px 10px;border-radius:6px;margin-bottom:12px;font-size:9pt}
+  #print .top b{color:#D9E15A}
+  #print svg{max-width:100%;height:auto;break-inside:avoid}
+  #print .plano svg{max-height:160mm;width:auto;max-width:100%}
+  #print .desp svg{max-height:120mm;width:auto;max-width:100%}
+  #print .fig{text-align:center;break-inside:avoid}
+  #print .ley{font-size:9pt;color:#5E6656}
+  #print ol,#print ul{margin:4px 0 8px 18px;padding:0}
+  #print li{margin-bottom:3px}
+  #print .note-lines div{border-bottom:1px solid #C9CDBF;height:22px}
+  #print .muted{color:#5E6656}
+}
 .linkbtn{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;color:var(--ink);font-weight:600}
 </style>
 </head>
@@ -103,8 +130,10 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
     <p class="sub" style="margin-bottom:8px">Poné cuántas unidades querés hacer de cada uno y te digo cuánta tela usan y cuánto queda del rollo.</p>
     <div class="tw"><table><thead><tr><th>Modelo</th><th class="n">Uso por unidad</th><th class="n">Cortar de a</th><th class="n">Cantidad</th><th class="n">Metros</th><th></th></tr></thead><tbody id="lista"></tbody></table></div>
     <div class="tot" id="tot"></div>
+    <div class="fichabar"><button class="btn main" id="ficha">📄 Generar ficha (PDF)</button><span class="legend-s" style="margin:0">Incluye los modelos con cantidad mayor a cero. Si no hay ninguno, el modelo de arriba. En la ventana de impresión elegí “Guardar como PDF”.</span></div>
   </div>
 </main>
+<div id="print"></div>
 <script>
 (function(){
 "use strict";
@@ -149,6 +178,10 @@ function analizar(md,RW,mg){
 function largoPara(q,A){ // cm para q unidades, usando bloques óptimos
   if(!A.best||q<=0) return 0; var bn=A.best.n, full=Math.floor(q/bn), r=q%bn;
   return full*A.best.len+(r?A.tabla[r].len:0);
+}
+function bloquesPara(q,A){ // lista de bloques reales a cortar
+  var out=[]; if(!A.best||q<=0) return out; var bn=A.best.n, full=Math.floor(q/bn), r=q%bn;
+  if(full) out.push({b:A.best,veces:full}); if(r) out.push({b:A.tabla[r],veces:1}); return out;
 }
 function porRollo(A,RLcm){
   if(!A.best) return 0; var bn=A.best.n, u=Math.floor(RLcm/A.best.len)*bn, rest=RLcm-Math.floor(RLcm/A.best.len)*A.best.len;
@@ -218,6 +251,77 @@ function renderLista(){
   var queda=RL-totcm;
   $("#tot").innerHTML='<span>Tela de la tanda: '+m2(totcm)+' m</span><span class="'+(queda<0?'neg':'pos')+'">'+(queda<0?'Faltan '+m2(-queda)+' m':'Quedan '+m2(queda)+' m en el rollo')+'</span>';
 }
+/* ---------- ficha imprimible ---------- */
+function desplegado(md){
+  var L=md.t1+md.t2+md.t3, k=Math.min(2.4, 300/(md.an+2*md.lb), 330/L), W=(md.an+2*md.lb)*k+150, H=L*k+120;
+  var x0=(W-md.an*k)/2, y0=50, cw=md.an*k, t3=md.t3*k, t2=md.t2*k, t1=md.t1*k, la=md.la*k, lb=md.lb*k;
+  var ys=y0+t3+(t2-la)/2, o=['<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif">'];
+  function T(x,y,t,sz,c,an,b){ o.push('<text x="'+x+'" y="'+y+'" font-size="'+(sz||10)+'" fill="'+(c||'#1E2418')+'" text-anchor="'+(an||'middle')+'"'+(b?' font-weight="700"':'')+'>'+t+'</text>'); }
+  function Ln(x1,y1,x2,y2,c,w,d){ o.push('<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+c+'" stroke-width="'+(w||1)+'"'+(d?' stroke-dasharray="'+d+'"':'')+'/>'); }
+  o.push('<rect x="'+x0+'" y="'+y0+'" width="'+cw+'" height="'+(L*k)+'" fill="#DDE3D3" stroke="#4E5B3A" stroke-width="1.5"/>');
+  Ln(x0,y0+t3,x0+cw,y0+t3,'#4E5B3A',1,'4 3'); Ln(x0,y0+t3+t2,x0+cw,y0+t3+t2,'#4E5B3A',1,'4 3');
+  T(x0+cw/2,y0+t3/2+4,'Respaldo delantero '+md.t3,10,'#1E2418','middle',1); T(x0+cw/2,y0+t3+t2/2+4,'Asiento '+md.t2,10,'#1E2418','middle',1); T(x0+cw/2,y0+t3+t2+t1/2+4,'Respaldo trasero '+md.t1,10,'#1E2418','middle',1);
+  [x0-lb,x0+cw].forEach(function(xs,i){ o.push('<rect x="'+xs+'" y="'+ys+'" width="'+lb+'" height="'+la+'" fill="#fff" stroke="#4E5B3A" stroke-width="1.5"/>'); T(xs+lb/2,ys+la/2,'LATERAL',9,'#4E5B3A','middle',1); T(xs+lb/2,ys+la/2+12,md.la+' × '+md.lb,9,'#5E6656');
+    var xe=i?x0+cw:x0, xo=i?xs+lb:xs; Ln(xe,ys,xe,ys+la,'#6B4E8A',3.5); Ln(Math.min(xe,xo),ys,Math.max(xe,xo),ys,'#D98B1E',3.5); Ln(Math.min(xe,xo),ys+la,Math.max(xe,xo),ys+la,'#D98B1E',3.5);
+    Ln(xe,y0,xe,ys,'#D98B1E',3.5); Ln(xe,ys+la,xe,y0+L*k,'#D98B1E',3.5); });
+  [[x0+18,y0,-1],[x0+cw-18,y0,-1],[x0+18,y0+L*k,1],[x0+cw-18,y0+L*k,1]].forEach(function(c){ Ln(c[0],c[1],c[0],c[1]+c[2]*14,'#2F5E8A',2.5); o.push('<rect x="'+(c[0]-4)+'" y="'+(c[1]+c[2]*14-3)+'" width="8" height="6" fill="#2F5E8A"/>'); });
+  var yp=y0+t3+t2; o.push('<rect x="'+(x0+cw*0.3-14)+'" y="'+(yp-2.5)+'" width="28" height="5" fill="#fff" stroke="#C2553F"/><rect x="'+(x0+cw*0.7-14)+'" y="'+(yp-2.5)+'" width="28" height="5" fill="#fff" stroke="#C2553F"/>');
+  Ln(x0,y0+L*k+30,x0+cw,y0+L*k+30,'#5E6656'); T(x0+cw/2,y0+L*k+44,md.an+' cm (ancho)',10,'#5E6656');
+  Ln(x0+cw+lb+22,y0,x0+cw+lb+22,y0+L*k,'#5E6656'); T(x0+cw+lb+28,y0+L*k/2,L+' cm',10,'#5E6656','start');
+  o.push('</svg>'); return o.join("");
+}
+function fichaHTML(){
+  var RW=num("#rw"), RL=num("#rl")*100, mg=num("#mg");
+  var lista=S.modelos.filter(function(m){return (m.q||0)>0;}); if(!lista.length) lista=[Object.assign(leerForm(),{q:0})];
+  var hoy=new Date().toLocaleDateString("es-AR"), tot=0, h=[];
+  h.push('<div class="top"><span><b>LOS PERRINES</b> · Ficha técnica para confección</span><span>'+hoy+'</span></div>');
+  h.push('<h1>Funda tipo canasto para mascotas</h1><p class="muted">Medidas en centímetros. Tela: trucker matelaseado doble faz, rollo de '+RW+' cm de ancho. Margen de costura sugerido: '+mg+' cm en bordes que se unen o llevan cierre; 0 cm en bordes con bies.</p>');
+  h.push('<h2>Qué hay que confeccionar</h2><table><tr><th>Modelo</th><th>Cantidad</th><th>Cortar de a</th><th>Tela</th></tr>');
+  lista.forEach(function(m){ var A=analizar(m,RW,mg), b=A.best, cm=largoPara(m.q||0,A); tot+=cm; h.push('<tr><td>'+esc(m.nom)+'</td><td>'+(m.q||'—')+'</td><td>'+(b?b.n:'—')+' unidades</td><td>'+(m.q?m2(cm)+' m':'—')+'</td></tr>'); });
+  h.push('</table>'+(tot?'<p>Total de tela: <b>'+m2(tot)+' m</b> de un rollo de '+(RL/100)+' m (quedan '+m2(RL-tot)+' m).</p>':''));
+  if(tot){
+    var seq=[], pos=0, cols=['#9FE1CB','#FAC775','#C9B8E8','#F4B6A6','#B8D8F0'];
+    lista.forEach(function(m,mi){ var A=analizar(m,RW,mg); bloquesPara(m.q,A).forEach(function(x){ for(var v=0;v<x.veces;v++){ seq.push({nom:m.nom,n:x.b.n,len:x.b.len,desde:pos,col:cols[mi%cols.length]}); pos+=x.b.len; } }); });
+    var Wm=680, total=Math.max(pos,RL), sc=Wm/total, sv=['<svg viewBox="0 0 '+(Wm+20)+' 86" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif">'];
+    seq.forEach(function(q,i){ var x=10+q.desde*sc, w=q.len*sc; sv.push('<rect x="'+x+'" y="20" width="'+w+'" height="34" fill="'+q.col+'" stroke="#1E2418" stroke-width="0.8"/>'); if(w>18) sv.push('<text x="'+(x+w/2)+'" y="41" font-size="10" text-anchor="middle" font-weight="700">'+(i+1)+'</text>'); });
+    if(RL>pos) sv.push('<rect x="'+(10+pos*sc)+'" y="20" width="'+((RL-pos)*sc)+'" height="34" fill="#F1F2EC" stroke="#C9CDBF" stroke-dasharray="4 3"/><text x="'+(10+(pos+(RL-pos)/2)*sc)+'" y="41" font-size="10" text-anchor="middle" fill="#5E6656">Queda en el rollo: '+m2(RL-pos)+' m</text>');
+    sv.push('<text x="10" y="14" font-size="10" fill="#5E6656">0 m</text><text x="'+(10+Wm)+'" y="14" font-size="10" fill="#5E6656" text-anchor="end">'+(RL/100)+' m</text>');
+    sv.push('<text x="10" y="74" font-size="10" fill="#5E6656">Rollo visto de costado: se corta de izquierda a derecha, en el orden de los números.</text></svg>');
+    h.push('<h2>Mapa del corte de la tanda</h2><div class="fig">'+sv.join("")+'</div>');
+    h.push('<table><tr><th>#</th><th>Bloque</th><th>Unidades</th><th>Desde</th><th>Hasta</th><th>Largo</th></tr>'+seq.map(function(q,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(q.nom)+'</td><td>'+q.n+'</td><td>'+m2(q.desde)+' m</td><td>'+m2(q.desde+q.len)+' m</td><td>'+m2(q.len)+' m</td></tr>'; }).join("")+'</table>');
+  }
+  lista.forEach(function(m,i){
+    var A=analizar(m,RW,mg), P=A.P, b=A.best, L=m.t1+m.t2+m.t3;
+    var bies=(2*(m.an+L)+m.nl*(m.la+2*m.lb))/100, cad=m.nl*2*(m.lb)/100;
+    h.push((i?'<div class="pg"></div>':'')+'<h2>'+esc(m.nom)+' · vista desplegada (medidas terminadas)</h2><div class="fig desp">'+desplegado(m)+'</div>');
+    h.push('<p class="ley">Naranja: cierres en las 4 esquinas (se unen los bordes del mismo color) · Violeta: costura fija del lateral al costado del asiento · Azul: 4 correas con hebilla a los apoyacabezas · Rojo: aberturas para el cinturón en el pliegue asiento/respaldo trasero.</p>');
+    h.push('<h3>Piezas a cortar (por unidad)</h3><table><tr><th>Pieza</th><th>Cant.</th><th>Terminada</th><th>Corte</th><th>Notas</th></tr>'
+      +'<tr><td>Cuerpo</td><td>1</td><td>'+m.an+' × '+L+'</td><td>'+P.CW+' × '+P.CL+'</td><td>Tramos: respaldo delantero '+m.t3+' · asiento '+m.t2+' · respaldo trasero '+m.t1+'. +'+mg+' cm en cada costado; extremos con bies.</td></tr>'
+      +'<tr><td>Lateral</td><td>'+m.nl+'</td><td>'+m.la+' × '+m.lb+'</td><td>'+P.LA+' × '+P.LB+'</td><td>El lado de '+m.la+' se cose al asiento. +'+mg+' cm en ese borde y en los dos bordes con cierre; borde libre con bies.</td></tr>'
+      +'<tr><td>Correas</td><td>4</td><td>—</td><td>~40 cm c/u</td><td>Cinta de 20 mm con hebilla enchufe. Confirmar largo con el prototipo.</td></tr></table>');
+    var bls=(m.q||0)>0?bloquesPara(m.q,A):(b?[{b:b,veces:1}]:[]);
+    bls.forEach(function(x){ var bb=x.b;
+      h.push('<div class="pg"></div><h3>'+esc(m.nom)+' · plano de corte: bloque de '+bb.n+' unidad'+(bb.n>1?'es':'')+' ('+m2(bb.len)+' m de rollo)'+(x.veces>1?' · cortar '+x.veces+' veces':'')+'</h3><div class="fig plano">'+dibujar(bb,RW)+'</div><p class="ley">'+(bb.giro?'El cuerpo va girado: los '+P.CL+' cm del largo a lo ancho del rollo. ':'El ancho del cuerpo ('+P.CW+' cm) va a lo ancho del rollo. ')+(x.veces>1?'Este bloque se repite '+x.veces+' veces. ':'')+'Celeste: cuerpos · naranja: laterales · gris: sobrante.</p>'); });
+    h.push('<h3>Materiales por unidad (estimado)</h3><table><tr><th>Material</th><th>Cantidad</th></tr>'
+      +'<tr><td>Trucker matelaseado doble faz</td><td>'+(b?up2(b.len/b.n/100).toLocaleString("es-AR"):'—')+' m</td></tr>'
+      +'<tr><td>Cadena de cierre plástica 6 mm</td><td>'+cad.toLocaleString("es-AR",{maximumFractionDigits:2})+' m ('+(m.nl*2)+' cierres de ~'+m.lb+' cm)</td></tr>'
+      +'<tr><td>Deslizadores 6 mm</td><td>'+(m.nl*2)+'</td></tr><tr><td>Hebillas enchufe 20 mm</td><td>4</td></tr><tr><td>Cinta mochilera 20 mm</td><td>1,6 m</td></tr>'
+      +'<tr><td>Bies 25 mm</td><td>~'+(Math.ceil(bies*2)/2).toLocaleString("es-AR")+' m</td></tr></table>');
+  });
+  h.push('<div class="pg"></div><h2>Armado paso a paso</h2><ol>'
+    +'<li><b>Cortar</b> cuerpos y laterales según el plano.</li>'
+    +'<li><b>Bies de 25 mm</b> en todo el contorno libre del cuerpo y de los laterales.</li>'
+    +'<li><b>Costura fija</b> de cada lateral al costado del tramo del asiento. Doble costura, cubierta con bies.</li>'
+    +'<li><b>Cierres en las 4 esquinas</b> (2 por lateral): esquina delantera (lateral con el costado del respaldo delantero) y esquina trasera (lateral con el costado del respaldo trasero). Cada cierre arranca abajo, junto a la costura del asiento, y abre hacia arriba.</li>'
+    +'<li><b>Aberturas para el cinturón</b>: cortes de 15 cm en el pliegue asiento/respaldo trasero, terminados con bies y reforzados en los extremos.</li>'
+    +'<li><b>Anclajes</b>: rollitos de tela (recortes enrollados firmes) cosidos en una tira, en el mismo pliegue.</li>'
+    +'<li><b>Correas</b>: la hembra de la hebilla cosida fija al cuerpo; la cinta pasa por el macho con regulador. 2 en el borde del respaldo delantero y 2 en el del respaldo trasero.</li>'
+    +'<li><b>Refuerzos</b>: costura en X o en caja donde se cosen las correas; doble costura en uniones que hacen fuerza.</li></ol>');
+  h.push('<h2>Especificaciones de costura</h2><table><tr><th>Ítem</th><th>Especificación</th></tr><tr><td>Hilo</td><td>Poliéster reforzado. N°40 general; N°20–30 en refuerzos.</td></tr><tr><td>Aguja</td><td>N°16 a 18.</td></tr><tr><td>Máquina</td><td>Recta industrial, ideal triple arrastre. Ribeteador para el bies.</td></tr><tr><td>Tela plastificada</td><td>Sin alfileres: sujetar con clips.</td></tr></table>');
+  h.push('<h2>Prueba del prototipo</h2><ul><li>Que cubra asiento, respaldos y puertas sin quedar flojo ni tirante.</li><li>Que los laterales queden parados y los cierres abran y cierren fácil.</li><li>Que las correas alcancen los apoyacabezas, sobre todo los delanteros.</li><li>Que las aberturas del cinturón coincidan con los anclajes del auto.</li><li>Prueba de agua: un vaso con peso arriba 30 minutos.</li><li>Que entre doblado en la bolsa de envío.</li></ul>');
+  h.push('<h3>Notas</h3><div class="note-lines">'+'<div></div>'.repeat(6)+'</div>');
+  return h.join("");
+}
 document.addEventListener("input",function(e){
   if(e.target.dataset.q){ var m=S.modelos.find(function(x){return x.id===e.target.dataset.q;}); m.q=parseFloat(e.target.value)||0; guardarLS();
     var pos=e.target.selectionStart, id=e.target.dataset.q; renderLista(); var el=document.querySelector('[data-q="'+id+'"]'); if(el){ el.focus(); try{el.setSelectionRange(pos,pos);}catch(x){} } return; }
@@ -225,6 +329,7 @@ document.addEventListener("input",function(e){
 });
 document.addEventListener("click",function(e){
   var t=e.target.closest("button"); if(!t) return;
+  if(t.id==="ficha"){ $("#print").innerHTML=fichaHTML(); setTimeout(function(){ window.print(); },150); return; }
   if(t.id==="guardar"){ var md=leerForm(), ex=S.modelos.find(function(x){return x.nom.toLowerCase()===md.nom.toLowerCase();});
     if(ex){ Object.assign(ex,md); } else { md.id="m"+Date.now().toString(36); md.q=0; S.modelos.push(md); } guardarLS(); renderLista(); t.textContent="Guardado ✓"; setTimeout(function(){t.textContent="Guardar modelo";},1500); }
   else if(t.dataset.ver){ cargarForm(S.modelos.find(function(x){return x.id===t.dataset.ver;})); }
