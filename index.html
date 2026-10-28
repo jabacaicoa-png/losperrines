@@ -175,6 +175,18 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .ship{font-size:1.02rem;padding:8px 16px}
 .tachado{color:var(--muted);text-decoration:line-through;font-weight:500;margin-right:6px}
 .gratis{color:var(--ok);font-weight:800}
+#modelos{padding:8px 0 40px}
+.modelos-grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:720px){.modelos-grid{grid-template-columns:1fr 1fr}}
+.modelo{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px}
+.modelo .m-ico svg{width:72px;height:48px}
+.modelo h3{margin:6px 0 2px;font-size:1.25rem}
+.modelo .m-sub{margin:0;font-weight:600}
+.modelo .m-det{margin:2px 0 12px;color:var(--muted);font-size:.92rem}
+.modelo .m-precio strong{display:block;font-size:2rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.modelo .m-precio span{color:var(--ok);font-weight:600}
+.modelo .m-transf{margin-top:10px;padding:8px 12px;border:2px solid var(--ok);border-radius:12px;font-weight:600;background:color-mix(in srgb, var(--ok) 9%, transparent)}
+.modelo .m-transf b{color:var(--ok);font-size:1.15rem}
 .price-main{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .price-main>strong{font-size:2.5rem;font-weight:800;letter-spacing:-.02em;line-height:1}
 .cuotas2{display:flex;flex-direction:column;line-height:1.2;color:var(--ok);font-weight:600;font-size:1rem}
@@ -321,6 +333,14 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
     <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="#4E5B3A"/><path d="M13 20a7 7 0 1 0 2-5" stroke="#D9E15A" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M11 11v6h6" stroke="#D9E15A" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>10 días</b><small>Para arrepentirte de tu compra</small></div></div>
   </div>
 </section>
+<section id="modelos" hidden>
+  <div class="wrap">
+    <h2>Elegí tu modelo</h2>
+    <p class="sub">La misma tela y la misma calidad, en dos tamaños.</p>
+    <div class="modelos-grid" id="modelosGrid"></div>
+  </div>
+</section>
+
 <section id="canasto" class="band">
   <div class="wrap">
     <h2>Por qué canasto y no una funda común</h2>
@@ -407,8 +427,9 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
       <h2>Medidas</h2>
       <p class="sub">Entra en la mayoría de los autos y camionetas con asiento trasero corrido.</p>
       <dl class="spec">
-        <dt>Cuerpo</dt><dd>130 × 128 cm: respaldo delantero 40, asiento 40 y respaldo trasero 48</dd>
-        <dt>Solapas de puertas</dt><dd>40 × 48 cm, con cierres</dd>
+        <dt>Doble</dt><dd>125 × 126 cm: respaldo delantero 38, asiento 40 y respaldo trasero 48</dd>
+        <dt>Individual</dt><dd>60 × 126 cm, mismos tramos, para una plaza</dd>
+        <dt>Laterales</dt><dd>40 × 38 cm, con cierres</dd>
         <dt>Sujeción</dt><dd>4 correas regulables a los apoyacabezas</dd>
         <dt>Tela</dt><dd>Trucker matelaseado impermeable, doble faz</dd>
         <dt>Lavado</dt><dd>A mano o en lavarropas, programa delicado</dd>
@@ -422,10 +443,10 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
       <text x="180" y="78" fill="#F2F3EC" font-size="14" text-anchor="middle" font-family="inherit">Asientos delanteros</text>
       <text x="180" y="150" fill="#F2F3EC" font-size="14" text-anchor="middle" font-family="inherit">Asiento</text>
       <text x="180" y="220" fill="#F2F3EC" font-size="14" text-anchor="middle" font-family="inherit">Respaldo trasero</text>
-      <text x="180" y="25" fill="currentColor" font-size="14" text-anchor="middle" font-family="inherit">130 cm</text>
-      <text x="350" y="40" fill="currentColor" font-size="14" text-anchor="end" font-family="inherit">128 cm</text>
-      <text x="61" y="200" fill="currentColor" font-size="13" text-anchor="middle" font-family="inherit">48 cm</text>
-      <text x="299" y="200" fill="currentColor" font-size="13" text-anchor="middle" font-family="inherit">48 cm</text>
+      <text x="180" y="25" fill="currentColor" font-size="14" text-anchor="middle" font-family="inherit">125 cm</text>
+      <text x="350" y="40" fill="currentColor" font-size="14" text-anchor="end" font-family="inherit">126 cm</text>
+      <text x="61" y="200" fill="currentColor" font-size="13" text-anchor="middle" font-family="inherit">38 cm</text>
+      <text x="299" y="200" fill="currentColor" font-size="13" text-anchor="middle" font-family="inherit">38 cm</text>
     </svg>
   </div>
 </section>
@@ -499,7 +520,7 @@ var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDb
 (function(){
 "use strict";
 var C={precio_tarjeta:90000,precio_transferencia:81000,cuotas:3,whatsapp:"",disponible:0,producto:"Funda tipo canasto"};
-var VISTA="", qty=0, step="cart", order=null, LOC=null, SUC=null;
+var VISTA="", Q={doble:0,individual:0}, step="cart", order=null, LOC=null, SUC=null;
 var fmt=new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
 function money(v){return fmt.format(Math.round(v));}
 function $(s,r){return (r||document).querySelector(s);}
@@ -540,11 +561,24 @@ function pintarPrecios(){
   $$('[data-p="envtach"]').forEach(function(e){ e.innerHTML = C.valor_envio ? '<s>'+money(C.valor_envio)+'</s> ' : ''; });
 }
 function pintarStock(){
-  var l=$("#stockLine"), n=C.disponible;
-  if(n<=0){ l.hidden=false; l.className="stockline low"; l.textContent="Sin stock por el momento";
-    $$("[data-add]").forEach(function(b){b.textContent="Avisame cuando vuelva"; b.dataset.aviso="1";}); }
+  var l=$("#stockLine"), d=PR("doble"), n=d?d.disponible:0;
+  if(n<=0){ l.hidden=false; l.className="stockline low"; l.textContent="Sin stock por el momento"; }
   else if(n<=5){ l.hidden=false; l.className="stockline low"; l.textContent=n===1?"¡Queda la última!":"Últimas "+n+" unidades"; }
   else { l.hidden=true; }
+  pintarModelos();
+}
+function pintarModelos(){
+  var g=$("#modelosGrid"); if(!g) return;
+  var info={doble:{sub:"Asiento trasero completo",det:"125 × 126 cm · laterales en las dos puertas"},individual:{sub:"Una plaza, lado izquierdo o derecho",det:"60 × 126 cm · laterales en las dos caras"}};
+  var ps=PRODS(); $("#modelos").hidden=ps.length<2;
+  g.innerHTML=ps.map(function(p){ var i=info[p.id]||{sub:"",det:""}, sin=p.disponible<=0;
+    return '<article class="modelo"><div class="m-ico" aria-hidden="true"><svg viewBox="0 0 60 40"><rect x="'+(p.id==="individual"?19:4)+'" y="6" width="'+(p.id==="individual"?22:52)+'" height="28" rx="5" fill="#D9E15A" stroke="#4E5B3A" stroke-width="2"/></svg></div>'
+      +'<h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-det">'+esc(i.det)+'</p>'
+      +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>Hasta '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
+      +'<div class="m-transf">💸 Transferencia <b>'+money(p.precio_transferencia)+'</b></div>'
+      +(sin?'<p class="stockline low">Sin stock por el momento</p>':(p.disponible<=5?'<p class="stockline low">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
+      +'<button class="btn btn-main" style="width:100%;margin-top:12px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'Agregar al carrito')+'</button></article>';
+  }).join("");
 }
 function fotos(){
   var hero=document.createElement("img"); hero.className="foto"; hero.alt="Funda tipo canasto colocada en el asiento trasero";
@@ -559,20 +593,30 @@ function fotos(){
 /* ---------- carrito y checkout ---------- */
 var drawer=$("#drawer"), dBody=$("#drBody"), dFoot=$("#drFoot"), dTitle=$("#drTitle");
 function abrir(){ if(!drawer.open) drawer.showModal(); render(); }
-function maxQ(){ return Math.max(0,Math.min(5,C.disponible)); }
-function setCount(){ $("#cartCount").textContent=qty; }
+function PRODS(){ return (C.productos&&C.productos.length)?C.productos:[{id:"doble",nombre:C.producto,precio_tarjeta:C.precio_tarjeta,precio_transferencia:C.precio_transferencia,disponible:C.disponible}]; }
+function PR(id){ return PRODS().filter(function(p){return p.id===id;})[0]; }
+function totQ(){ return (Q.doble||0)+(Q.individual||0); }
+function sumT(){ var t=0; PRODS().forEach(function(p){ t+=p.precio_tarjeta*(Q[p.id]||0); }); return t; }
+function sumX(){ var t=0; PRODS().forEach(function(p){ t+=p.precio_transferencia*(Q[p.id]||0); }); return t; }
+function maxQ(id){ var p=PR(id); return p?Math.max(0,Math.min(5,p.disponible)):0; }
+function setCount(){ $("#cartCount").textContent=totQ(); }
 function render(){
   if(step==="cart"){
     dTitle.textContent="Tu carrito";
-    if(!qty){ dBody.innerHTML="<p>Tu carrito está vacío.</p>"; dFoot.innerHTML=C.disponible>0?'<button class="btn btn-main" data-addin>Agregar la funda</button>':""; return; }
-    dBody.innerHTML='<div class="line"><div class="thumb"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="6" y="8" width="28" height="24" rx="4" fill="#D9E15A"/></svg></div>'
-      +'<div class="info"><b>'+esc(C.producto)+'</b><small>'+money(C.precio_tarjeta)+' · hasta '+C.cuotas+' cuotas sin interés</small></div>'
-      +'<div class="qty"><button data-q="-1" aria-label="Quitar uno">−</button><span>'+qty+'</span><button data-q="1" aria-label="Agregar uno">+</button></div></div>'
-      +'<div class="totals"><div class="r big"><span>Total</span><span>'+money(C.precio_tarjeta*qty)+'</span></div>'
-      +'<div class="r"><span>Por transferencia</span><span style="color:var(--ok);font-weight:700">'+money(C.precio_transferencia*qty)+'</span></div>'
-      +'<div class="r"><span>Hasta '+C.cuotas+' cuotas sin interés</span><span>'+C.cuotas+' × '+money(C.precio_tarjeta*qty/C.cuotas)+'</span></div>'
-      +'<div class="r"><span>Envío</span><span>'+(C.valor_envio?'<span class="tachado">'+money(C.valor_envio)+'</span>':'')+'<span class="gratis">GRATIS</span></span></div></div>'
-      +(qty>=maxQ()?'<p class="hint">Máximo '+maxQ()+' por compra.</p>':'');
+    if(!totQ()){ dBody.innerHTML="<p>Tu carrito está vacío.</p>";
+      dFoot.innerHTML=PRODS().filter(function(p){return p.disponible>0;}).map(function(p){return '<button class="btn btn-main" style="width:100%;margin-bottom:8px" data-addp="'+p.id+'">Agregar '+esc(p.nombre)+'</button>';}).join(""); return; }
+    var lines=PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){
+      return '<div class="line"><div class="thumb"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="'+(p.id==="individual"?13:6)+'" y="8" width="'+(p.id==="individual"?14:28)+'" height="24" rx="4" fill="#D9E15A"/></svg></div>'
+        +'<div class="info"><b>'+esc(p.nombre)+'</b><small>'+money(p.precio_tarjeta)+' · transferencia '+money(p.precio_transferencia)+'</small></div>'
+        +'<div class="qty"><button data-q="-1" data-id="'+p.id+'" aria-label="Quitar uno">−</button><span>'+Q[p.id]+'</span><button data-q="1" data-id="'+p.id+'" aria-label="Agregar uno">+</button></div></div>';
+    }).join("");
+    var otros=PRODS().filter(function(p){return !Q[p.id]&&p.disponible>0;});
+    dBody.innerHTML=lines
+      +(otros.length?'<p style="margin:4px 0 10px">'+otros.map(function(p){return '<button class="linkbtn" data-addp="'+p.id+'">+ Sumar '+esc(p.nombre)+'</button>';}).join(" · ")+'</p>':'')
+      +'<div class="totals"><div class="r big"><span>Total</span><span>'+money(sumT())+'</span></div>'
+      +'<div class="r"><span>Por transferencia</span><span style="color:var(--ok);font-weight:700">'+money(sumX())+'</span></div>'
+      +'<div class="r"><span>Hasta '+C.cuotas+' cuotas sin interés</span><span>'+C.cuotas+' × '+money(sumT()/C.cuotas)+'</span></div>'
+      +'<div class="r"><span>Envío</span><span>'+(C.valor_envio?'<span class="tachado">'+money(C.valor_envio)+'</span>':'')+'<span class="gratis">GRATIS</span></span></div></div>';
     dFoot.innerHTML='<button class="btn btn-main" data-go="datos">Continuar</button>';
   } else if(step==="datos"){
     var g=store("lp_datos")||{};
@@ -591,8 +635,8 @@ function render(){
       +'<label class="f">Indicaciones para la entrega (opcional)<input name="observaciones" maxlength="200" placeholder="Ej: timbre B, casa con rejas verdes" value="'+esc(g.observaciones)+'"></label></div>'
       +'<div id="sucursal" hidden><label class="f">Sucursal Andreani<input name="sucursal" list="sucList" placeholder="Escribí tu ciudad" autocomplete="off" value="'+esc(g.sucursal)+'"></label><datalist id="sucList"></datalist><p class="hint">Elegí una de la lista.</p></div>'
       +'<fieldset><legend>Forma de pago</legend>'
-      +'<label class="pay"><input type="radio" name="pago" value="tarjeta" checked><span><b>Tarjeta: '+money(C.precio_tarjeta*qty)+'</b><small>1 pago o hasta '+C.cuotas+' cuotas sin interés de '+money(C.precio_tarjeta*qty/C.cuotas)+', con Mercado Pago.</small></span></label>'
-      +'<label class="pay"><input type="radio" name="pago" value="transferencia"><span><b>Transferencia: '+money(C.precio_transferencia*qty)+'</b><small>Con descuento. Te pasamos los datos al confirmar.</small></span></label>'
+      +'<label class="pay"><input type="radio" name="pago" value="tarjeta" checked><span><b>Tarjeta: '+money(sumT())+'</b><small>1 pago o hasta '+C.cuotas+' cuotas sin interés de '+money(sumT()/C.cuotas)+', con Mercado Pago.</small></span></label>'
+      +'<label class="pay"><input type="radio" name="pago" value="transferencia"><span><b>Transferencia: '+money(sumX())+'</b><small>Con descuento. Te pasamos los datos al confirmar.</small></span></label>'
       +'</fieldset><p class="err" id="err" role="alert"></p></form>';
     dFoot.innerHTML='<div class="g2"><button class="btn btn-ghost" data-go="cart">Volver</button><button class="btn btn-main" id="pagarBtn" data-pagar>Confirmar compra</button></div>';
     entregaToggle(); if(g.cp) buscarCP(g.cp, g.prov_loc_cp);
@@ -652,11 +696,12 @@ function pagar(btn){
   var d=leerForm(); if(!d) return;
   store("lp_datos",d);
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  d.cantidad=qty;
+  d.items=PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){return {producto:p.id,cantidad:Q[p.id]};});
   api("pedido",d).then(function(r){
     if(r.pago==="tarjeta"){ store("lp_ultimo",{id:r.id,email:d.email}); location.href=r.init_point; return; }
-    order=r; step="ok"; qty=0; setCount(); render(); dBody.scrollTop=0;
-    C.disponible=Math.max(0,C.disponible-d.cantidad); pintarStock();
+    order=r; step="ok"; render(); dBody.scrollTop=0;
+    PRODS().forEach(function(p){ p.disponible=Math.max(0,p.disponible-(Q[p.id]||0)); }); C.disponible=PR("doble")?PR("doble").disponible:0;
+    Q={doble:0,individual:0}; setCount(); pintarStock();
   }).catch(function(e){ $("#err").textContent=e.message; btn.disabled=false; btn.textContent="Confirmar compra"; });
 }
 
@@ -706,10 +751,11 @@ function enviarDlg(tipo,btn){
 /* ---------- eventos ---------- */
 document.addEventListener("click",function(e){
   var t=e.target.closest("button,a"); if(!t) return;
-  if(t.hasAttribute("data-add")){ if(t.dataset.aviso){ abrirDlg("aviso"); return; } qty=Math.max(qty,1); setCount(); step="cart"; abrir(); }
-  else if(t.hasAttribute("data-addin")){ qty=1; setCount(); render(); }
+  if(t.hasAttribute("data-add")){ var m=$("#modelos"); if(m&&!m.hidden){ m.scrollIntoView({behavior:"smooth",block:"start"}); return; } t.setAttribute("data-addp","doble"); }
+  if(t.dataset.addp){ var id=t.dataset.addp, pr=PR(id); if(!pr) return; if(pr.disponible<=0){ abrirDlg("aviso"); return; }
+    Q[id]=Math.max(1,Math.min(maxQ(id),(Q[id]||0)+1)); setCount(); step="cart"; abrir(); return; }
   else if(t.id==="openCart"){ if(step==="ok"){ step="cart"; } abrir(); }
-  else if(t.dataset.q){ qty=Math.max(0,Math.min(maxQ(),qty+parseInt(t.dataset.q,10))); setCount(); render(); }
+  else if(t.dataset.q){ var qid=t.dataset.id||"doble"; Q[qid]=Math.max(0,Math.min(maxQ(qid),(Q[qid]||0)+parseInt(t.dataset.q,10))); setCount(); render(); }
   else if(t.dataset.go){ step=t.dataset.go; render(); dBody.scrollTop=0; }
   else if(t.hasAttribute("data-pagar")){ pagar(t); }
   else if(t.dataset.retry){ var u=store("lp_ultimo")||{}; t.disabled=true; api("reintentar",{id:t.dataset.retry,email:u.email}).then(function(r){location.href=r.init_point;}).catch(function(x){ $("#err").textContent=x.message; t.disabled=false; }); }

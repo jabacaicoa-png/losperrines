@@ -188,6 +188,9 @@ function render(){
   h+= S.tab==="resumen"?vResumen(d) : S.tab==="pedidos"?vPedidos(d) : S.tab==="stock"?vStock(d) : S.tab==="envios"?vEnvios(d) : S.tab==="pagos"?vPagos() : S.tab==="costos"?vCostos() : vConfig(d);
   r.innerHTML=h+'</main>';
 }
+function nombreProd(d,id){ var p=(d.productos||[]).filter(function(x){return x.id===id;})[0]; return p?p.nombre:(id==="individual"?"Individual":"Doble"); }
+function heroes(d){ var min=Number(d.config.stock_minimo); var ids=["doble"]; if(d.config.activo2==="SI"||(d.stock.individual&&d.stock.individual.ingresado>0)) ids.push("individual");
+  return ids.map(function(id){ return '<h3 style="margin:14px 0 8px">'+esc(nombreProd(d,id))+'</h3>'+stockHero(d.stock[id],min); }).join(""); }
 function stockHero(s,min){
   var tot=Math.max(s.ingresado+s.ajustes,1);
   return '<div class="stock"><div class="avail"><b>'+Math.max(0,s.disponible)+'</b><span>disponibles para vender</span></div><div>'
@@ -204,7 +207,7 @@ function vResumen(d){
     +'<div class="sub" style="margin:4px 0 0">'+(abierta?'Cualquiera puede comprar en la web.':'El público ve "Muy pronto". Vos la ves con el link de vista previa.')+'</div></div>'
     +'<button class="btn '+(abierta?'ghost':'main')+'" data-a="tienda" data-v="'+(abierta?'NO':'SI')+'">'+(abierta?'Cerrar tienda':'Abrir tienda')+'</button></div>'
     +(!abierta?'<div class="block" style="margin-top:0;margin-bottom:14px"><h3>Link de vista previa</h3><div class="copy">'+esc(d.urlVista)+'</div><p class="sub" style="margin:8px 0 0">Abrilo en tu celular para ver y probar la tienda completa. Las compras que hagas son reales.</p></div>':'')
-    +stockHero(d.stock,Number(c.stock_minimo))
+    +heroes(d)
     +'<div class="cards"><div class="kpi"><small>Vendidas este mes</small><b>'+v.unidades+'</b></div>'
     +'<div class="kpi"><small>Cobrado este mes</small><b>'+money(v.total)+'</b></div>'
     +'<div class="kpi"><small>Por transferencia</small><b>'+money(v.transferencia)+'</b></div>'
@@ -214,7 +217,7 @@ function vResumen(d){
   if(res) todo.push('<li>'+res+' transferencia'+(res>1?'s':'')+' esperando pago. <button class="btn ghost" data-go="pedidos" data-f="reserva">Ver</button></li>');
   if(pag) todo.push('<li>'+pag+' pedido'+(pag>1?'s':'')+' pagado'+(pag>1?'s':'')+' para exportar a Andreani. <button class="btn ghost" data-go="envios">Exportar</button></li>');
   if(exp) todo.push('<li>'+exp+' envío'+(exp>1?'s':'')+' exportado'+(exp>1?'s':'')+' sin número de seguimiento. <button class="btn ghost" data-go="envios">Cargar</button></li>');
-  if(d.avisos.length && d.stock.disponible>0) todo.push('<li>'+d.avisos.length+' persona'+(d.avisos.length>1?'s':'')+' esperan aviso de stock. <button class="btn ghost" data-go="stock">Ver</button></li>');
+  if(d.avisos.length && (d.stock.doble.disponible>0||d.stock.individual.disponible>0)) todo.push('<li>'+d.avisos.length+' persona'+(d.avisos.length>1?'s':'')+' esperan aviso de stock. <button class="btn ghost" data-go="stock">Ver</button></li>');
   var falta=[]; if(!c.alias&&!c.cbu) falta.push("alias o CBU"); if(!c.email_aviso) falta.push("tu email"); if(!c.whatsapp||c.whatsapp.length<8) falta.push("WhatsApp"); if(!d.tokenMP) falta.push("token de Mercado Pago"); if(!c.plantilla_andreani_id) falta.push("plantilla de Andreani");
   if(falta.length) todo.unshift('<li>Falta configurar: '+falta.join(", ")+'. <button class="btn ghost" data-go="config">Configurar</button></li>');
   return h+'<div class="block"><h3>Para hacer</h3>'+(todo.length?'<ul style="margin:0;padding-left:18px;display:grid;gap:10px">'+todo.join("")+'</ul>':'<p class="sub" style="margin:0">Todo al día.</p>')+'</div>';
@@ -231,7 +234,7 @@ function tarjetaPedido(p){
   }
   if(["reserva","pagado","exportado","despachado"].indexOf(p.estado)>=0) acts+='<button class="btn ghost" data-a="reenviar" data-id="'+p.id+'">Reenviar mail</button>';
   return '<article class="order"><div class="head"><div class="who"><b>'+esc(p.nombre+" "+p.apellido)+'</b><small>'+esc(p.id)+' · '+esc(p.fecha)+'</small></div>'
-    +'<div class="amt"><b>'+money(p.total)+'</b><small class="meta">'+(p.pago==="transferencia"?"Transferencia":"Tarjeta")+' · '+p.cantidad+' u.</small></div></div>'
+    +'<div class="amt"><b>'+money(p.total)+'</b><small class="meta">'+(p.pago==="transferencia"?"Transferencia":"Tarjeta")+' · '+esc(p._items||(p.cantidad+' u.'))+'</small></div></div>'
     +'<div class="meta"><span class="st '+p.estado+'">'+(LABEL[p.estado]||p.estado)+'</span></div>'
     +'<div class="meta">'+esc(dest)+'</div><div class="meta">DNI '+esc(p.dni)+' · '+esc(p.email)+' · '+esc(p.cel_cod+" "+p.cel_num)+'</div>'
     +(p.tracking?'<div class="meta">Seguimiento: <a href="https://www.andreani.com/envio/'+esc(p.tracking)+'" target="_blank" rel="noopener">'+esc(p.tracking)+'</a></div>':'')
@@ -246,16 +249,17 @@ function vPedidos(d){
   return h+(list.length?list.map(tarjetaPedido).join(""):'<div class="empty">No hay pedidos en este estado.</div>');
 }
 function vStock(d){
-  var h='<h2>Stock</h2>'+stockHero(d.stock,Number(d.config.stock_minimo));
+  var h='<h2>Stock</h2>'+heroes(d);
   h+='<div class="block"><h3>Cargar un movimiento</h3><div class="g2">'
+    +'<label class="f">Producto<select id="mvProd"><option value="doble">'+esc(nombreProd(d,"doble"))+'</option><option value="individual">'+esc(nombreProd(d,"individual"))+'</option></select></label>'
     +'<label class="f">Tipo<select id="mvTipo"><option value="ingreso">Ingreso (lote nuevo)</option><option value="ajuste-">Ajuste: resta (fallada, regalo)</option><option value="ajuste+">Ajuste: suma (devolución)</option></select></label>'
     +'<label class="f">Cantidad<input id="mvCant" type="number" min="1" step="1" inputmode="numeric" value="1"></label></div>'
     +'<label class="f">Motivo<input id="mvMot" placeholder="Ej. Lote 1, entregado por Susana"></label>'
     +'<button class="btn main" data-a="mov">Guardar movimiento</button></div>';
-  h+='<div class="block"><h3>Historial</h3>'+(d.movimientos.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th class="n">Cantidad</th></tr></thead><tbody>'
-    +d.movimientos.map(function(m){return '<tr><td>'+esc(m.fecha)+'</td><td>'+esc(m.motivo)+'</td><td class="n '+(m.cantidad>0?'pos':'neg')+'">'+(m.cantidad>0?'+':'')+m.cantidad+'</td></tr>';}).join("")
+  h+='<div class="block"><h3>Historial</h3>'+(d.movimientos.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th class="n">Cantidad</th></tr></thead><tbody>'
+    +d.movimientos.map(function(m){return '<tr><td>'+esc(m.fecha)+'</td><td>'+(m.producto==="individual"?"Individual":"Doble")+'</td><td>'+esc(m.motivo)+'</td><td class="n '+(m.cantidad>0?'pos':'neg')+'">'+(m.cantidad>0?'+':'')+m.cantidad+'</td></tr>';}).join("")
     +'</tbody></table></div>':'<p class="sub" style="margin:0">Sin movimientos todavía.</p>')+'<p class="sub" style="margin:10px 0 0">Las ventas se descuentan solas desde los pedidos.</p></div>';
-  h+='<div class="block"><h3>Avisame cuando vuelva</h3>'+(d.avisos.length?'<p class="sub" style="margin:0 0 10px">'+d.avisos.length+' personas esperan aviso.</p><ul style="margin:0 0 12px;padding-left:18px">'+d.avisos.map(function(a){return '<li>'+esc(a)+'</li>';}).join("")+'</ul><button class="btn main" data-a="avisar"'+(d.stock.disponible>0?'':' disabled')+'>Avisarles que hay stock</button>':'<p class="sub" style="margin:0">Nadie en espera.</p>')+'</div>';
+  h+='<div class="block"><h3>Avisame cuando vuelva</h3>'+(d.avisos.length?'<p class="sub" style="margin:0 0 10px">'+d.avisos.length+' personas esperan aviso.</p><ul style="margin:0 0 12px;padding-left:18px">'+d.avisos.map(function(a){return '<li>'+esc(a)+'</li>';}).join("")+'</ul><button class="btn main" data-a="avisar"'+((d.stock.doble.disponible>0||d.stock.individual.disponible>0)?'':' disabled')+'>Avisarles que hay stock</button>':'<p class="sub" style="margin:0">Nadie en espera.</p>')+'</div>';
   return h;
 }
 function vEnvios(d){
@@ -270,8 +274,8 @@ function vEnvios(d){
   h+='</div><div class="block"><h3>2. Cargar seguimiento ('+exp.length+')</h3>'+(exp.length?exp.map(tarjetaPedido).join(""):'<p class="sub" style="margin:0">Nada pendiente.</p>')+'</div>';
   return h;
 }
-var CFG_ORDEN=["alias","cbu","titular","banco","whatsapp","email_aviso","precio_tarjeta","precio_transferencia","cuotas_max","valor_envio","stock_minimo","reserva_transferencia_horas","reserva_tarjeta_horas","plantilla_andreani_id","peso_gr","alto_cm","ancho_cm","profundidad_cm","valor_declarado","url_web","producto","clave_vista"];
-var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",precio_tarjeta:"Precio con tarjeta",precio_transferencia:"Precio por transferencia",cuotas_max:"Cuotas (máximo)",valor_envio:"Valor del envío que se muestra tachado (0 = no mostrar)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto",clave_vista:"Clave de vista previa"};
+var CFG_ORDEN=["alias","cbu","titular","banco","whatsapp","email_aviso","precio_tarjeta","precio_transferencia","producto2","precio2_tarjeta","precio2_transferencia","activo2","cuotas_max","valor_envio","stock_minimo","reserva_transferencia_horas","reserva_tarjeta_horas","plantilla_andreani_id","peso_gr","alto_cm","ancho_cm","profundidad_cm","valor_declarado","url_web","producto","clave_vista"];
+var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",precio_tarjeta:"Doble: precio con tarjeta",precio_transferencia:"Doble: precio por transferencia",cuotas_max:"Cuotas (máximo)",producto2:"Nombre del producto individual",precio2_tarjeta:"Individual: precio con tarjeta",precio2_transferencia:"Individual: precio por transferencia",activo2:"Vender el individual (SI / NO)",valor_envio:"Valor del envío que se muestra tachado (0 = no mostrar)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto doble",clave_vista:"Clave de vista previa"};
 function vConfig(d){
   var c=d.config;
   return '<h2>Configuración</h2>'
@@ -306,7 +310,7 @@ document.addEventListener("click",function(e){
   else if(a==="mov"){
     var tipo=$("#mvTipo").value, cant=parseInt($("#mvCant").value,10), mot=$("#mvMot").value.trim();
     if(!(cant>0)){ toast("Poné una cantidad mayor a cero."); return; } if(!mot){ toast("Escribí el motivo."); return; }
-    accion("movimiento",{tipo:tipo==="ingreso"?"ingreso":"ajuste",cantidad:tipo==="ajuste-"?-cant:cant,motivo:mot},"Movimiento guardado",t);
+    accion("movimiento",{producto:$("#mvProd").value,tipo:tipo==="ingreso"?"ingreso":"ajuste",cantidad:tipo==="ajuste-"?-cant:cant,motivo:mot},"Movimiento guardado",t);
   }
   else if(a==="avisar") accion("avisar",{},"Avisos enviados",t);
   else if(a==="guardarCfg"){ var vals={}; new FormData($("#cfg")).forEach(function(v,k){vals[k]=v;}); accion("guardarConfig",{valores:vals},"Configuración guardada",t); }
