@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Los Perrines · Pagos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{--olive:#4E5B3A;--ball:#D9E15A;--bg:#F2F3EC;--card:#FFFFFF;--ink:#1E2418;--muted:#5E6656;--line:#D9DCCF;--field:#F7F8F3;--ok:#2F7A3E;--warn:#A86A12;--bad:#B4432F;color-scheme:light;box-sizing:border-box}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--olive:#6E7D55;--bg:#14170F;--card:#1D2217;--ink:#EEF0E6;--muted:#A5AD98;--line:#323A28;--field:#181C13;--ok:#6CC27D;--warn:#E3A84B;--bad:#E27A66;color-scheme:dark}}
+:root[data-theme="dark"]{--olive:#6E7D55;--bg:#14170F;--card:#1D2217;--ink:#EEF0E6;--muted:#A5AD98;--line:#323A28;--field:#181C13;--ok:#6CC27D;--warn:#E3A84B;--bad:#E27A66;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ball);outline-offset:2px;border-radius:4px}
+main{max-width:900px;margin:0 auto;padding:16px}
+h2{font-size:1.3rem;margin:4px 0 12px;letter-spacing:-.02em}
+h3{font-size:1.05rem;margin:0 0 10px}
+.sync{font-size:.8rem;color:var(--muted);margin:-6px 0 12px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.kpi small{display:block;color:var(--muted);font-size:.82rem}
+.kpi b{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
+.kpi.pend b{color:var(--warn)}
+.block{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.row-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer}
+.btn.main{background:var(--olive);color:#F2F3EC}
+.btn.ghost{background:transparent;border:1.5px solid var(--line)}
+.btn.danger{background:transparent;border:1.5px solid var(--line);color:var(--bad)}
+.comp{border-top:1px solid var(--line);padding:12px 0}
+.comp:first-of-type{border-top:0}
+.comp .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.comp .top b{display:block}
+.comp .top small{color:var(--muted)}
+.comp .nums{text-align:right;white-space:nowrap}
+.comp .nums b{font-size:1.05rem}
+.bar{height:8px;border-radius:5px;background:var(--line);overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;background:var(--ok)}
+.comp .acts{display:flex;gap:8px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;border-radius:999px;padding:1px 8px;border:1.5px solid currentColor}
+.tag.ok{color:var(--ok)} .tag.pend{color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.82rem}
+td.n,th.n{text-align:right;white-space:nowrap}
+.tw{overflow-x:auto}
+.empty{color:var(--muted);padding:12px 0}
+.x{background:none;border:0;cursor:pointer;color:var(--muted);font-size:1.1rem}
+dialog{border:0;border-radius:18px;padding:0;width:min(480px,94vw);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(20,24,14,.5)}
+.dlg{padding:18px}
+.f{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;font-size:.88rem;font-weight:600;color:var(--muted)}
+.f input,.f select,.f textarea{font:500 1rem "Bricolage Grotesque",sans-serif;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:.82rem;color:var(--muted);margin:-6px 0 12px}
+.err{color:var(--bad);font-weight:600;min-height:1.2em;margin:4px 0 0;font-size:.9rem}
+.dacts{display:flex;gap:10px;justify-content:space-between;margin-top:6px}
+@media(max-width:520px){.cards{grid-template-columns:1fr 1fr}.cards .kpi:first-child{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<dialog id="dlg"><div class="dlg" id="dlgIn"></div></dialog>
+<script>
+var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDbptu4xiogljKkCeJQrGXh4rn7f0PsXDbypAZCxbVQ/exec";
+</script>
+<script>
+(function(){
+"use strict";
+var SEED={compromisos:[
+  {id:"c1",proveedor:"Carlos",concepto:"Tela trucker matelaseado (60 m)",total:420000,notas:"Seña y saldo al terminar la tela"},
+  {id:"c2",proveedor:"Casa Natalia",concepto:"Insumos (hebillas, cinta, bies, cierres, deslizadores)",total:0,notas:"Cargá el total de la compra"},
+  {id:"c3",proveedor:"Susana",concepto:"Confección del lote (37 × $10.000)",total:370000,notas:"50% de adelanto y el resto con cada entrega"}
+],pagos:[]};
+var S={compromisos:[],pagos:[]}, LS="lp-pagos", timer=null, cloud=false;
+var fmt=new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
+function money(v){return fmt.format(Math.round(v||0));}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function $(s,r){return (r||document).querySelector(s);}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function n(v){var x=parseFloat(String(v).replace(/\./g,"").replace(",","."));return isFinite(x)?x:0;}
+function hoy(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fFecha(s){if(!s)return"";var p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0];}
+function norm(d){d=d&&typeof d==="object"?d:{};return {compromisos:Array.isArray(d.compromisos)?d.compromisos:[],pagos:Array.isArray(d.pagos)?d.pagos:[]};}
+function api(accion,data){
+  var body=Object.assign({accion:accion,token:sessionStorage.getItem("lp_token")||""},data||{});
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(j){if(!j.ok)throw new Error(j.error||"Error");return j;});
+}
+var syncTxt="";
+function setSync(t){syncTxt=t;var e=$("#sync");if(e)e.textContent=t;}
+function persist(){
+  var json=JSON.stringify(S); try{localStorage.setItem(LS,json);}catch(e){}
+  if(cloud) api("guardarPagos",{data:JSON.parse(json)}).then(function(){setSync("Guardado en tu planilla");}).catch(function(e){setSync(e.message==="SESION"?"Sesión vencida: volvé a entrar al panel":"Guardado solo en este dispositivo");});
+  else setSync("Guardado en este dispositivo");
+}
+function save(){setSync("Guardando…");clearTimeout(timer);timer=setTimeout(persist,400);}
+function pagado(cid){return S.pagos.filter(function(p){return p.compromisoId===cid;}).reduce(function(a,p){return a+n(p.monto);},0);}
+function comp(cid){return S.compromisos.find(function(c){return c.id===cid;});}
+
+function render(){
+  var tot=0,pag=0;
+  S.compromisos.forEach(function(c){tot+=n(c.total);});
+  S.pagos.forEach(function(p){pag+=n(p.monto);});
+  var pend=S.compromisos.reduce(function(a,c){return a+Math.max(0,n(c.total)-pagado(c.id));},0);
+  var h='<h2>Pagos a proveedores</h2><div class="sync" id="sync">'+esc(syncTxt)+'</div>'
+    +'<div class="cards"><div class="kpi"><small>Total comprometido</small><b>'+money(tot)+'</b></div>'
+    +'<div class="kpi"><small>Ya pagado</small><b>'+money(pag)+'</b></div>'
+    +'<div class="kpi pend"><small>Falta pagar</small><b>'+money(pend)+'</b></div></div>';
+  h+='<div class="block"><div class="row-h"><h3 style="margin:0">Compromisos</h3><button class="btn ghost" data-a="nuevoComp">+ Nuevo</button></div>';
+  if(!S.compromisos.length) h+='<div class="empty">Todavía no cargaste compromisos.</div>';
+  S.compromisos.forEach(function(c){
+    var p=pagado(c.id), t=n(c.total), saldo=Math.max(0,t-p), pct=t>0?Math.min(100,p/t*100):0;
+    h+='<div class="comp"><div class="top"><div><b>'+esc(c.proveedor)+'</b><small>'+esc(c.concepto)+'</small>'+(c.notas?'<br><small>'+esc(c.notas)+'</small>':'')+'</div>'
+      +'<div class="nums"><b>'+(t?money(saldo):'—')+'</b><br><small>'+(t?(saldo>0?'falta de '+money(t):'')+'':'sin total')+'</small> '+(t&&saldo<=0?'<span class="tag ok">Pagado</span>':'')+'</div></div>'
+      +'<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>'
+      +'<div class="acts"><small style="color:var(--muted);align-self:center">Pagado '+money(p)+'</small><span style="flex:1"></span>'
+      +'<button class="btn main" data-a="pagar" data-id="'+c.id+'">Registrar pago</button><button class="btn ghost" data-a="editComp" data-id="'+c.id+'">Editar</button></div></div>';
+  });
+  h+='</div><div class="block"><div class="row-h"><h3 style="margin:0">Pagos realizados</h3></div>';
+  var lista=S.pagos.slice().sort(function(a,b){return (b.fecha||"").localeCompare(a.fecha||"");});
+  h+=lista.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Proveedor</th><th>Detalle</th><th class="n">Monto</th><th></th></tr></thead><tbody>'
+    +lista.map(function(p){var c=comp(p.compromisoId)||{};return '<tr><td>'+esc(fFecha(p.fecha))+'</td><td>'+esc(c.proveedor||"—")+'</td><td>'+esc(p.nota||"")+(p.medio?' <small style="color:var(--muted)">· '+esc(p.medio)+'</small>':'')+'</td><td class="n">'+money(p.monto)+'</td><td><button class="x" data-a="borrarPago" data-id="'+p.id+'" aria-label="Borrar pago">×</button></td></tr>';}).join("")
+    +'</tbody></table></div>':'<div class="empty">Todavía no registraste pagos.</div>';
+  $("#app").innerHTML=h+'</div>';
+}
+function dlg(html){$("#dlgIn").innerHTML=html;$("#dlg").showModal();var f=$("#dlgIn input");if(f)setTimeout(function(){f.focus();},50);}
+function formComp(c){
+  var nuevo=!c; c=c||{id:uid(),proveedor:"",concepto:"",total:"",notas:""};
+  dlg('<h3>'+(nuevo?'Nuevo compromiso':'Editar compromiso')+'</h3>'
+    +'<label class="f">Proveedor<input id="cProv" value="'+esc(c.proveedor)+'" placeholder="Ej. Carlos"></label>'
+    +'<label class="f">Concepto<input id="cConc" value="'+esc(c.concepto)+'" placeholder="Ej. Tela trucker 60 m"></label>'
+    +'<label class="f">Total acordado<input id="cTot" inputmode="numeric" value="'+esc(c.total||"")+'" placeholder="Ej. 420000"></label>'
+    +'<label class="f">Notas<input id="cNot" value="'+esc(c.notas)+'" placeholder="Ej. seña + saldo al entregar"></label>'
+    +'<p class="err" id="dErr"></p><div class="dacts">'+(nuevo?'<button class="btn ghost" data-a="cerrar">Cancelar</button>':'<button class="btn danger" data-a="borrarComp" data-id="'+c.id+'">Eliminar</button>')
+    +'<button class="btn main" data-a="guardarComp" data-id="'+c.id+'" data-nuevo="'+(nuevo?1:0)+'">Guardar</button></div>');
+}
+function formPago(cid){
+  var c=comp(cid), saldo=Math.max(0,n(c.total)-pagado(cid));
+  dlg('<h3>Registrar pago · '+esc(c.proveedor)+'</h3>'
+    +(n(c.total)?'<p class="hint">Falta pagar '+money(saldo)+' de '+money(c.total)+'.</p>':'')
+    +'<div class="g2"><label class="f">Fecha<input id="pFecha" type="date" value="'+hoy()+'"></label>'
+    +'<label class="f">Monto<input id="pMonto" inputmode="numeric" placeholder="Ej. 150000"></label></div>'
+    +'<label class="f">Detalle<input id="pNota" placeholder="Ej. Seña, Adelanto 50%, Entrega 1 (10 u.)"></label>'
+    +'<label class="f">Medio<select id="pMedio"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option><option>Mercado Pago</option></select></label>'
+    +'<p class="err" id="dErr"></p><div class="dacts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="guardarPago" data-id="'+cid+'">Guardar pago</button></div>');
+}
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button");if(!t)return;var a=t.dataset.a,id=t.dataset.id;
+  if(a==="nuevoComp") formComp(null);
+  else if(a==="editComp") formComp(comp(id));
+  else if(a==="pagar") formPago(id);
+  else if(a==="cerrar") $("#dlg").close();
+  else if(a==="guardarComp"){
+    var prov=$("#cProv").value.trim(), conc=$("#cConc").value.trim();
+    if(!prov){$("#dErr").textContent="Poné el proveedor.";return;}
+    var o={id:id,proveedor:prov,concepto:conc,total:n($("#cTot").value),notas:$("#cNot").value.trim()};
+    if(t.dataset.nuevo==="1") S.compromisos.push(o); else { var i=S.compromisos.findIndex(function(c){return c.id===id;}); S.compromisos[i]=o; }
+    $("#dlg").close(); save(); render();
+  }
+  else if(a==="borrarComp"){
+    var cant=S.pagos.filter(function(p){return p.compromisoId===id;}).length;
+    if(!confirm("¿Eliminar este compromiso"+(cant?" y sus "+cant+" pagos":"")+"?"))return;
+    S.compromisos=S.compromisos.filter(function(c){return c.id!==id;}); S.pagos=S.pagos.filter(function(p){return p.compromisoId!==id;});
+    $("#dlg").close(); save(); render();
+  }
+  else if(a==="guardarPago"){
+    var m=n($("#pMonto").value); if(!(m>0)){$("#dErr").textContent="Poné un monto mayor a cero.";return;}
+    S.pagos.push({id:uid(),compromisoId:id,fecha:$("#pFecha").value||hoy(),monto:m,nota:$("#pNota").value.trim(),medio:$("#pMedio").value});
+    $("#dlg").close(); save(); render();
+  }
+  else if(a==="borrarPago"){ if(confirm("¿Borrar este pago?")){ S.pagos=S.pagos.filter(function(p){return p.id!==id;}); save(); render(); } }
+});
+$("#dlg").addEventListener("click",function(e){if(e.target===this)this.close();});
+
+try{var raw=localStorage.getItem(LS);if(raw)S=norm(JSON.parse(raw));}catch(e){}
+if(!S.compromisos.length&&!S.pagos.length) S=norm(JSON.parse(JSON.stringify(SEED)));
+render();
+if(!sessionStorage.getItem("lp_token")){ setSync("Entrá desde el panel para guardar en tu planilla"); }
+else { setSync("Cargando…");
+  api("pagos").then(function(r){ cloud=true;
+    if(r.pagos&&((r.pagos.compromisos||[]).length||(r.pagos.pagos||[]).length)){ S=norm(r.pagos); render(); setSync("Guardado en tu planilla"); }
+    else persist();
+  }).catch(function(e){ setSync(e.message==="SESION"?"Sesión vencida: volvé a entrar al panel":"Sin conexión: guardado en este dispositivo"); });
+}
+})();
+</script>
+</body>
+</html>
