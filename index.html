@@ -175,6 +175,18 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .ship{font-size:1.02rem;padding:8px 16px}
 .tachado{color:var(--muted);text-decoration:line-through;font-weight:500;margin-right:6px}
 .gratis{color:var(--ok);font-weight:800}
+.sello{margin:12px 0 0;font-weight:700;font-size:.98rem}
+.modelo .m-sello{margin:4px 0 10px;font-size:.88rem;font-weight:700;color:var(--ok)}
+.hecho{padding:8px 0 48px}
+.hgrid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:720px){.hgrid{grid-template-columns:1fr 1fr}}
+.hcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.hcard h3{margin:0 0 6px;font-size:1.1rem}
+.hcard p{margin:0;color:var(--muted)}
+.hcard.dest{background:var(--olive);border-color:var(--olive)}
+.hcard.dest h3,.hcard.dest p,.hcard.dest a{color:#F2F3EC}
+.hcard.dest a{font-weight:700}
+.cmp.ours ul{margin:0}
 #modelos{padding:8px 0 40px}
 .modelos-grid{display:grid;gap:14px;grid-template-columns:1fr}
 @media(min-width:720px){.modelos-grid{grid-template-columns:1fr 1fr}}
@@ -284,7 +296,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
       <div class="price-box">
         <div class="hero-pagos"><span>💳 Hasta <b><span data-p="ncuotas">3</span> cuotas sin interés</b></span><span>💸 <b><span data-p="desc">10</span>% off</b> por transferencia</span></div>
         <span class="ship"><span aria-hidden="true">🚚</span><span class="ship-txt">Envío <b>GRATIS</b> <span data-p="envtach"></span>por Andreani a todo el país</span></span>
-        <p class="price-list" style="margin-top:10px">Hecho en San Luis para toda Argentina.</p>
+        <p class="sello">🇦🇷 Diseñada y confeccionada en San Luis · Con garantía de fábrica</p>
         <div class="buy-row">
           <button class="btn btn-main" data-add>Ver productos</button>
           <a class="btn btn-ghost" href="#canasto">Cómo es</a>
@@ -346,7 +358,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 <section class="beneficios">
   <div class="wrap grid4">
     <div class="ben dest"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="21" height="15" rx="2" fill="#D9E15A"/><path d="M24 15h7l5 6v5H24z" fill="#D9E15A"/><circle cx="11" cy="29" r="4" fill="#F2F3EC" stroke="#4E5B3A" stroke-width="2"/><circle cx="30" cy="29" r="4" fill="#F2F3EC" stroke="#4E5B3A" stroke-width="2"/></svg><div><b>Envío gratis por Andreani</b><small>A toda Argentina, a tu casa o a una sucursal</small></div></div>
-    <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 35 11v18L20 36 5 29V11z" fill="#4E5B3A"/><path d="M5 11l15 7 15-7M20 18v18" stroke="#D9E15A" stroke-width="2.5" fill="none"/></svg><div><b>Seguimiento online</b><small>Te mandamos por mail el número de seguimiento de Andreani</small></div></div>
+    <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 35 11v18L20 36 5 29V11z" fill="#4E5B3A"/><path d="M5 11l15 7 15-7M20 18v18" stroke="#D9E15A" stroke-width="2.5" fill="none"/></svg><div><b>Garantía de fábrica</b><small>Si algo falla por la fabricación, lo reparamos o la cambiamos</small></div></div>
     <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="9" width="34" height="23" rx="4" fill="#4E5B3A"/><rect x="3" y="14" width="34" height="5" fill="#D9E15A"/><rect x="8" y="24" width="10" height="3" rx="1.5" fill="#F2F3EC"/></svg><div><b>Hasta <span data-p="ncuotas">3</span> cuotas</b><small>Con tarjeta, por Mercado Pago</small></div></div>
     <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="#4E5B3A"/><path d="M13 20a7 7 0 1 0 2-5" stroke="#D9E15A" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M11 11v6h6" stroke="#D9E15A" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>10 días</b><small>Para arrepentirte de tu compra</small></div></div>
   </div>
@@ -355,27 +367,15 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 
 <section id="canasto" class="band">
   <div class="wrap">
-    <h2>Por qué canasto y no una funda común</h2>
-    <p class="sub">La mayoría de las fundas cubren el asiento y dejan los costados sueltos. El canasto se cierra por los cuatro lados, así tu mascota no se pasa adelante ni ensucia las puertas.</p>
-    <div class="compare">
-      <div class="cmp">
-        <h3>Funda común</h3>
-        <ul>
-          <li>Cubre el asiento y el respaldo</li>
-          <li>Costados sueltos o sin cubrir</li>
-          <li>La mascota puede bajar al piso o pasarse adelante</li>
-          <li>Tela fina, sin acolchado</li>
-        </ul>
-      </div>
-      <div class="cmp ours">
-        <h3>Funda tipo canasto</h3>
-        <ul>
-          <li>Cubre asiento, respaldo y la parte de atrás de los asientos delanteros</li>
-          <li>Solapas en las puertas, cerradas con cierres en las cuatro esquinas</li>
-          <li>Tu mascota queda contenida, sin pasarse adelante</li>
-          <li>Acolchado doble faz e impermeable</li>
-        </ul>
-      </div>
+    <h2>Por qué un canasto</h2>
+    <p class="sub">Se cierra por los cuatro lados: tu mascota viaja contenida, no se pasa adelante y el auto queda limpio.</p>
+    <div class="cmp ours">
+      <ul>
+        <li>Cubre el asiento, el respaldo y la parte de atrás de los asientos delanteros</li>
+        <li>Laterales en las puertas, cerrados con cierres en las cuatro esquinas</li>
+        <li>Para que tu mascota suba, abrís los cierres de un lado y el lateral baja</li>
+        <li>Acolchado, doble faz e impermeable</li>
+      </ul>
     </div>
   </div>
 </section>
@@ -383,16 +383,25 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 <section class="tela">
   <div class="wrap">
     <h2>No es una tela cualquiera</h2>
-    <p class="sub">La mayoría de las fundas son una capa de tela fina apoyada sobre el asiento. La nuestra está hecha con una tela técnica, acolchada y con las dos caras terminadas.</p>
+    <p class="sub">Está hecha con una tela técnica, acolchada y con las dos caras terminadas, pensada para el uso diario con mascotas.</p>
     <div class="grid4">
       <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M10 16l6 6-6 6M22 10l6 6-6 6M22 22l6 6-6 6M34 16l-6 6 6 6" stroke="#D9E15A" stroke-width="2.4" fill="none" stroke-linejoin="round"/></svg><h3>Trucker matelaseado impermeable</h3><p>Una tela técnica, firme y resistente al roce de las patas, con tratamiento impermeable. Barro, agua o un accidente no llegan al tapizado.</p></div>
       <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M13 17h16l-4-4M31 27H15l4 4" stroke="#D9E15A" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Doble faz: las dos caras iguales</h3><p>No tiene un “revés” de plástico ni una cara fea. Las dos caras tienen la misma terminación: si una se ensucia en el viaje, la das vuelta y seguís.</p></div>
       <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M13 29h18a5 5 0 0 0 0-10 7 7 0 0 0-13-2 5 5 0 0 0-5 12z" fill="#D9E15A"/></svg><h3>Acolchada</h3><p>Entre las dos capas lleva guata. Tu mascota viaja cómoda en los viajes largos, y el asiento queda protegido de la presión de las patas.</p></div>
       <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M11 22h22" stroke="#D9E15A" stroke-width="2.6" stroke-dasharray="4 3"/><path d="M11 14h22M11 30h22" stroke="#F2F3EC" stroke-width="2.6" stroke-linecap="round"/></svg><h3>Terminaciones que se notan</h3><p>Bordes con bies de poliamida, costuras reforzadas en cada correa y cierres en las cuatro esquinas. Confeccionada a mano en San Luis.</p></div>
     </div>
-    <div class="versus">
-      <div class="vs no"><b>Funda común</b>Una capa de tela fina.</div>
-      <div class="vs si"><b>Funda tipo canasto</b>Tela técnica doble faz, acolchada e impermeable.</div>
+  </div>
+</section>
+
+<section class="hecho">
+  <div class="wrap">
+    <h2>Hecha acá, pensada para durar</h2>
+    <p class="sub">Cada funda se diseña y se confecciona en San Luis. Eso se nota en los detalles y en cómo te respondemos.</p>
+    <div class="hgrid">
+      <div class="hcard"><h3>Confección cuidada</h3><p>Se cose y se revisa una por una: costuras reforzadas donde hace fuerza, bies en todos los bordes y cierres en las cuatro esquinas.</p></div>
+      <div class="hcard"><h3>Hablás con quien la fabrica</h3><p>Cualquier duda sobre la colocación, el lavado o tu auto la resolvés directo por WhatsApp, sin intermediarios.</p></div>
+      <div class="hcard"><h3>Precio de fábrica</h3><p>Sin importación ni intermediarios: una funda acolchada y doble faz a un precio justo, con envío gratis a todo el país.</p></div>
+      <div class="hcard dest"><h3>Garantía de fábrica</h3><p>Si algo falla por la fabricación, lo reparamos o lo cambiamos. Así de simple. <a href="#garantia">Ver condiciones</a></p></div>
     </div>
   </div>
 </section>
@@ -478,6 +487,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
     <details><summary>¿Cómo pago?</summary><p>Con tarjeta, en 1 pago o hasta <span data-p="ncuotas">3</span> cuotas sin interés, a través de Mercado Pago. O por transferencia, con <span data-p="desc">10</span>% de descuento. Los precios de cada modelo están en “Nuestros productos”.</p></details>
     <details><summary>¿Entra en mi auto?</summary><p>Funciona en autos y camionetas con asiento trasero corrido. Si tenés dudas, escribinos por WhatsApp con el modelo de tu auto.</p></details>
     <details><summary>¿Lo puedo lavar?</summary><p>Sí. A mano o en lavarropas con programa delicado y agua fría. Dejalo secar a la sombra.</p></details>
+    <details id="garantia"><summary>¿Tiene garantía?</summary><p>Sí, tiene <b>garantía de fábrica</b>: cubre fallas de confección y de materiales con el uso normal de tu mascota. No cubre daños por mal uso o maltrato, como cortes, quemaduras, mordidas, tirones forzados, o lavado con lavandina o secado con calor. Para usarla, escribinos por WhatsApp con tu número de pedido y fotos del problema: lo reparamos o te enviamos una nueva.</p></details>
     <details><summary>¿Y si no me convence?</summary><p>Tenés 10 días corridos desde que lo recibís para arrepentirte de la compra, con el botón de arrepentimiento de abajo.</p></details>
   </div>
 </section>
@@ -587,7 +597,7 @@ function pintarModelos(){
     var ilus='<svg viewBox="0 0 120 80" aria-hidden="true"><rect x="0" y="0" width="120" height="80" rx="12" fill="#2F3822"/><rect x="'+(60-i.ancho/2)+'" y="18" width="'+i.ancho+'" height="44" rx="6" fill="#D9E15A" stroke="#F2F3EC" stroke-width="2"/><path d="M'+(60-i.ancho/2)+' 40H'+(60+i.ancho/2)+'" stroke="#4E5B3A" stroke-width="2" stroke-dasharray="4 3"/></svg>';
     return '<article class="modelo">'
       +'<div class="m-foto">'+ilus+'<img src="'+i.foto+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()"></div>'
-      +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p>'
+      +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>Hasta '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<div class="m-transf"><span>💸 Por transferencia <small>'+d+'% off</small></span><b>'+money(p.precio_transferencia)+'</b></div>'
       +'<p class="m-envio">🚚 Envío <b>GRATIS</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s> ':'')+'por Andreani</p>'
