@@ -275,13 +275,22 @@ function vEnvios(d){
   return h;
 }
 var CFG_ORDEN=["alias","cbu","titular","banco","whatsapp","email_aviso","precio_tarjeta","precio_transferencia","producto2","precio2_tarjeta","precio2_transferencia","activo2","cuotas_max","valor_envio","stock_minimo","reserva_transferencia_horas","reserva_tarjeta_horas","plantilla_andreani_id","peso_gr","alto_cm","ancho_cm","profundidad_cm","valor_declarado","url_web","producto","clave_vista"];
-var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",precio_tarjeta:"Doble: precio con tarjeta",precio_transferencia:"Doble: precio por transferencia",cuotas_max:"Cuotas (máximo)",producto2:"Nombre del producto individual",precio2_tarjeta:"Individual: precio con tarjeta",precio2_transferencia:"Individual: precio por transferencia",activo2:"Vender el individual (SI / NO)",valor_envio:"Valor del envío que se muestra tachado (0 = no mostrar)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto doble",clave_vista:"Clave de vista previa"};
+var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",precio_tarjeta:"Precio con tarjeta",precio_transferencia:"Precio por transferencia",cuotas_max:"Cuotas (máximo)",producto2:"Nombre del producto (el que ve el cliente)",precio2_tarjeta:"Precio con tarjeta",precio2_transferencia:"Precio por transferencia",activo2:"Mostrarlo en la web (SI / NO)",valor_envio:"Valor del envío que se muestra tachado (0 = no mostrar)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto (el que ve el cliente)",clave_vista:"Clave de vista previa"};
+var CFG_GRUPOS=[
+  ["Producto 1 (doble)",["producto","precio_tarjeta","precio_transferencia"]],
+  ["Producto 2 (individual)",["producto2","precio2_tarjeta","precio2_transferencia","activo2"]],
+  ["Cobros",["cuotas_max","alias","cbu","titular","banco"]],
+  ["Contacto",["whatsapp","email_aviso"]],
+  ["Envíos",["valor_envio","plantilla_andreani_id","peso_gr","alto_cm","ancho_cm","profundidad_cm","valor_declarado"]],
+  ["Stock y reservas",["stock_minimo","reserva_transferencia_horas","reserva_tarjeta_horas"]],
+  ["Web",["url_web","clave_vista"]]
+];
 function vConfig(d){
   var c=d.config;
   return '<h2>Configuración</h2>'
     +'<div class="block" style="margin-top:0"><b>Mercado Pago:</b> '+(d.tokenMP?'<span class="pos">conectado</span>':'<span class="neg">falta el Access Token</span> (se carga en Apps Script → Propiedades del script).')+'</div>'
-    +'<div class="block"><form id="cfg">'+CFG_ORDEN.map(function(k){return '<div class="cfg-row"><label class="f" style="margin:0">'+esc(CFG_LBL[k]||k)+'<input name="'+k+'" value="'+esc(c[k]||"")+'"></label></div>';}).join("")
-    +'</form><button class="btn main big" data-a="guardarCfg" style="margin-top:12px">Guardar cambios</button></div>';
+    +'<form id="cfg">'+CFG_GRUPOS.map(function(g){ return '<div class="block"><h3>'+esc(g[0])+'</h3>'+g[1].map(function(k){return '<div class="cfg-row"><label class="f" style="margin:0">'+esc(CFG_LBL[k]||k)+'<input name="'+k+'" value="'+esc(c[k]||"")+'"></label></div>';}).join("")+'</div>'; }).join("")
+    +'</form><button class="btn main big" data-a="guardarCfg" style="margin:4px 0 20px">Guardar cambios</button>';
 }
 function vPagos(){ return '<iframe src="pagos.html" title="Pagos" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function vCorte(){ return '<iframe src="corte.html" title="Calculadora de corte" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
