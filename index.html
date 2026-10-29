@@ -439,15 +439,12 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
       <h2>Medidas</h2>
       <p class="sub">Entra en la mayoría de los autos y camionetas con asiento trasero corrido.</p>
       <dl class="spec">
-        <dt>Doble</dt><dd>125 × 126 cm: respaldo delantero 38, asiento 40 y respaldo trasero 48</dd>
-        <dt>Individual</dt><dd>60 × 126 cm, mismos tramos, para una plaza</dd>
-        <dt>Laterales</dt><dd>40 × 38 cm, con cierres</dd>
-        <dt>Sujeción</dt><dd>4 correas regulables a los apoyacabezas</dd>
+        <div id="specDyn" style="display:contents"></div>
         <dt>Tela</dt><dd>Trucker matelaseado impermeable, doble faz</dd>
         <dt>Lavado</dt><dd>A mano o en lavarropas, programa delicado</dd>
       </dl>
     </div>
-    <svg viewBox="0 0 360 300" role="img" aria-label="Esquema de la funda desplegada con sus medidas">
+    <svg viewBox="0 0 360 300" role="img" aria-label="Esquema de la funda desplegada">
       <rect x="95" y="40" width="170" height="210" rx="6" fill="#4E5B3A"/>
       <rect x="30" y="110" width="62" height="70" rx="6" fill="#6E7D55"/>
       <rect x="268" y="110" width="62" height="70" rx="6" fill="#6E7D55"/>
@@ -455,10 +452,10 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
       <text x="180" y="78" fill="#F2F3EC" font-size="14" text-anchor="middle" font-family="inherit">Asientos delanteros</text>
       <text x="180" y="150" fill="#F2F3EC" font-size="14" text-anchor="middle" font-family="inherit">Asiento</text>
       <text x="180" y="220" fill="#F2F3EC" font-size="14" text-anchor="middle" font-family="inherit">Respaldo trasero</text>
-      <text x="180" y="25" fill="currentColor" font-size="14" text-anchor="middle" font-family="inherit">125 cm</text>
-      <text x="350" y="40" fill="currentColor" font-size="14" text-anchor="end" font-family="inherit">126 cm</text>
-      <text x="61" y="200" fill="currentColor" font-size="13" text-anchor="middle" font-family="inherit">38 cm</text>
-      <text x="299" y="200" fill="currentColor" font-size="13" text-anchor="middle" font-family="inherit">38 cm</text>
+      
+      
+      <text x="61" y="200" fill="currentColor" font-size="13" text-anchor="middle" font-family="inherit">Lateral</text>
+      <text x="299" y="200" fill="currentColor" font-size="13" text-anchor="middle" font-family="inherit">Lateral</text>
     </svg>
   </div>
 </section>
@@ -578,14 +575,15 @@ function pintarStock(){
 }
 var INFO={
   doble:{sub:"Asiento trasero completo",foto:"foto-doble.jpg",ancho:52,
-    det:["125 × 126 cm: respaldo delantero 38, asiento 40 y respaldo trasero 48","Laterales de 40 × 38 cm en las dos puertas, con cierres","4 correas regulables a los apoyacabezas","Abertura para el cinturón de seguridad"]},
+    det:["130 × 130 cm: respaldo delantero 38, asiento 40 y respaldo trasero 52", "Laterales de 40 × 36 cm en las dos puertas, con cierres", "4 correas regulables a los apoyacabezas", "Abertura para el cinturón de seguridad"]},
   individual:{sub:"Una plaza, lado izquierdo o derecho",foto:"foto-individual.jpg",ancho:24,
-    det:["60 × 126 cm: misma base que la doble","Laterales de 40 × 38 cm en los dos lados, con cierres","Se usa del lado izquierdo o del derecho","Ideal si viajás con alguien atrás"]}
+    det:["60 × 130 cm: misma base que la doble", "Laterales de 40 × 36 cm en los dos lados, con cierres", "Se usa del lado izquierdo o del derecho", "Ideal si viajás con alguien atrás"]}
 };
 function pintarModelos(){
+  var sd=$("#specDyn"); if(sd) sd.innerHTML=PRODS().map(function(p){ var i0=INFO[p.id]||{det:[]}, det=(p.medidas&&p.medidas.length)?p.medidas:i0.det; return '<dt>'+esc(p.nombre)+'</dt><dd>'+det.map(esc).join('<br>')+'</dd>'; }).join("");
   var g=$("#modelosGrid"); if(!g) return;
   var ps=PRODS(); $("#modelos").hidden=!ps.length;
-  g.innerHTML=ps.map(function(p){ var i=INFO[p.id]||{sub:"",det:[],ancho:40}, sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
+  g.innerHTML=ps.map(function(p){ var i0=INFO[p.id]||{sub:"",det:[],ancho:40,foto:""}, i={sub:p.sub||i0.sub,det:(p.medidas&&p.medidas.length)?p.medidas:i0.det,ancho:i0.ancho,foto:i0.foto}, sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
     var ilus='<svg viewBox="0 0 120 80" aria-hidden="true"><rect x="0" y="0" width="120" height="80" rx="12" fill="#2F3822"/><rect x="'+(60-i.ancho/2)+'" y="18" width="'+i.ancho+'" height="44" rx="6" fill="#D9E15A" stroke="#F2F3EC" stroke-width="2"/><path d="M'+(60-i.ancho/2)+' 40H'+(60+i.ancho/2)+'" stroke="#4E5B3A" stroke-width="2" stroke-dasharray="4 3"/></svg>';
     return '<article class="modelo">'
       +'<div class="m-foto">'+ilus+'<img src="'+i.foto+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()"></div>'
