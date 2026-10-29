@@ -33,6 +33,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font:500 16px/1.4 "Manrope",
 .wrap{max-width:640px;margin:0 auto;padding:12px 14px 40px}
 button{font:inherit;color:inherit}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px 12px}
+.gc-info{font-size:.86rem;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line)}
+.gc-calc{font-size:.88rem;padding:10px 14px;background:var(--field);border-top:1px solid var(--line)}
+.gc-warn{font-size:.86rem;padding:10px 14px;color:#A86A12;background:color-mix(in srgb,#E3A84B 14%,transparent);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.gc-sel{font:600 .95rem inherit;font-family:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;max-width:60%}
 .ptabs{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
 .ptab{flex:none;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font:700 .92rem inherit;cursor:pointer;font-family:inherit}
 .ptab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -169,7 +173,8 @@ function upItem(p,it){
 function norm(d){ d=d&&typeof d==="object"?d:{}; var ps=Array.isArray(d.productos)?d.productos:[];
   ps.forEach(function(p){ p.items=(p.items||[]).map(function(it){return upItem(p,it);}); });
   var pv=Array.isArray(d.proveedores)?d.proveedores:buildProvs(ps);
-  return {productos:ps, proveedores:pv, activo:d.activo||null}; }
+  var gc=d.compartidos&&typeof d.compartidos==="object"?d.compartidos:{};
+  return {productos:ps, proveedores:pv, activo:d.activo||null, compartidos:{rollo:n(gc.rollo)||60, gastos:Array.isArray(gc.gastos)?gc.gastos:[]}}; }
 function buildProvs(ps){ var m={},out=[]; ps.forEach(function(p){ (p.items||[]).forEach(function(i){ var k=(i.proveedor||"").trim(); if(!k) return;
   if(!m[k]){ m[k]={id:uid(),nombre:k,telefono:i.telefono||"",lugar:i.lugar||"",web:"",notas:""}; out.push(m[k]); }
   else { if(!m[k].telefono&&i.telefono) m[k].telefono=i.telefono; if(!m[k].lugar&&i.lugar) m[k].lugar=i.lugar; } }); }); return out; }
@@ -235,13 +240,21 @@ function compra(p,it){
   var need=n(it.uso)*n(p.lote), env=n(it.contenido)>0? need/n(it.contenido):0, buy=Math.ceil(env-1e-9);
   return {need:need, env:env, buy:buy, total:buy*n(it.precio), sobra:Math.max(0,buy*n(it.contenido)-need)};
 }
+function telaItem(p){
+  var mats=p.items.filter(function(i){return i.clase!=="fijo";});
+  return mats.find(function(i){return i.id===p.telaId;}) || mats.find(function(i){return /tela|trucker|tracker|matelase/i.test(i.concepto||"");}) || null;
+}
+function metrosTela(p){ var t=telaItem(p); return t&&t.incluir!==false? n(t.uso):0; }
+function gcTotal(){ return (state.compartidos.gastos||[]).reduce(function(a,g){return a+(g.incluir===false?0:n(g.total));},0); }
+function gcPorMetro(){ var r=n(state.compartidos.rollo); return r>0? gcTotal()/r : 0; }
+function gcUnit(p){ return gcPorMetro()*metrosTela(p); }
 function calc(p){
-  var mat=0,fab=0,venta=0,compras=0;
+  var mat=0,fab=gcUnit(p),venta=0,compras=0;
   p.items.forEach(function(it){ if(!it.incluir) return; var c=cost(p,it);
     if(it.clase==="fijo"){ if(it.cuando==="venta") venta+=c; else fab+=c; } else { mat+=c; compras+=compra(p,it).total; } });
   var precio=n(p.precio), lote=n(p.lote), prodC=mat+fab, total=prodC+venta, gan=precio-total, neto=precio-venta;
   var inv=compras+fab*lote, ingreso=precio*lote, ganLote=ingreso-inv-venta*lote;
-  return {mat:mat,fab:fab,venta:venta,prod:prodC,total:total,gan:gan,compras:compras,
+  return {mat:mat,fab:fab,gc:gcUnit(p),venta:venta,prod:prodC,total:total,gan:gan,compras:compras,
     margen:precio>0?gan/precio*100:0, rent:total>0?gan/total*100:0,
     inv:inv, ventaLote:venta*lote, ingreso:ingreso, ganLote:ganLote,
     recupero: neto>0&&inv>0? Math.ceil(inv/neto-1e-9):null};
@@ -275,10 +288,29 @@ function render(){
   if(!fijos.length) h+='<div class="empty">Mano de obra, envío, packaging…</div>';
   fijos.forEach(function(it){ h+=itemHTML(p,it); });
   h+='<button class="add" data-a="new-fijo">+ Agregar costo</button></div></div>';
+  h+='<div class="sec"><div class="sec-h"><h2>Gastos compartidos</h2><span class="tot">'+$m(gcUnit(p))+'</span></div><div class="list" id="gc">'+gcHTML(p)+'</div></div>';
   h+='<div class="sec"><div class="sec-h"><h2>Lote</h2></div><div class="list" id="lote">'+loteHTML(p)+'</div></div>';
   h+='<div class="actions"><button class="btn" data-a="lista" style="grid-column:1/-1">Lista de compras</button><button class="btn" data-a="provs">Proveedores</button><button class="btn pri" data-a="share">Compartir cuadro</button></div>';
   app.innerHTML=h;
   refresh();
+}
+function gcHTML(p){
+  var G=state.compartidos, t=telaItem(p), mats=p.items.filter(function(i){return i.clase!=="fijo";}), h='';
+  h+='<div class="gc-info">Son los gastos que pagás una vez para todo (flete del rollo, publicación, financiación…). Se cargan acá una sola vez y se reparten solos entre todos los productos <b>según los metros de tela que usa cada uno</b>, así el costo por unidad es correcto con cualquier combinación.</div>';
+  (G.gastos||[]).forEach(function(g){
+    h+='<div class="item'+(g.incluir===false?' off':'')+'" role="button" tabindex="0" data-a="gc-edit" data-id="'+esc(g.id)+'"><div class="main"><div class="t">'+esc(g.concepto||"Sin nombre")+'</div><div class="s">Total '+$m(n(g.total))+'</div></div>'
+      +'<div class="v">'+$m(g.incluir===false?0:n(g.total)/(n(G.rollo)||1)*metrosTela(p))+'</div>'
+      +'<button class="sw" role="switch" aria-checked="'+(g.incluir===false?'false':'true')+'" aria-label="Incluir '+esc(g.concepto)+'" data-a="gc-toggle" data-id="'+esc(g.id)+'"></button></div>';
+  });
+  if(!(G.gastos||[]).length) h+='<div class="empty">Todavía no cargaste gastos compartidos.</div>';
+  h+='<button class="add" data-a="gc-new">+ Agregar gasto compartido</button>';
+  var lotes=[]; state.productos.forEach(function(x){ x.items.forEach(function(i){ if(i.clase==="fijo"&&i.base==="lote") lotes.push(i); }); });
+  if(lotes.length) h+='<div class="gc-warn">Tenés '+lotes.length+' costo'+(lotes.length>1?'s':'')+' cargado'+(lotes.length>1?'s':'')+' como “Total del lote” dentro de los productos. Si son gastos de todo el negocio (flete, publicación, financiación), pasalos acá para no contarlos dos veces. <button class="pbtn" data-a="gc-migrar">Pasarlos a compartidos</button></div>';
+  h+='<div class="kv"><span>Metros de tela del rollo</span><div class="lote-in"><input id="gc-rollo" type="number" inputmode="decimal" min="1" step="any" value="'+esc(G.rollo)+'"></div></div>';
+  h+='<div class="kv"><span>Tela de este producto</span><select id="gc-tela" class="gc-sel"><option value="">— Elegí el material —</option>'+mats.map(function(i){return '<option value="'+esc(i.id)+'"'+(t&&t.id===i.id?' selected':'')+'>'+esc(i.concepto||"Material")+'</option>';}).join("")+'</select></div>';
+  h+='<div class="gc-calc">'+$m(gcTotal())+' ÷ '+Q.format(n(G.rollo))+' m = <b>'+$m2(gcPorMetro())+' por metro</b> × '+Q.format(metrosTela(p))+' m de tela = <b>'+$m(gcUnit(p))+' por unidad</b></div>';
+  if(!t) h+='<div class="gc-warn">Elegí cuál material es la tela, así la app sabe cuántos metros usa este producto.</div>';
+  return h;
 }
 function itemHTML(p,it){
   return '<div class="item'+(it.incluir?'':' off')+'" data-id="'+esc(it.id)+'" role="button" tabindex="0" data-a="edit">'
@@ -308,6 +340,8 @@ function loteHTML(p){
 }
 function refresh(){
   var p=prod(); if(!p) return; var c=calc(p);
+  var gcEl=$("#gc"); if(gcEl){ var ae=document.activeElement; if(!(ae&&ae.id==="gc-rollo")) gcEl.innerHTML=gcHTML(p); else { var cc=gcEl.querySelector(".gc-calc"); if(cc){ var tmp2=document.createElement("div"); tmp2.innerHTML=gcHTML(p); cc.innerHTML=tmp2.querySelector(".gc-calc").innerHTML; } }
+    var tt=gcEl.parentNode.querySelector(".sec-h .tot"); if(tt) tt.textContent=$m(gcUnit(p)); }
   var hero=$("#hero"); if(hero){ var a=document.activeElement, focusP=a&&a.id==="precio";
     if(!focusP) hero.innerHTML=heroHTML(p); else {
       var pr=n(p.precio), cw=pr>0?Math.min(100,Math.max(0,c.total/pr*100)):100;
@@ -431,6 +465,7 @@ function shareText(p){
   L2.push("Total materiales: "+$m(c.mat)); L2.push("");
   var fx=p.items.filter(function(i){return i.clase==="fijo"&&i.incluir;});
   if(fx.length){ L2.push("OTROS COSTOS"); fx.forEach(function(i){ L2.push("• "+(i.concepto||"-")+": "+$m(cost(p,i))); }); L2.push(""); }
+  if(gcUnit(p)>0){ L2.push("GASTOS COMPARTIDOS (por metro de tela)"); L2.push("• "+$m(gcTotal())+" ÷ "+Q.format(n(state.compartidos.rollo))+" m × "+Q.format(metrosTela(p))+" m = "+$m(gcUnit(p))); L2.push(""); }
   L2.push("Costo total por unidad: "+$m(c.total));
   L2.push("Precio de venta: "+$m(n(p.precio)));
   L2.push("Ganancia por unidad: "+$m(c.gan)+" ("+P.format(c.rent)+"% sobre costo)"); L2.push("");
@@ -449,7 +484,40 @@ function shareSheet(){
 }
 
 /* ---------- eventos ---------- */
+function gcEditar(g,nuevo){
+  openSheet('<div class="sh-h"><h3>'+(nuevo?'Nuevo gasto compartido':'Editar gasto compartido')+'</h3><button class="x" data-a="close" aria-label="Cerrar">×</button></div>'
+    +'<label class="f">Concepto<input id="gc-c" value="'+esc(g.concepto||"")+'" placeholder="Ej. Flete del rollo"></label>'
+    +'<label class="f">Monto total<input id="gc-t" type="number" inputmode="decimal" min="0" step="any" value="'+esc(g.total||"")+'" placeholder="Ej. 88000"></label>'
+    +'<p class="mini">Se reparte solo entre todos los productos según los metros de tela que usa cada uno.</p>'
+    +'<div class="sh-actions">'+(nuevo?'<button class="btn" data-a="close">Cancelar</button>':'<button class="btn danger" data-a="gc-del" data-id="'+esc(g.id)+'">Eliminar</button>')+'<button class="btn pri" data-a="gc-ok" data-id="'+esc(g.id)+'" data-nuevo="'+(nuevo?1:0)+'">Guardar</button></div>');
+}
+document.addEventListener("change",function(e){
+  if(e.target.id==="gc-tela"){ var p=prod(); p.telaId=e.target.value||""; save(); refresh(); }
+});
+document.addEventListener("input",function(e){
+  if(e.target.id==="gc-rollo"){ state.compartidos.rollo=n(e.target.value)||0; save(); refresh(); }
+});
 document.addEventListener("click",function(e){
+  var gb=e.target.closest("[data-a^='gc-']");
+  if(gb){ var ga=gb.dataset.a, gid=gb.dataset.id, G=state.compartidos;
+    if(ga==="gc-toggle"){ e.stopPropagation(); var g1=G.gastos.find(function(x){return x.id===gid;}); g1.incluir=g1.incluir===false; save(); refresh(); return; }
+    if(ga==="gc-new"){ gcEditar({id:uid()},true); return; }
+    if(ga==="gc-edit"){ gcEditar(G.gastos.find(function(x){return x.id===gid;}),false); return; }
+    if(ga==="gc-ok"){ var c=($("#gc-c").value||"").trim(), tv=n($("#gc-t").value); if(!c){ toast("Poné el concepto"); return; }
+      if(gb.dataset.nuevo==="1") G.gastos.push({id:gid,concepto:c,total:tv,incluir:true}); else { var g2=G.gastos.find(function(x){return x.id===gid;}); g2.concepto=c; g2.total=tv; }
+      closeSheet(); save(); refresh(); toast("Gasto guardado"); return; }
+    if(ga==="gc-del"){ if(!confirm("¿Eliminar este gasto compartido?")) return; G.gastos=G.gastos.filter(function(x){return x.id!==gid;}); closeSheet(); save(); refresh(); return; }
+    if(ga==="gc-migrar"){
+      var vistos={}, movidos=0;
+      state.productos.forEach(function(x){ x.items=x.items.filter(function(i){
+        if(!(i.clase==="fijo"&&i.base==="lote")) return true;
+        var k=(i.concepto||"").trim().toLowerCase();
+        var ex=G.gastos.find(function(g){return (g.concepto||"").trim().toLowerCase()===k;});
+        if(!ex&&!vistos[k]){ G.gastos.push({id:uid(),concepto:i.concepto,total:n(i.monto),incluir:i.incluir!==false}); vistos[k]=1; }
+        movidos++; return false; }); });
+      save(); render(); toast(movidos+" costos pasados a compartidos"); return; }
+  }
+
   var b=e.target.closest("[data-a]"); if(!b) return; var a=b.dataset.a, p=prod();
   if(a==="toggle"){ e.stopPropagation(); var row=b.closest("[data-id]"), it=p.items.find(function(x){return x.id===row.dataset.id;}); it.incluir=!it.incluir; save(); render(); return; }
   if(a==="edit"){ var it2=p.items.find(function(x){return x.id===b.dataset.id;}); if(it2) editItem(it2,false); return; }
