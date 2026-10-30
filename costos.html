@@ -33,6 +33,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:500 16px/1.4 "Manrope",
 .wrap{max-width:640px;margin:0 auto;padding:12px 14px 40px}
 button{font:inherit;color:inherit}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px 12px}
+.chk{display:flex;gap:10px;align-items:flex-start;margin:4px 0 12px;font-size:.92rem;cursor:pointer}
+.chk input{width:20px;height:20px;margin-top:2px;flex:none}
+.chk small{color:var(--muted)}
 .gc-info{font-size:.86rem;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line)}
 .gc-calc{font-size:.88rem;padding:10px 14px;background:var(--field);border-top:1px solid var(--line)}
 .gc-warn{font-size:.86rem;padding:10px 14px;color:#A86A12;background:color-mix(in srgb,#E3A84B 14%,transparent);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
@@ -240,9 +243,10 @@ function compra(p,it){
   var need=n(it.uso)*n(p.lote), env=n(it.contenido)>0? need/n(it.contenido):0, buy=Math.ceil(env-1e-9);
   return {need:need, env:env, buy:buy, total:buy*n(it.precio), sobra:Math.max(0,buy*n(it.contenido)-need)};
 }
+function hayTelaMarcada(p,excepto){ return !!p&&p.items.some(function(i){return i.clase!=="fijo"&&i.esTela&&(!excepto||i.id!==excepto.id);}); }
 function telaItem(p){
   var mats=p.items.filter(function(i){return i.clase!=="fijo";});
-  return mats.find(function(i){return i.id===p.telaId;}) || mats.find(function(i){return /tela|trucker|tracker|matelase/i.test(i.concepto||"");}) || null;
+  return mats.find(function(i){return i.esTela;}) || mats.find(function(i){return !i.noTela&&/tela|trucker|tracker|matelase/i.test(i.concepto||"");}) || null;
 }
 function metrosTela(p){ var t=telaItem(p); return t&&t.incluir!==false? n(t.uso):0; }
 function gcTotal(){ return (state.compartidos.gastos||[]).reduce(function(a,g){return a+(g.incluir===false?0:n(g.total));},0); }
@@ -307,9 +311,8 @@ function gcHTML(p){
   var lotes=[]; state.productos.forEach(function(x){ x.items.forEach(function(i){ if(i.clase==="fijo"&&i.base==="lote") lotes.push(i); }); });
   if(lotes.length) h+='<div class="gc-warn">Tenés '+lotes.length+' costo'+(lotes.length>1?'s':'')+' cargado'+(lotes.length>1?'s':'')+' como “Total del lote” dentro de los productos. Si son gastos de todo el negocio (flete, publicación, financiación), pasalos acá para no contarlos dos veces. <button class="pbtn" data-a="gc-migrar">Pasarlos a compartidos</button></div>';
   h+='<div class="kv"><span>Metros de tela del rollo</span><div class="lote-in"><input id="gc-rollo" type="number" inputmode="decimal" min="1" step="any" value="'+esc(G.rollo)+'"></div></div>';
-  h+='<div class="kv"><span>Tela de este producto</span><select id="gc-tela" class="gc-sel"><option value="">— Elegí el material —</option>'+mats.map(function(i){return '<option value="'+esc(i.id)+'"'+(t&&t.id===i.id?' selected':'')+'>'+esc(i.concepto||"Material")+'</option>';}).join("")+'</select></div>';
-  h+='<div class="gc-calc">'+$m(gcTotal())+' ÷ '+Q.format(n(G.rollo))+' m = <b>'+$m2(gcPorMetro())+' por metro</b> × '+Q.format(metrosTela(p))+' m de tela = <b>'+$m(gcUnit(p))+' por unidad</b></div>';
-  if(!t) h+='<div class="gc-warn">Elegí cuál material es la tela, así la app sabe cuántos metros usa este producto.</div>';
+  h+='<div class="gc-calc">A esta funda le corresponden <b>'+$m(gcUnit(p))+'</b> por unidad, porque usa '+Q.format(metrosTela(p))+' m de los '+Q.format(n(G.rollo))+' m del rollo.</div>';
+  if(!t) h+='<div class="gc-warn">Falta indicar cuál es la tela: abrí el material de la tela y marcá “Es la tela del rollo”.</div>';
   return h;
 }
 function itemHTML(p,it){
@@ -381,7 +384,8 @@ function editItem(it,isNew){
       +'<div class="g2"><label class="f">Cada uno trae<input type="number" inputmode="decimal" step="any" min="0" data-d="contenido" value="'+esc(draft.contenido)+'"></label>'
       +'<label class="f">Unidad<input data-d="unidad" value="'+esc(draft.unidad)+'" placeholder="m, u…"></label></div></fieldset>'
       +'<fieldset><legend>Cuánto lleva cada producto</legend>'
-      +'<label class="f">Uso por unidad<input type="number" inputmode="decimal" step="any" min="0" data-d="uso" value="'+esc(draft.uso)+'"></label></fieldset>';
+      +'<label class="f">Uso por unidad<input type="number" inputmode="decimal" step="any" min="0" data-d="uso" value="'+esc(draft.uso)+'"></label></fieldset>'
+      +'<label class="chk"><input type="checkbox" id="esTela"'+(draft.esTela||(!hayTelaMarcada(prod(),draft)&&/tela|trucker|tracker|matelase/i.test(draft.concepto||""))?' checked':'')+'> <span><b>Es la tela del rollo</b><br><small>Con sus metros se reparten los gastos compartidos. Marcá solo un material por producto.</small></span></label>';
   } else {
     h+='<div class="seg" role="group"><button data-a="base" data-v="unidad" aria-pressed="'+(draft.base!=="lote")+'">Monto por unidad</button><button data-a="base" data-v="lote" aria-pressed="'+(draft.base==="lote")+'">Total del lote</button></div>'
       +'<div class="g2"><label class="f">'+(draft.base==="lote"?"Monto total (se reparte)":"Monto por unidad")+'<input type="number" inputmode="decimal" step="any" min="0" data-d="monto" value="'+esc(draft.monto)+'"></label>'
@@ -411,7 +415,7 @@ $("#sheet").addEventListener("input",function(e){
   if(k==="proveedor"){ var pr=provNames()[v]; if(pr){ var te=$('[data-d="telefono"]'), lu=$('[data-d="lugar"]'); if(te&&!te.value){te.value=pr.telefono||"";draft.telefono=te.value;} if(lu&&!lu.value){lu.value=pr.lugar||"";draft.lugar=lu.value;} } }
   updPreview();
 });
-$("#sheet").addEventListener("change",function(e){ var k=e.target.dataset.d; if(k&&e.target.tagName==="SELECT"&&draft){ draft[k]=e.target.value; updPreview(); } });
+$("#sheet").addEventListener("change",function(e){ if(e.target.id==="esTela"&&draft){ draft.esTela=e.target.checked; draft.noTela=!e.target.checked; return; } var k=e.target.dataset.d; if(k&&e.target.tagName==="SELECT"&&draft){ draft[k]=e.target.value; updPreview(); } });
 
 function listaSheet(){
   var p=prod(), c=calc(p), rows=p.items.filter(function(i){return i.clase!=="fijo"&&i.incluir;});
@@ -525,7 +529,7 @@ document.addEventListener("click",function(e){
   if(a==="new-fijo"){ editItem({id:uid(),clase:"fijo",concepto:"",proveedor:"",telefono:"",lugar:"",monto:"",cuando:"fab",base:"unidad",incluir:true,notas:""},true); return; }
   if(a==="base"){ draft.base=b.dataset.v; editItem(draft,draftNew); return; }
   if(a==="lista"){ listaSheet(); return; }
-  if(a==="save-item"){ ensureProv(draft); if(draftNew) p.items.push(draft); else { var i=p.items.findIndex(function(x){return x.id===draft.id;}); if(i>=0) p.items[i]=draft; }
+  if(a==="save-item"){ ensureProv(draft); var cbx=$("#esTela"); if(cbx){ draft.esTela=cbx.checked; draft.noTela=!cbx.checked; } if(draft.esTela) p.items.forEach(function(x){ if(x.id!==draft.id) x.esTela=false; }); if(draftNew) p.items.push(draft); else { var i=p.items.findIndex(function(x){return x.id===draft.id;}); if(i>=0) p.items[i]=draft; }
     draft=null; closeSheet(); save(); render(); toast("Guardado"); return; }
   if(a==="del-item"){ if(confirm("¿Eliminar "+(draft.concepto||"este renglón")+"?")){ p.items=p.items.filter(function(x){return x.id!==draft.id;}); draft=null; closeSheet(); save(); render(); toast("Eliminado"); } return; }
   if(a==="close"){ draft=null; closeSheet(); return; }
