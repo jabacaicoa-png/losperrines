@@ -175,6 +175,14 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .ship{font-size:1.02rem;padding:8px 16px}
 .tachado{color:var(--muted);text-decoration:line-through;font-weight:500;margin-right:6px}
 .gratis{color:var(--ok);font-weight:800}
+.sucmap{height:220px;border-radius:14px;border:1px solid var(--line);margin:6px 0 10px;overflow:hidden;z-index:0}
+.suclist{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.suc{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;background:var(--card)}
+.suc.on{border-color:var(--olive);background:color-mix(in srgb,var(--ball) 18%,var(--card))}
+.suc input{margin-top:3px;accent-color:var(--olive)}
+.suc b{display:block;font-size:.95rem}
+.suc small{display:block;color:var(--muted);font-size:.85rem}
+.suc em{display:block;font-style:normal;font-weight:700;color:var(--ok);font-size:.85rem;margin-top:2px}
 .sello{margin:12px 0 0;font-weight:700;font-size:.98rem}
 .modelo .m-sello{margin:4px 0 10px;font-size:.88rem;font-weight:700;color:var(--ok)}
 .hecho{padding:8px 0 48px}
@@ -652,14 +660,14 @@ function render(){
       +'<div class="g2"><label class="f">DNI<input name="dni" required inputmode="numeric" maxlength="10" value="'+esc(g.dni)+'"></label><label class="f">Email<input name="email" type="email" required autocomplete="email" value="'+esc(g.email)+'"></label></div>'
       +'<div class="g2" style="grid-template-columns:1fr 2fr"><label class="f">Cód. área<input name="cel_cod" required inputmode="numeric" maxlength="5" placeholder="266" value="'+esc(g.cel_cod)+'"></label><label class="f">Celular<input name="cel_num" required inputmode="numeric" maxlength="9" placeholder="4123456" value="'+esc(g.cel_num)+'"></label></div>'
       +'<p class="hint">Sin 0 ni 15. Ej: 266 4123456.</p>'
+      +'<div class="g2" style="grid-template-columns:1fr 2fr"><label class="f">Código postal<input name="cp" inputmode="numeric" maxlength="4" autocomplete="postal-code" value="'+esc(g.cp)+'"></label><label class="f">Localidad<select name="prov_loc_cp"><option value="">Poné tu código postal</option></select></label></div>'
       +'<fieldset><legend>Envío '+(C.valor_envio?'<span class="tachado">'+money(C.valor_envio)+'</span>':'')+'<span class="gratis">GRATIS</span> por Andreani</legend>'
       +'<label class="pay"><input type="radio" name="entrega" value="domicilio" '+(g.entrega!=="sucursal"?"checked":"")+'><span><b>A domicilio</b><small>Te lo llevan a tu casa</small></span></label>'
       +'<label class="pay"><input type="radio" name="entrega" value="sucursal" '+(g.entrega==="sucursal"?"checked":"")+'><span><b>Retiro en sucursal Andreani</b><small>Lo retirás en la sucursal que elijas</small></span></label></fieldset>'
       +'<div id="domicilio"><div class="g2" style="grid-template-columns:2fr 1fr"><label class="f">Calle<input name="calle" autocomplete="address-line1" value="'+esc(g.calle)+'"></label><label class="f">Número<input name="numero" inputmode="numeric" value="'+esc(g.numero)+'"></label></div>'
       +'<div class="g2"><label class="f">Piso<input name="piso" value="'+esc(g.piso)+'"></label><label class="f">Depto<input name="depto" value="'+esc(g.depto)+'"></label></div>'
-      +'<div class="g2" style="grid-template-columns:1fr 2fr"><label class="f">Código postal<input name="cp" inputmode="numeric" maxlength="4" autocomplete="postal-code" value="'+esc(g.cp)+'"></label><label class="f">Localidad<select name="prov_loc_cp"><option value="">Poné tu código postal</option></select></label></div>'
       +'<label class="f">Indicaciones para la entrega (opcional)<input name="observaciones" maxlength="200" placeholder="Ej: timbre B, casa con rejas verdes" value="'+esc(g.observaciones)+'"></label></div>'
-      +'<div id="sucursal" hidden><label class="f">Buscar sucursal Andreani<input type="search" id="sucBuscar" placeholder="Escribí una ciudad o sucursal, ej. Avellaneda" autocomplete="off" oninput="filtrarSucursales()"></label><label class="f">Sucursal Andreani<select name="sucursal" id="sucSelect"><option value="">Cargando sucursales…</option></select></label><p class="hint" id="sucHint">Escribí para filtrar las sucursales y seleccioná una opción.</p></div>'
+      +'<div id="sucursal" hidden><input type="hidden" name="sucursal" value="'+esc(g.sucursal)+'"><div id="sucMap" class="sucmap" hidden></div><div id="sucList" class="suclist"><p class="hint">Poné tu código postal y elegí tu localidad para ver las sucursales más cercanas.</p></div></div>'
       +'<fieldset><legend>Forma de pago</legend>'
       +'<label class="pay"><input type="radio" name="pago" value="tarjeta" checked><span><b>Tarjeta: '+money(sumT())+'</b><small>1 pago o hasta '+C.cuotas+' cuotas sin interés de '+money(sumT()/C.cuotas)+', con Mercado Pago.</small></span></label>'
       +'<label class="pay"><input type="radio" name="pago" value="transferencia"><span><b>Transferencia: '+money(sumX())+'</b><small>Con descuento. Te pasamos los datos al confirmar.</small></span></label>'
@@ -679,51 +687,60 @@ function render(){
 function entregaToggle(){
   var f=$("#f"); if(!f) return; var r=f.querySelector('[name="entrega"]:checked'); var suc=!!r&&r.value==="sucursal";
   $("#domicilio").hidden=suc; $("#sucursal").hidden=!suc;
-  if(suc) cargarSuc().catch(function(){});
+  if(suc) mostrarSucursales();
 }
 function cargarLoc(){ return LOC?Promise.resolve(LOC):fetch("localidades.json").then(function(r){return r.json();}).then(function(j){LOC=j;return j;}); }
-function normalizarSucursal(s){
-  return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+var RET=null, GEO={}, MAPA=null, CAPA=null;
+function cargarRet(){ return RET?Promise.resolve(RET):fetch("sucursales_retiro.json").then(function(r){return r.json();}).then(function(j){RET=j;return j;}); }
+function normTxt(t){ return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9 ]/g," ").replace(/\s+/g," ").trim(); }
+function km(a,b){ var R=6371,dl=(b.lat-a.lat)*Math.PI/180,dn=(b.lng-a.lng)*Math.PI/180,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dn/2)*Math.sin(dn/2); return 2*R*Math.asin(Math.sqrt(x)); }
+function geoFetch(url){ return Promise.race([fetch(url,{headers:{"Accept-Language":"es"}}).then(function(r){return r.json();}),new Promise(function(_,rej){setTimeout(function(){rej(new Error("tiempo"));},7000);})]); }
+function ubicar(plc){
+  if(GEO[plc]!==undefined) return Promise.resolve(GEO[plc]);
+  var p=plc.split(" / "), prov=p[0], cp=p[p.length-1], loc=p.slice(1,-1).join(" ").replace(/\(.*?\)/g,"").trim();
+  var base="https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ar&";
+  return geoFetch(base+"postalcode="+encodeURIComponent(cp)+"&city="+encodeURIComponent(loc)).then(function(j){
+      if(j&&j.length) return j;
+      return geoFetch(base+"q="+encodeURIComponent(loc+", "+prov+", Argentina"));
+    }).then(function(j){ var g=j&&j.length?{lat:+j[0].lat,lng:+j[0].lon}:null; GEO[plc]=g; return g; })
+    .catch(function(){ GEO[plc]=null; return null; });
 }
-function filtrarSucursales(){
-  var sel=$("#sucSelect"), input=$("#sucBuscar"), hint=$("#sucHint");
-  if(!sel||!SUC) return;
-  var texto=normalizarSucursal(input&&input.value), anterior=sel.value;
-  var lista=texto?SUC.filter(function(n){return normalizarSucursal(n).includes(texto);}):SUC;
-  // Limitar la cantidad visible para que el selector sea rápido en celulares.
-  var visibles=lista.slice(0,100);
-  sel.innerHTML='<option value="">'+(lista.length?'Elegí una sucursal ('+lista.length+' coincidencias)':'No hay sucursales que coincidan')+'</option>'+
-    visibles.map(function(n){return '<option value="'+esc(n)+'"'+(n===anterior?' selected':'')+'>'+esc(n)+'</option>';}).join("");
-  if(hint) hint.textContent=lista.length>100?'Hay '+lista.length+' coincidencias. Escribí más letras para acotar la búsqueda.':lista.length?'Encontramos '+lista.length+' sucursal(es). Elegí una de la lista.':'No encontramos sucursales con ese texto. Probá otra búsqueda.';
-}
-function cargarSuc(){
-  var sel=$("#sucSelect"), hint=$("#sucHint");
-  if(!sel) return Promise.resolve(SUC);
-  function mostrar(list){
-    if(!sel.isConnected) return list;
-    var anterior=(store("lp_datos")||{}).sucursal||"";
-    var buscador=$("#sucBuscar");
-    if(buscador && anterior && list.indexOf(anterior)>=0 && !buscador.value){
-      buscador.value=anterior;
-    }
-    filtrarSucursales();
-    if(anterior && list.indexOf(anterior)>=0 && Array.from(sel.options).some(function(o){return o.value===anterior;})) sel.value=anterior;
-    return list;
-  }
-  if(SUC) return Promise.resolve(mostrar(SUC));
-  sel.innerHTML='<option value="">Cargando sucursales…</option>';
-  return fetch("sucursales.json",{cache:"no-store"}).then(function(r){
-    if(!r.ok) throw new Error("No se encontró sucursales.json (HTTP "+r.status+")");
-    return r.json();
-  }).then(function(j){
-    if(!Array.isArray(j)||!j.length||!j.every(function(x){return typeof x==="string";})) throw new Error("El listado de sucursales no es válido");
-    SUC=j; return mostrar(j);
-  }).catch(function(e){
-    if(sel.isConnected) sel.innerHTML='<option value="">No se pudieron cargar las sucursales</option>';
-    if(hint) hint.textContent="Error al cargar las sucursales. Actualizá la página e intentá nuevamente.";
-    console.error("Error de sucursales Andreani:",e);
-    throw e;
+function cargarLeaflet(){
+  if(window.L) return Promise.resolve(window.L);
+  return new Promise(function(ok,bad){
+    var c=document.createElement("link"); c.rel="stylesheet"; c.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(c);
+    var sc=document.createElement("script"); sc.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"; sc.onload=function(){ok(window.L);}; sc.onerror=bad; document.head.appendChild(sc);
   });
+}
+function elegirSuc(nombre){
+  var f=$("#f"); if(!f) return; f.querySelector('[name="sucursal"]').value=nombre;
+  $$("#sucList .suc").forEach(function(el){ var on=el.dataset.n===nombre; el.classList.toggle("on",on); var rb=el.querySelector("input"); if(rb) rb.checked=on; });
+  if($("#err")) $("#err").textContent="";
+}
+function mostrarSucursales(){
+  var f=$("#f"); if(!f||$("#sucursal").hidden) return;
+  var plc=(f.querySelector('[name="prov_loc_cp"]')||{}).value||"", box=$("#sucList"), mapa=$("#sucMap");
+  if(!plc){ box.innerHTML='<p class="hint">Poné tu código postal y elegí tu localidad para ver las sucursales más cercanas.</p>'; mapa.hidden=true; return; }
+  box.innerHTML='<p class="hint"><span class="spinner"></span> Buscando las sucursales más cercanas…</p>';
+  Promise.all([cargarRet(),ubicar(plc)]).then(function(res){
+    var list=res[0], yo=res[1], p=plc.split(" / "), cp=parseInt(p[p.length-1],10)||0, prov=normTxt(p[0]), tops;
+    if(yo){ tops=list.map(function(x){return Object.assign({km:km(yo,x)},x);}).sort(function(a,b){return a.km-b.km;}).slice(0,5); }
+    else { var misma=list.filter(function(x){return normTxt(x.prov)===prov;}); tops=(misma.length?misma:list).slice().sort(function(a,b){return Math.abs((+a.cp||0)-cp)-Math.abs((+b.cp||0)-cp);}).slice(0,5); }
+    var actual=f.querySelector('[name="sucursal"]').value;
+    if(actual&&!tops.some(function(x){return x.n===actual;})) f.querySelector('[name="sucursal"]').value="";
+    box.innerHTML='<p class="hint" style="margin:6px 0 8px">'+(yo?'Las 5 sucursales más cercanas a tu localidad:':'Sucursales sugeridas para tu zona:')+'</p>'
+      +tops.map(function(x){ return '<label class="suc'+(x.n===actual?' on':'')+'" data-n="'+esc(x.n)+'"><input type="radio" name="sucpick"'+(x.n===actual?' checked':'')+'><span><b>'+esc(x.n)+'</b><small>'+esc(x.dir)+' · '+esc(x.loc)+', '+esc(x.prov)+(x.cp?' (CP '+esc(x.cp)+')':'')+'</small>'+(x.km!=null?'<em>a '+(x.km<10?x.km.toFixed(1):Math.round(x.km))+' km</em>':'')+'</span></label>'; }).join("");
+    if(yo){ cargarLeaflet().then(function(L){
+        mapa.hidden=false;
+        if(!MAPA||!document.body.contains(MAPA.getContainer())){ MAPA=L.map(mapa,{scrollWheelZoom:false}); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(MAPA); CAPA=null; }
+        if(CAPA) CAPA.remove(); CAPA=L.layerGroup().addTo(MAPA);
+        var pts=[[yo.lat,yo.lng]];
+        tops.forEach(function(x){ pts.push([x.lat,x.lng]); L.circleMarker([x.lat,x.lng],{radius:9,color:"#fff",weight:2,fillColor:"#4E5B3A",fillOpacity:1}).addTo(CAPA).bindPopup("<b>"+esc(x.n)+"</b><br>"+esc(x.dir)+"<br>"+esc(x.loc)).on("click",function(){ elegirSuc(x.n); }); });
+        L.circleMarker([yo.lat,yo.lng],{radius:8,color:"#4E5B3A",fillColor:"#D9E15A",fillOpacity:1,weight:3}).addTo(CAPA).bindTooltip("Tu localidad");
+        setTimeout(function(){ MAPA.invalidateSize(); MAPA.fitBounds(pts,{padding:[24,24],maxZoom:13}); },50);
+      }).catch(function(){ mapa.hidden=true; });
+    } else mapa.hidden=true;
+  }).catch(function(){ box.innerHTML='<p class="hint">No pudimos cargar las sucursales. Probá de nuevo.</p>'; });
 }
 function buscarCP(cp,pre){
   var sel=$('#f [name="prov_loc_cp"]'); if(!sel) return;
@@ -736,27 +753,28 @@ function buscarCP(cp,pre){
     sel.innerHTML=(m.length>1?'<option value="">Elegí tu localidad</option>':'')+m.map(function(s){
       var p=s.split(" / "); var loc=p.slice(1,-1).join(" / ");
       return '<option value="'+esc(s)+'"'+(s===pre?" selected":"")+'>'+esc(loc+" ("+p[0]+")")+'</option>'; }).join("");
+    mostrarSucursales();
   }).catch(function(){ sel.innerHTML='<option value="">No pudimos cargar las localidades</option>'; });
 }
 function leerForm(){
   var f=$("#f"), err=$("#err"), d={}, bad=[];
   new FormData(f).forEach(function(v,k){d[k]=String(v).trim();});
   $$("input,select",f).forEach(function(el){el.style.borderColor="";});
-  var req=["nombre","apellido","dni","email","cel_cod","cel_num"].concat(d.entrega==="sucursal"?["sucursal"]:["calle","numero","cp","prov_loc_cp"]);
+  var req=["nombre","apellido","dni","email","cel_cod","cel_num","cp","prov_loc_cp"].concat(d.entrega==="sucursal"?["sucursal"]:["calle","numero"]);
   req.forEach(function(k){ if(!d[k]) bad.push(k); });
   if(d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) bad.push("email");
   if(d.dni && d.dni.replace(/\D/g,"").length<7) bad.push("dni");
-  if(d.entrega==="sucursal" && d.sucursal && SUC && SUC.indexOf(d.sucursal)<0) bad.push("sucursal");
+  if(d.entrega==="sucursal" && d.sucursal && RET && !RET.some(function(x){return x.n===d.sucursal;})) bad.push("sucursal");
   if(bad.length){
     bad.forEach(function(k){ var el=f.querySelector('[name="'+k+'"]'); if(el) el.style.borderColor="#C2553F"; });
-    err.textContent=bad.indexOf("sucursal")>=0&&d.sucursal?"Elegí la sucursal de la lista.":"Revisá los datos marcados.";
+    err.textContent=bad.indexOf("sucursal")>=0?"Elegí la sucursal donde vas a retirar.":"Revisá los datos marcados.";
     var first=f.querySelector('[name="'+bad[0]+'"]'); if(first) first.focus(); return null;
   }
   err.textContent=""; return d;
 }
 function pagar(btn){
   var f=$("#f"), r=f.querySelector('[name="entrega"]:checked');
-  if(r && r.value==="sucursal" && !SUC){ btn.disabled=true; cargarSuc().then(function(){btn.disabled=false; pagar(btn);}).catch(function(){btn.disabled=false; $("#err").textContent="No pudimos cargar las sucursales. Probá de nuevo.";}); return; }
+  if(r && r.value==="sucursal" && !RET){ btn.disabled=true; cargarRet().then(function(){btn.disabled=false; pagar(btn);}).catch(function(){btn.disabled=false; $("#err").textContent="No pudimos cargar las sucursales. Probá de nuevo.";}); return; }
   var d=leerForm(); if(!d) return;
   store("lp_datos",d);
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
@@ -828,7 +846,7 @@ document.addEventListener("click",function(e){
   else if(t.hasAttribute("data-close")){ var d=t.closest("dialog"); if(d) d.close(); if(step==="ok"){ step="cart"; } }
 });
 [drawer,dlg].forEach(function(d){ d.addEventListener("click",function(e){ if(e.target===d) d.close(); }); });
-document.addEventListener("change",function(e){ if(e.target.name==="entrega") entregaToggle(); });
+document.addEventListener("change",function(e){ if(e.target.name==="entrega") entregaToggle(); else if(e.target.name==="prov_loc_cp") mostrarSucursales(); else if(e.target.name==="sucpick"){ var lb=e.target.closest(".suc"); if(lb) elegirSuc(lb.dataset.n); } });
 document.addEventListener("input",function(e){ if(e.target.name==="cp") buscarCP(e.target.value); });
 })();
 </script>
