@@ -659,7 +659,7 @@ function render(){
       +'<div class="g2"><label class="f">Piso<input name="piso" value="'+esc(g.piso)+'"></label><label class="f">Depto<input name="depto" value="'+esc(g.depto)+'"></label></div>'
       +'<div class="g2" style="grid-template-columns:1fr 2fr"><label class="f">Código postal<input name="cp" inputmode="numeric" maxlength="4" autocomplete="postal-code" value="'+esc(g.cp)+'"></label><label class="f">Localidad<select name="prov_loc_cp"><option value="">Poné tu código postal</option></select></label></div>'
       +'<label class="f">Indicaciones para la entrega (opcional)<input name="observaciones" maxlength="200" placeholder="Ej: timbre B, casa con rejas verdes" value="'+esc(g.observaciones)+'"></label></div>'
-      +'<div id="sucursal" hidden><label class="f">Sucursal Andreani<input name="sucursal" list="sucList" placeholder="Escribí tu ciudad" autocomplete="off" value="'+esc(g.sucursal)+'"></label><datalist id="sucList"></datalist><p class="hint">Elegí una de la lista.</p></div>'
+      +'<div id="sucursal" hidden><label class="f">Sucursal Andreani<select name="sucursal" id="sucSelect"><option value="">Cargando sucursales…</option></select></label><p class="hint" id="sucHint">Seleccioná la sucursal donde querés retirar tu pedido.</p></div>'
       +'<fieldset><legend>Forma de pago</legend>'
       +'<label class="pay"><input type="radio" name="pago" value="tarjeta" checked><span><b>Tarjeta: '+money(sumT())+'</b><small>1 pago o hasta '+C.cuotas+' cuotas sin interés de '+money(sumT()/C.cuotas)+', con Mercado Pago.</small></span></label>'
       +'<label class="pay"><input type="radio" name="pago" value="transferencia"><span><b>Transferencia: '+money(sumX())+'</b><small>Con descuento. Te pasamos los datos al confirmar.</small></span></label>'
@@ -679,13 +679,35 @@ function render(){
 function entregaToggle(){
   var f=$("#f"); if(!f) return; var r=f.querySelector('[name="entrega"]:checked'); var suc=!!r&&r.value==="sucursal";
   $("#domicilio").hidden=suc; $("#sucursal").hidden=!suc;
-  if(suc) cargarSuc();
+  if(suc) cargarSuc().catch(function(){});
 }
 function cargarLoc(){ return LOC?Promise.resolve(LOC):fetch("localidades.json").then(function(r){return r.json();}).then(function(j){LOC=j;return j;}); }
 function cargarSuc(){
-  if(SUC) return Promise.resolve(SUC);
-  return fetch("sucursales.json").then(function(r){return r.json();}).then(function(j){SUC=j;
-    $("#sucList").innerHTML=j.map(function(s){return '<option value="'+esc(s)+'">';}).join(""); return j;});
+  var sel=$("#sucSelect"), hint=$("#sucHint");
+  if(!sel) return Promise.resolve(SUC);
+  function mostrar(list){
+    if(!sel.isConnected) return list;
+    var anterior=(store("lp_datos")||{}).sucursal||"";
+    var actual=sel.value || anterior;
+    sel.innerHTML='<option value="">Elegí una sucursal ('+list.length+' disponibles)</option>'+
+      list.map(function(n){return '<option value="'+esc(n)+'"'+(n===actual?' selected':'')+'>'+esc(n)+'</option>';}).join("");
+    if(hint) hint.textContent="Seleccioná una sucursal de la lista desplegable.";
+    return list;
+  }
+  if(SUC) return Promise.resolve(mostrar(SUC));
+  sel.innerHTML='<option value="">Cargando sucursales…</option>';
+  return fetch("sucursales.json",{cache:"no-store"}).then(function(r){
+    if(!r.ok) throw new Error("No se encontró sucursales.json (HTTP "+r.status+")");
+    return r.json();
+  }).then(function(j){
+    if(!Array.isArray(j)||!j.length||!j.every(function(x){return typeof x==="string";})) throw new Error("El listado de sucursales no es válido");
+    SUC=j; return mostrar(j);
+  }).catch(function(e){
+    if(sel.isConnected) sel.innerHTML='<option value="">No se pudieron cargar las sucursales</option>';
+    if(hint) hint.textContent="Error al cargar las sucursales. Actualizá la página e intentá nuevamente.";
+    console.error("Error de sucursales Andreani:",e);
+    throw e;
+  });
 }
 function buscarCP(cp,pre){
   var sel=$('#f [name="prov_loc_cp"]'); if(!sel) return;
