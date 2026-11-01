@@ -260,6 +260,8 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 @media (prefers-reduced-motion: reduce){.spinner{animation-duration:2.4s}}
 .linkbtn{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;font:inherit;cursor:pointer}
 .big{font-size:2rem;font-weight:800;letter-spacing:-.02em}
+
+.suc-combo{position:relative;width:100%}.suc-combo>input[type="search"]{width:100%}.suc-resultados{position:absolute;z-index:120;top:calc(100% + 4px);left:0;right:0;max-height:260px;overflow-y:auto;background:#fff;border:1px solid #aab69f;border-radius:9px;box-shadow:0 10px 30px #0002}.suc-resultados[hidden]{display:none!important}.suc-opcion{display:block;width:100%;border:0;border-bottom:1px solid #e5e8e1;background:white;color:#1e2418;text-align:left;padding:12px 14px;cursor:pointer;font:inherit}.suc-opcion:hover,.suc-opcion:focus{background:#edf2e6;outline:0}
 </style>
 </head>
 <body>
@@ -659,7 +661,7 @@ function render(){
       +'<div class="g2"><label class="f">Piso<input name="piso" value="'+esc(g.piso)+'"></label><label class="f">Depto<input name="depto" value="'+esc(g.depto)+'"></label></div>'
       +'<div class="g2" style="grid-template-columns:1fr 2fr"><label class="f">Código postal<input name="cp" inputmode="numeric" maxlength="4" autocomplete="postal-code" value="'+esc(g.cp)+'"></label><label class="f">Localidad<select name="prov_loc_cp"><option value="">Poné tu código postal</option></select></label></div>'
       +'<label class="f">Indicaciones para la entrega (opcional)<input name="observaciones" maxlength="200" placeholder="Ej: timbre B, casa con rejas verdes" value="'+esc(g.observaciones)+'"></label></div>'
-      +'<div id="sucursal" hidden><label class="f">Buscar sucursal Andreani<input type="search" id="sucBuscar" placeholder="Escribí una ciudad o sucursal, ej. Avellaneda" autocomplete="off" oninput="filtrarSucursales()"></label><label class="f">Sucursal Andreani<select name="sucursal" id="sucSelect"><option value="">Cargando sucursales…</option></select></label><p class="hint" id="sucHint">Escribí para filtrar las sucursales y seleccioná una opción.</p></div>'
+      +'<div id="sucursal" hidden><label class="f" for="sucBuscar">Sucursal Andreani</label><div class="suc-combo"><input type="search" id="sucBuscar" placeholder="Escribí una localidad, ej. Junín" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sucResultados" oninput="filtrarSucursales()" onfocus="filtrarSucursales()" onkeydown="teclaSucursal(event)"><input type="hidden" name="sucursal" id="sucValor"><div id="sucResultados" class="suc-resultados" role="listbox" hidden></div></div><p class="hint" id="sucHint">Escribí el nombre de una localidad y elegí la sucursal.</p></div>'
       +'<fieldset><legend>Forma de pago</legend>'
       +'<label class="pay"><input type="radio" name="pago" value="tarjeta" checked><span><b>Tarjeta: '+money(sumT())+'</b><small>1 pago o hasta '+C.cuotas+' cuotas sin interés de '+money(sumT()/C.cuotas)+', con Mercado Pago.</small></span></label>'
       +'<label class="pay"><input type="radio" name="pago" value="transferencia"><span><b>Transferencia: '+money(sumX())+'</b><small>Con descuento. Te pasamos los datos al confirmar.</small></span></label>'
@@ -685,33 +687,52 @@ function cargarLoc(){ return LOC?Promise.resolve(LOC):fetch("localidades.json").
 function normalizarSucursal(s){
   return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 }
+function seleccionarSucursal(nombre){
+  var campo=$("#sucBuscar"), valor=$("#sucValor"), lista=$("#sucResultados");
+  if(!campo||!valor) return;
+  campo.value=nombre; valor.value=nombre;
+  lista.hidden=true; campo.setAttribute("aria-expanded","false");
+  var hint=$("#sucHint"); if(hint) hint.textContent="Sucursal seleccionada: "+nombre;
+}
 function filtrarSucursales(){
-  var sel=$("#sucSelect"), input=$("#sucBuscar"), hint=$("#sucHint");
-  if(!sel||!SUC) return;
-  var texto=normalizarSucursal(input&&input.value), anterior=sel.value;
-  var lista=texto?SUC.filter(function(n){return normalizarSucursal(n).includes(texto);}):SUC;
-  // Limitar la cantidad visible para que el selector sea rápido en celulares.
-  var visibles=lista.slice(0,100);
-  sel.innerHTML='<option value="">'+(lista.length?'Elegí una sucursal ('+lista.length+' coincidencias)':'No hay sucursales que coincidan')+'</option>'+
-    visibles.map(function(n){return '<option value="'+esc(n)+'"'+(n===anterior?' selected':'')+'>'+esc(n)+'</option>';}).join("");
-  if(hint) hint.textContent=lista.length>100?'Hay '+lista.length+' coincidencias. Escribí más letras para acotar la búsqueda.':lista.length?'Encontramos '+lista.length+' sucursal(es). Elegí una de la lista.':'No encontramos sucursales con ese texto. Probá otra búsqueda.';
+  var campo=$("#sucBuscar"), valor=$("#sucValor"), lista=$("#sucResultados"), hint=$("#sucHint");
+  if(!campo||!lista) return;
+  // Si se modifica el texto, se invalida la selección previa.
+  if(campo.value!==valor.value) valor.value="";
+  if(!SUC){
+    if(hint) hint.textContent="Cargando sucursales…";
+    cargarSuc().catch(function(){}); return;
+  }
+  var q=normalizarSucursal(campo.value);
+  if(!q){lista.hidden=true;campo.setAttribute("aria-expanded","false");if(hint)hint.textContent="Escribí una localidad, por ejemplo Junín.";return;}
+  var coincidencias=SUC.filter(function(n){return normalizarSucursal(n).includes(q);});
+  var visibles=coincidencias.slice(0,30);
+  lista.innerHTML=visibles.map(function(n,i){return '<button type="button" role="option" class="suc-opcion" data-suc-idx="'+i+'">'+esc(n)+'</button>';}).join("");
+  lista.hidden=!visibles.length;campo.setAttribute("aria-expanded",String(!!visibles.length));
+  if(hint) hint.textContent=coincidencias.length?coincidencias.length+" coincidencia(s). Tocá la sucursal que querés retirar.":"No hay sucursales que coincidan con esa búsqueda.";
+  Array.from(lista.querySelectorAll("button")).forEach(function(b,i){
+    b.addEventListener("click",function(){seleccionarSucursal(visibles[i]);});
+    b.addEventListener("keydown",function(e){if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();botonesNavegar(lista,i+(e.key==="ArrowDown"?1:-1));}else if(e.key==="Escape"){lista.hidden=true;campo.focus();}});
+  });
+}
+function botonesNavegar(lista,i){var bs=Array.from(lista.querySelectorAll("button"));if(bs.length)bs[(i+bs.length)%bs.length].focus();}
+function teclaSucursal(e){
+  var lista=$("#sucResultados");if(!lista||lista.hidden)return;
+  var botones=Array.from(lista.querySelectorAll("button"));
+  if(e.key==="ArrowDown" && botones.length){e.preventDefault();botones[0].focus();}
+  if(e.key==="Escape"){lista.hidden=true;$("#sucBuscar").setAttribute("aria-expanded","false");}
 }
 function cargarSuc(){
-  var sel=$("#sucSelect"), hint=$("#sucHint");
-  if(!sel) return Promise.resolve(SUC);
+  var campo=$("#sucBuscar"), hint=$("#sucHint");
+  if(!campo) return Promise.resolve(SUC);
   function mostrar(list){
-    if(!sel.isConnected) return list;
+    if(!campo.isConnected) return list;
     var anterior=(store("lp_datos")||{}).sucursal||"";
-    var buscador=$("#sucBuscar");
-    if(buscador && anterior && list.indexOf(anterior)>=0 && !buscador.value){
-      buscador.value=anterior;
-    }
-    filtrarSucursales();
-    if(anterior && list.indexOf(anterior)>=0 && Array.from(sel.options).some(function(o){return o.value===anterior;})) sel.value=anterior;
+    if(anterior && list.indexOf(anterior)>=0 && !campo.value) seleccionarSucursal(anterior);
+    else if(campo.value && !$("#sucValor").value) filtrarSucursales();
     return list;
   }
   if(SUC) return Promise.resolve(mostrar(SUC));
-  sel.innerHTML='<option value="">Cargando sucursales…</option>';
   return fetch("sucursales.json",{cache:"no-store"}).then(function(r){
     if(!r.ok) throw new Error("No se encontró sucursales.json (HTTP "+r.status+")");
     return r.json();
@@ -719,12 +740,14 @@ function cargarSuc(){
     if(!Array.isArray(j)||!j.length||!j.every(function(x){return typeof x==="string";})) throw new Error("El listado de sucursales no es válido");
     SUC=j; return mostrar(j);
   }).catch(function(e){
-    if(sel.isConnected) sel.innerHTML='<option value="">No se pudieron cargar las sucursales</option>';
     if(hint) hint.textContent="Error al cargar las sucursales. Actualizá la página e intentá nuevamente.";
-    console.error("Error de sucursales Andreani:",e);
-    throw e;
+    console.error("Error de sucursales Andreani:",e);throw e;
   });
 }
+document.addEventListener("click",function(e){
+  var combo=document.querySelector(".suc-combo"),lista=$("#sucResultados"),campo=$("#sucBuscar");
+  if(combo&&lista&&!combo.contains(e.target)){lista.hidden=true;if(campo)campo.setAttribute("aria-expanded","false");}
+});
 function buscarCP(cp,pre){
   var sel=$('#f [name="prov_loc_cp"]'); if(!sel) return;
   cp=String(cp).replace(/\D/g,"");
