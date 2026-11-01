@@ -229,6 +229,9 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .modelo h3{margin:6px 0 2px;font-size:1.25rem}
 .modelo .m-sub{margin:0;font-weight:600}
 .modelo .m-det{margin:2px 0 12px;color:var(--muted);font-size:.92rem}
+.modelo .m-beneficios{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
+.modelo .m-beneficios span{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;background:#eef1db;color:#34452c;border:1px solid #cdd6a7;font-size:.75rem;font-weight:800;letter-spacing:.015em}
+.modelo .m-beneficio-desc{font-size:.9rem;line-height:1.45;margin:8px 0 0;color:var(--muted)}
 .modelo .m-precio strong{display:block;font-size:2rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
 .modelo .m-precio span{color:var(--ok);font-weight:600}
 .modelo .m-transf{margin-top:10px;padding:8px 12px;border:2px solid var(--ok);border-radius:12px;font-weight:600;background:color-mix(in srgb, var(--ok) 9%, transparent)}
@@ -314,9 +317,9 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
   <div class="wrap grid">
     <div>
       <h1>Salí con tu mascota. El auto queda limpio.</h1>
-      <p class="lead">Fundas tipo canasto de tela trucker matelaseada, acolchadas e impermeables, terminadas de los dos lados. Para el asiento trasero completo o para una sola plaza.</p>
+      <p class="lead">Protegé los asientos de tu auto con nuestras fundas <strong>impermeables, acolchadas y resistentes</strong>. Diseñadas para viajar con tu mascota sin preocuparte por el agua, el barro ni los pelos. Disponibles para el asiento trasero completo o para una sola plaza.</p>
       <div class="price-box">
-        <div class="hero-pagos"><span>💳 Hasta <b><span data-p="ncuotas">3</span> cuotas sin interés</b></span><span>💸 <b><span data-p="desc">10</span>% off</b> por transferencia</span></div>
+        <div class="hero-pagos"><span>💧 <b>IMPERMEABLE</b> · Protección contra agua, barro y pelos</span><span>💳 Hasta <b><span data-p="ncuotas">3</span> cuotas sin interés</b></span><span>💸 <b><span data-p="desc">10</span>% off</b> por transferencia</span></div>
         <span class="ship"><span aria-hidden="true">🚚</span><span class="ship-txt">Envío <b>GRATIS</b> <span data-p="envtach"></span>por Andreani a todo el país</span></span>
         <p class="sello">🇦🇷 Diseñada y confeccionada en San Luis · Con garantía de fábrica</p>
         <div class="buy-row">
@@ -624,7 +627,7 @@ function pintarModelos(){
     var ilus='<svg viewBox="0 0 120 80" aria-hidden="true"><rect x="0" y="0" width="120" height="80" rx="12" fill="#2F3822"/><rect x="'+(60-i.ancho/2)+'" y="18" width="'+i.ancho+'" height="44" rx="6" fill="#D9E15A" stroke="#F2F3EC" stroke-width="2"/><path d="M'+(60-i.ancho/2)+' 40H'+(60+i.ancho/2)+'" stroke="#4E5B3A" stroke-width="2" stroke-dasharray="4 3"/></svg>';
     return '<article class="modelo">'
       +(function(){ var pm=principalDe(p.id), nm=MED(p.id).length; return '<div class="m-foto"'+(nm?' role="button" tabindex="0" data-gal="'+p.id+'" data-i="0" aria-label="Ver fotos de '+esc(p.nombre)+'"':'')+'>'+ilus+'<img src="'+(pm?urlImg(pm.drive,900):i.foto)+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()">'+(nm>1?'<span class="m-galbadge">📷 '+nm+'</span>':'')+'</div>'; })()
-      +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
+      +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-beneficio-desc">Funda impermeable para mascotas: protege los asientos del agua, barro y pelos.</p><div class="m-beneficios"><span>💧 IMPERMEABLE</span><span>🛡️ PROTECCIÓN</span><span>ACOLCHADA</span></div><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>Hasta '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<div class="m-transf"><span>💸 Por transferencia <small>'+d+'% off</small></span><b>'+money(p.precio_transferencia)+'</b></div>'
       +'<p class="m-envio">🚚 Envío <b>GRATIS</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s> ':'')+'por Andreani</p>'
