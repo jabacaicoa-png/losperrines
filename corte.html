@@ -161,7 +161,7 @@ function aplicarCorte(d){
 function marcarCorte(){
  dirtyCorte=true;guardarLS();
  if(loadingCorte){estadoCorte("Cargando datos del servidor; cambios locales pendientes");return;}
- if(!cloudReady){estadoCorte("Sin sincronización: iniciá sesión desde admin.html. Cambios solo en este dispositivo.");return;}
+ if(!cloudReady){estadoCorte("⚠ NO guardado en la nube: iniciá sesión en admin.html. El cambio está solo en este dispositivo.");return;}
  if(conflictoCorte){estadoCorte("Conflicto: hay cambios en otro dispositivo. No se sobrescribieron.");return;}
  estadoCorte("Cambios pendientes de guardar…");clearTimeout(saveTimer);saveTimer=setTimeout(enviarCorte,650);
 }
@@ -181,7 +181,7 @@ function enviarCorte(){
 }
 function iniciarCorte(){
  var token=sessionStorage.getItem("lp_token");
- if(!token){loadingCorte=false;estadoCorte("⚠ Sin sesión: entrá desde admin.html en esta misma pestaña para sincronizar. Los cambios quedan locales.");return;}
+ if(!token){loadingCorte=false;estadoCorte("⚠ Sin sesión de administrador: los cambios NO están guardados en Google Sheets. Entrá desde admin.html e iniciá sesión.");return;}
  corteAPI("corte").then(function(r){
  cloudReady=true;loadingCorte=false;versionCorte=r.version||"";
  if(r.data){
@@ -276,6 +276,12 @@ if(!S.modelos||!S.modelos.length){ S={modelos:[
   {id:"m3",nom:"Doble rediseño",an:125,t1:54,t2:40,t3:38,la:40,lb:38,nl:2,q:0}
 ]}; }
 function guardarLS(){ try{ localStorage.setItem(LS,JSON.stringify(snapshotCorte())); }catch(e){} }
+function recuperarCamposLocales(){
+ try{
+  var d=JSON.parse(localStorage.getItem(LS)||"null");
+  if(d&&d.fields)Object.keys(d.fields).forEach(function(k){var el=document.getElementById(k);if(el)el.value=d.fields[k];});
+ }catch(e){}
+}
 function leerForm(){ return {nom:$("#nom").value.trim()||"Modelo",an:num("#an"),t1:num("#t1"),t2:num("#t2"),t3:num("#t3"),la:num("#la"),lb:num("#lb"),nl:num("#nl")}; }
 function cargarForm(m){ ["nom","an","t1","t2","t3","la","lb","nl"].forEach(function(k){ $("#"+k).value=m[k]; }); calcular(); window.scrollTo({top:0,behavior:"smooth"}); }
 
@@ -390,8 +396,10 @@ document.addEventListener("click",function(e){
   else if(t.dataset.ver){ cargarForm(S.modelos.find(function(x){return x.id===t.dataset.ver;})); }
   else if(t.dataset.del){ if(confirm("¿Borrar este modelo?")){ S.modelos=S.modelos.filter(function(x){return x.id!==t.dataset.del;}); marcarCorte(); renderLista(); } }
 });
+recuperarCamposLocales();
 calcular();
 iniciarCorte();
+window.addEventListener("beforeunload",function(e){if(dirtyCorte||savingCorte){e.preventDefault();e.returnValue="";}});
 window.addEventListener("focus",function(){if(cloudReady&&!dirtyCorte&&!savingCorte)corteAPI("corte").then(function(r){if(r.version!==versionCorte){versionCorte=r.version||"";aplicarCorte(r.data);guardarLS();estadoCorte("✓ Actualizado desde otro dispositivo");}}).catch(function(){});});
 })();
 </script>
