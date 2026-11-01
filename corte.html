@@ -134,10 +134,65 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
   </div>
 </main>
 <div id="print"></div>
+<div id="syncCorte" role="status" aria-live="polite" style="position:sticky;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);padding:10px 18px;text-align:center;font-size:.85rem;font-weight:700">Conectando con la planilla…</div>
 <script>
 (function(){
 "use strict";
 var LS="lp-corte";
+var API="https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDbptu4xiogljKkCeJQrGXh4rn7f0PsXDbypAZCxbVQ/exec";
+var versionCorte="",cloudReady=false,dirtyCorte=false,loadingCorte=true,saveTimer=null,savingCorte=false,conflictoCorte=false;
+function estadoCorte(t ){var e=document.getElementById("syncCorte");if(e)e.textContent=t;}
+function corteAPI(accion,extra){
+ var body=Object.assign({accion:accion,token:sessionStorage.getItem("lp_token")||""},extra||{});
+ return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})
+ .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+ .then(function(j){if(!j.ok)throw new Error(j.error||"Error de servidor");return j;});
+}
+function snapshotCorte(){
+ var fields={};["rw","rl","rp","mg","nom","an","t1","t2","t3","la","lb","nl"].forEach(function(k){fields[k]=document.getElementById(k).value;});
+ return {modelos:S.modelos,fields:fields};
+}
+function aplicarCorte(d){
+ if(!d||!Array.isArray(d.modelos))return;
+ S={modelos:d.modelos};
+ if(d.fields)Object.keys(d.fields).forEach(function(k){var el=document.getElementById(k);if(el)el.value=d.fields[k];});
+ renderLista();calcular();
+}
+function marcarCorte(){
+ dirtyCorte=true;guardarLS();
+ if(loadingCorte){estadoCorte("Cargando datos del servidor; cambios locales pendientes");return;}
+ if(!cloudReady){estadoCorte("Sin sincronización: iniciá sesión desde admin.html. Cambios solo en este dispositivo.");return;}
+ if(conflictoCorte){estadoCorte("Conflicto: hay cambios en otro dispositivo. No se sobrescribieron.");return;}
+ estadoCorte("Cambios pendientes de guardar…");clearTimeout(saveTimer);saveTimer=setTimeout(enviarCorte,650);
+}
+function enviarCorte(){
+ if(!cloudReady||!dirtyCorte||savingCorte||conflictoCorte)return;
+ savingCorte=true;dirtyCorte=false;var data=snapshotCorte();
+ estadoCorte("Guardando en Google Sheets…");
+ corteAPI("guardarCorte",{data:data,version:versionCorte}).then(function(r){
+ versionCorte=r.version;savingCorte=false;
+ if(dirtyCorte){clearTimeout(saveTimer);saveTimer=setTimeout(enviarCorte,100);}
+ else estadoCorte("✓ Guardado en Google Sheets · disponible en PC y celular");
+ }).catch(function(e){
+ savingCorte=false;dirtyCorte=true;
+ if(e.message.indexOf("CONFLICTO_CORTE")>=0){conflictoCorte=true;estadoCorte("⚠ Hay una versión más reciente en otro dispositivo. Recargá antes de seguir; tus cambios locales siguen en este navegador.");}
+ else estadoCorte("⚠ No se guardó en Google Sheets: "+e.message+". Reintentá al editar o recargar.");
+ });
+}
+function iniciarCorte(){
+ var token=sessionStorage.getItem("lp_token");
+ if(!token){loadingCorte=false;estadoCorte("⚠ Sin sesión: entrá desde admin.html en esta misma pestaña para sincronizar. Los cambios quedan locales.");return;}
+ corteAPI("corte").then(function(r){
+ cloudReady=true;loadingCorte=false;versionCorte=r.version||"";
+ if(r.data){
+  if(dirtyCorte){conflictoCorte=true;estadoCorte("⚠ Hay cambios locales sin sincronizar. No se reemplazaron. Guardá una copia antes de recargar.");return;}
+  aplicarCorte(r.data);guardarLS();estadoCorte("✓ Datos actualizados desde Google Sheets");
+ }else{
+  estadoCorte("Inicializando modelos en Google Sheets…");dirtyCorte=true;enviarCorte();
+ }
+ }).catch(function(e){loadingCorte=false;estadoCorte("⚠ Sin conexión con Google Sheets: "+e.message+". Los cambios no se sincronizan.");});
+}
+
 function $(s){return document.querySelector(s);}
 function num(id){var v=parseFloat(String($(id).value).replace(",","."));return isFinite(v)?v:0;}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
@@ -214,13 +269,13 @@ function dibujar(b,RW){
 
 /* ---------- estado ---------- */
 var S={modelos:[]};
-try{ var raw=localStorage.getItem(LS); if(raw) S=JSON.parse(raw); }catch(e){}
+try{ var raw=localStorage.getItem(LS); if(raw) { var cached=JSON.parse(raw); S={modelos:cached.modelos||[]}; } }catch(e){}
 if(!S.modelos||!S.modelos.length){ S={modelos:[
   {id:"m1",nom:"Doble (actual)",an:125,t1:48,t2:40,t3:38,la:40,lb:38,nl:2,q:9},
   {id:"m2",nom:"Individual (actual)",an:60,t1:48,t2:40,t3:38,la:40,lb:38,nl:2,q:3},
   {id:"m3",nom:"Doble rediseño",an:125,t1:54,t2:40,t3:38,la:40,lb:38,nl:2,q:0}
 ]}; }
-function guardarLS(){ try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){} }
+function guardarLS(){ try{ localStorage.setItem(LS,JSON.stringify(snapshotCorte())); }catch(e){} }
 function leerForm(){ return {nom:$("#nom").value.trim()||"Modelo",an:num("#an"),t1:num("#t1"),t2:num("#t2"),t3:num("#t3"),la:num("#la"),lb:num("#lb"),nl:num("#nl")}; }
 function cargarForm(m){ ["nom","an","t1","t2","t3","la","lb","nl"].forEach(function(k){ $("#"+k).value=m[k]; }); calcular(); window.scrollTo({top:0,behavior:"smooth"}); }
 
@@ -323,19 +378,21 @@ function fichaHTML(){
   return h.join("");
 }
 document.addEventListener("input",function(e){
-  if(e.target.dataset.q){ var m=S.modelos.find(function(x){return x.id===e.target.dataset.q;}); m.q=parseFloat(e.target.value)||0; guardarLS();
+  if(e.target.dataset.q){ var m=S.modelos.find(function(x){return x.id===e.target.dataset.q;}); m.q=parseFloat(e.target.value)||0; marcarCorte();
     var pos=e.target.selectionStart, id=e.target.dataset.q; renderLista(); var el=document.querySelector('[data-q="'+id+'"]'); if(el){ el.focus(); try{el.setSelectionRange(pos,pos);}catch(x){} } return; }
-  if(e.target.closest(".block")||e.target.id) calcular();
+  if(e.target.closest(".block")||e.target.id){ calcular(); if(e.target.matches("input"))marcarCorte(); }
 });
 document.addEventListener("click",function(e){
   var t=e.target.closest("button"); if(!t) return;
   if(t.id==="ficha"){ $("#print").innerHTML=fichaHTML(); setTimeout(function(){ window.print(); },150); return; }
   if(t.id==="guardar"){ var md=leerForm(), ex=S.modelos.find(function(x){return x.nom.toLowerCase()===md.nom.toLowerCase();});
-    if(ex){ Object.assign(ex,md); } else { md.id="m"+Date.now().toString(36); md.q=0; S.modelos.push(md); } guardarLS(); renderLista(); t.textContent="Guardado ✓"; setTimeout(function(){t.textContent="Guardar modelo";},1500); }
+    if(ex){ Object.assign(ex,md); } else { md.id="m"+Date.now().toString(36); md.q=0; S.modelos.push(md); } marcarCorte(); renderLista(); t.textContent="Guardar pendiente…"; setTimeout(function(){t.textContent="Guardar modelo";},1500); }
   else if(t.dataset.ver){ cargarForm(S.modelos.find(function(x){return x.id===t.dataset.ver;})); }
-  else if(t.dataset.del){ if(confirm("¿Borrar este modelo?")){ S.modelos=S.modelos.filter(function(x){return x.id!==t.dataset.del;}); guardarLS(); renderLista(); } }
+  else if(t.dataset.del){ if(confirm("¿Borrar este modelo?")){ S.modelos=S.modelos.filter(function(x){return x.id!==t.dataset.del;}); marcarCorte(); renderLista(); } }
 });
 calcular();
+iniciarCorte();
+window.addEventListener("focus",function(){if(cloudReady&&!dirtyCorte&&!savingCorte)corteAPI("corte").then(function(r){if(r.version!==versionCorte){versionCorte=r.version||"";aplicarCorte(r.data);guardarLS();estadoCorte("✓ Actualizado desde otro dispositivo");}}).catch(function(){});});
 })();
 </script>
 </body>
