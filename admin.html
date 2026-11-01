@@ -125,6 +125,14 @@ dialog::backdrop{background:rgba(20,24,14,.5)}
 .cfg-row small{display:block;color:var(--muted);margin:-2px 0 6px}
 .cfg-row textarea{width:100%;font:500 1rem "Bricolage Grotesque",sans-serif;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;resize:vertical}
 .cfg-row input{width:100%;font:500 1rem "Bricolage Grotesque",sans-serif;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:9px 12px}
+.medgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.medcard{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.medcard img,.medvid{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--field)}
+.medvid{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:2rem;color:var(--muted)}
+.medvid small{font-size:.8rem}
+.medbadge{position:absolute;top:8px;left:8px;background:var(--ball);color:#1E2418;font-weight:700;font-size:.75rem;border-radius:999px;padding:2px 8px}
+.medacts{display:flex;gap:4px;padding:6px;justify-content:space-between}
+.medacts .btn{padding:6px 8px;flex:1}
 .spinner{display:inline-block;width:18px;height:18px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .copy{word-break:break-all;background:var(--field);border:1.5px dashed var(--line);border-radius:10px;padding:10px 12px;font-size:.9rem}
@@ -181,12 +189,12 @@ function render(){
   if(!S.data){ r.innerHTML='<div style="min-height:100vh;display:grid;place-items:center"><span class="spinner"></span></div>'; cargar(); return; }
   var d=S.data, P=d.pedidos;
   var nRes=P.filter(function(p){return p.estado==="reserva";}).length, nPag=P.filter(function(p){return p.estado==="pagado";}).length, nExp=P.filter(function(p){return p.estado==="exportado";}).length;
-  var tabs=[["resumen","Resumen",0],["pedidos","Pedidos",nRes+nPag+nExp],["stock","Stock",0],["envios","Envíos",nPag+nExp],["pagos","Pagos",0],["costos","Costos",0],["corte","Corte",0],["config","Configuración",0]];
+  var tabs=[["resumen","Resumen",0],["pedidos","Pedidos",nRes+nPag+nExp],["stock","Stock",0],["fotos","Fotos y videos",0],["envios","Envíos",nPag+nExp],["pagos","Pagos",0],["costos","Costos",0],["corte","Corte",0],["config","Configuración",0]];
   var h='<header class="top"><div class="bar"><div class="brand">'+LOGO+'<span>Los Perrines <small>Administración</small></span></div>'
     +'<div style="display:flex;gap:8px"><button class="btn ghost" data-a="refrescar" aria-label="Actualizar">↻</button><button class="btn ghost" data-a="salir">Salir</button></div></div><nav class="tabs" role="tablist">'
     +tabs.map(function(t){return '<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+t[1]+(t[2]?'<span class="pill">'+t[2]+'</span>':'')+'</button>';}).join("")
     +'</nav></header><main>';
-  h+= S.tab==="resumen"?vResumen(d) : S.tab==="pedidos"?vPedidos(d) : S.tab==="stock"?vStock(d) : S.tab==="envios"?vEnvios(d) : S.tab==="pagos"?vPagos() : S.tab==="costos"?vCostos() : S.tab==="corte"?vCorte() : vConfig(d);
+  h+= S.tab==="resumen"?vResumen(d) : S.tab==="pedidos"?vPedidos(d) : S.tab==="stock"?vStock(d) : S.tab==="fotos"?vFotos(d) : S.tab==="envios"?vEnvios(d) : S.tab==="pagos"?vPagos() : S.tab==="costos"?vCostos() : S.tab==="corte"?vCorte() : vConfig(d);
   r.innerHTML=h+'</main>';
 }
 function nombreProd(d,id){ var p=(d.productos||[]).filter(function(x){return x.id===id;})[0]; return p?p.nombre:(id==="individual"?"Individual":"Doble"); }
@@ -293,12 +301,55 @@ function vConfig(d){
     +'<form id="cfg">'+CFG_GRUPOS.map(function(g){ return '<div class="block"><h3>'+esc(g[0])+'</h3>'+g[1].map(function(k){return '<div class="cfg-row"><label class="f" style="margin:0">'+esc(CFG_LBL[k]||k)+(/^medidas/.test(k)?'<textarea name="'+k+'" rows="5">'+esc(c[k]||"")+'</textarea><small style="color:var(--muted);font-weight:500">Un renglón por cada punto. Se muestran en “Medidas y detalles”.</small>':'<input name="'+k+'" value="'+esc(c[k]||"")+'">')+'</label></div>';}).join("")+'</div>'; }).join("")
     +'</form><button class="btn main big" data-a="guardarCfg" style="margin:4px 0 20px">Guardar cambios</button>';
 }
+var MED_DEST="portada";
+function urlImg(id,w){ return "https://lh3.googleusercontent.com/d/"+id+"=w"+(w||400); }
+function vFotos(d){
+  var dest=[["portada","Portada de la web"]].concat((d.productos||[]).map(function(p){return [p.id,p.nombre];}));
+  if(!dest.some(function(x){return x[0]===MED_DEST;})) MED_DEST="portada";
+  var lista=(d.media||[]).filter(function(m){return m.destino===MED_DEST;});
+  var h='<h2>Fotos y videos</h2><p class="sub">Elegí dónde van, subilos y ordenalos. La foto marcada con ★ es la principal (la que se ve primero).</p>'
+    +'<div class="filters">'+dest.map(function(x){ var n=(d.media||[]).filter(function(m){return m.destino===x[0];}).length; return '<button class="chip" data-med="'+x[0]+'" aria-pressed="'+(MED_DEST===x[0])+'">'+esc(x[1])+(n?' ('+n+')':'')+'</button>'; }).join("")+'</div>'
+    +'<div class="block" style="margin-top:0"><label class="btn main" style="display:inline-block;cursor:pointer">＋ Subir fotos o videos<input type="file" id="medFile" accept="image/*,video/*" multiple hidden></label>'
+    +'<p class="sub" style="margin:10px 0 0">Las fotos se achican solas para que la web cargue rápido. Videos: cortos, hasta 25 MB.</p><div id="medProg" class="sub" style="margin:8px 0 0"></div></div>';
+  if(!lista.length) return h+'<div class="empty">Todavía no hay fotos ni videos acá.</div>';
+  h+='<div class="medgrid">'+lista.map(function(m,i){
+    var prev=m.tipo==="img"?'<img src="'+urlImg(m.drive,400)+'" alt="'+esc(m.nombre)+'" loading="lazy">':'<div class="medvid">▶<small>Video</small></div>';
+    return '<div class="medcard">'+prev+(m.principal?'<span class="medbadge">★ Principal</span>':'')
+      +'<div class="medacts"><button class="btn ghost" data-a="mOrd" data-id="'+m.id+'" data-dir="-1" aria-label="Mover antes"'+(i===0?' disabled':'')+'>◀</button>'
+      +'<button class="btn ghost" data-a="mOrd" data-id="'+m.id+'" data-dir="1" aria-label="Mover después"'+(i===lista.length-1?' disabled':'')+'>▶</button>'
+      +(m.tipo==="img"&&!m.principal?'<button class="btn ghost" data-a="mPri" data-id="'+m.id+'" aria-label="Hacer principal">★</button>':'')
+      +'<button class="btn ghost" style="color:var(--bad)" data-a="mDel" data-id="'+m.id+'" aria-label="Borrar">🗑</button></div></div>';
+  }).join("")+'</div>';
+  return h;
+}
+function achicar(file){ return new Promise(function(ok,bad){
+  var img=new Image(), url=URL.createObjectURL(file);
+  img.onload=function(){ var max=1600, w=img.naturalWidth, h=img.naturalHeight, k=Math.min(1,max/Math.max(w,h));
+    var c=document.createElement("canvas"); c.width=Math.round(w*k); c.height=Math.round(h*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(url); ok({data:c.toDataURL("image/jpeg",0.82).split(",")[1],mime:"image/jpeg",nombre:file.name.replace(/\.[^.]+$/,"")+".jpg"}); };
+  img.onerror=function(){ URL.revokeObjectURL(url); bad(new Error("No pude leer la imagen "+file.name)); };
+  img.src=url; }); }
+function leerB64(file){ return new Promise(function(ok,bad){ var r=new FileReader(); r.onload=function(){ ok({data:String(r.result).split(",")[1],mime:file.type,nombre:file.name}); }; r.onerror=function(){bad(new Error("No pude leer "+file.name));}; r.readAsDataURL(file); }); }
+function subirArchivos(files){
+  var prog=$("#medProg"), lista=Array.prototype.slice.call(files), i=0, ok=0;
+  function sig(){
+    if(i>=lista.length){ prog.textContent=ok+" de "+lista.length+" subidos."; cargar(ok?"Archivos subidos":null); return; }
+    var f=lista[i++]; prog.innerHTML='<span class="spinner"></span> Subiendo '+i+' de '+lista.length+': '+esc(f.name);
+    var esVid=/^video\//.test(f.type);
+    if(!/^(image|video)\//.test(f.type)){ toast(f.name+": no es foto ni video"); return sig(); }
+    if(esVid&&f.size>25*1024*1024){ toast(f.name+": el video pesa más de 25 MB"); return sig(); }
+    (esVid?leerB64(f):achicar(f)).then(function(x){ return api("subirMedia",{destino:MED_DEST,nombre:x.nombre,mime:x.mime,data:x.data}); })
+      .then(function(){ ok++; sig(); }).catch(function(e){ toast(e.message); sig(); });
+  }
+  sig();
+}
 function vPagos(){ return '<iframe src="pagos.html" title="Pagos" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function vCorte(){ return '<iframe src="corte.html" title="Calculadora de corte" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function vCostos(){ return '<iframe src="costos.html" title="Costos" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function dlg(html){ $("#dlgIn").innerHTML=html; $("#dlg").showModal(); }
 
 /* ---------- eventos ---------- */
+document.addEventListener("change",function(e){ if(e.target.id==="medFile"&&e.target.files.length){ subirArchivos(e.target.files); e.target.value=""; } });
 document.addEventListener("submit",function(e){
   if(e.target.id!=="login") return; e.preventDefault();
   var b=$("#loginBtn"); b.disabled=true; b.innerHTML='<span class="spinner"></span>';
@@ -309,6 +360,7 @@ document.addEventListener("click",function(e){
   var t=e.target.closest("button"); if(!t||t.disabled) return;
   if(t.dataset.tab){ S.tab=t.dataset.tab; render(); window.scrollTo(0,0); return; }
   if(t.dataset.go){ S.tab=t.dataset.go; if(t.dataset.f) S.filtro=t.dataset.f; render(); window.scrollTo(0,0); return; }
+  if(t.dataset.med){ MED_DEST=t.dataset.med; render(); return; }
   if(t.classList.contains("chip")){ S.filtro=t.dataset.f; render(); return; }
   var a=t.dataset.a, id=t.dataset.id;
   if(a==="salir") salir();
@@ -324,6 +376,9 @@ document.addEventListener("click",function(e){
     accion("movimiento",{producto:$("#mvProd").value,tipo:tipo==="ingreso"?"ingreso":"ajuste",cantidad:tipo==="ajuste-"?-cant:cant,motivo:mot},"Movimiento guardado",t);
   }
   else if(a==="avisar") accion("avisar",{},"Avisos enviados",t);
+  else if(a==="mOrd") accion("ordenMedia",{id:id,dir:t.dataset.dir},null,t);
+  else if(a==="mPri") accion("principalMedia",{id:id},"Foto principal actualizada",t);
+  else if(a==="mDel"){ if(confirm("¿Borrar este archivo? Se va a la papelera de tu Drive.")) accion("borrarMedia",{id:id},"Archivo borrado",t); }
   else if(a==="guardarCfg"){ var vals={}; new FormData($("#cfg")).forEach(function(v,k){vals[k]=v;}); accion("guardarConfig",{valores:vals},"Configuración guardada",t); }
   else if(a==="exportar"){
     accion("exportar",{},null,t).then(function(r){ if(!r) return;

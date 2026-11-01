@@ -175,6 +175,20 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .ship{font-size:1.02rem;padding:8px 16px}
 .tachado{color:var(--muted);text-decoration:line-through;font-weight:500;margin-right:6px}
 .gratis{color:var(--ok);font-weight:800}
+.modelo .m-foto[data-gal]{cursor:pointer}
+.m-galbadge{position:absolute;right:10px;bottom:10px;background:rgba(30,36,24,.75);color:#fff;font-weight:700;font-size:.85rem;border-radius:999px;padding:3px 10px}
+.galvid{width:100%;aspect-ratio:4/3;border:0;border-radius:16px;background:#2F3822;color:#D9E15A;font-size:2.4rem;cursor:pointer}
+#gallery img[data-gal]{cursor:pointer}
+.galdlg{border:0;padding:0;width:min(920px,96vw);max-height:94vh;background:#111;color:#fff;border-radius:18px;overflow:hidden}
+.galdlg::backdrop{background:rgba(0,0,0,.8)}
+.galtop{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-weight:700}
+.galtop .x{color:#fff}
+.galbox{display:flex;align-items:center;justify-content:center;background:#000;height:min(70vh,640px)}
+.galbox img{max-width:100%;max-height:100%;object-fit:contain}
+.galbox iframe{width:100%;height:100%;border:0}
+.galnav{display:flex;justify-content:space-between;gap:10px;padding:10px 12px}
+.galnav .btn{color:#fff;border-color:#555}
+.galnav .btn:disabled{opacity:.35}
 .sucmap{height:220px;border-radius:14px;border:1px solid var(--line);margin:6px 0 10px;overflow:hidden;z-index:0}
 .suclist{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
 .suc{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;background:var(--card)}
@@ -532,6 +546,11 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 </dialog>
 
 <!-- diálogos simples -->
+<dialog id="gal" class="galdlg" aria-label="Galería">
+  <div class="galtop"><span id="galN"></span><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div id="galBox" class="galbox"></div>
+  <div class="galnav"><button class="btn btn-ghost" id="galPrev" aria-label="Anterior">‹ Anterior</button><button class="btn btn-ghost" id="galNext" aria-label="Siguiente">Siguiente ›</button></div>
+</dialog>
 <dialog class="drawer" id="dlg" aria-label="Formulario">
   <div class="dr">
     <div class="dr-h"><h2 id="dlgTitle"></h2><button class="x" data-close aria-label="Cerrar">×</button></div>
@@ -604,7 +623,7 @@ function pintarModelos(){
   g.innerHTML=ps.map(function(p){ var i0=INFO[p.id]||{sub:"",det:[],ancho:40,foto:""}, i={sub:p.sub||i0.sub,det:(p.medidas&&p.medidas.length)?p.medidas:i0.det,ancho:i0.ancho,foto:i0.foto}, sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
     var ilus='<svg viewBox="0 0 120 80" aria-hidden="true"><rect x="0" y="0" width="120" height="80" rx="12" fill="#2F3822"/><rect x="'+(60-i.ancho/2)+'" y="18" width="'+i.ancho+'" height="44" rx="6" fill="#D9E15A" stroke="#F2F3EC" stroke-width="2"/><path d="M'+(60-i.ancho/2)+' 40H'+(60+i.ancho/2)+'" stroke="#4E5B3A" stroke-width="2" stroke-dasharray="4 3"/></svg>';
     return '<article class="modelo">'
-      +'<div class="m-foto">'+ilus+'<img src="'+i.foto+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()"></div>'
+      +(function(){ var pm=principalDe(p.id), nm=MED(p.id).length; return '<div class="m-foto"'+(nm?' role="button" tabindex="0" data-gal="'+p.id+'" data-i="0" aria-label="Ver fotos de '+esc(p.nombre)+'"':'')+'>'+ilus+'<img src="'+(pm?urlImg(pm.drive,900):i.foto)+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()">'+(nm>1?'<span class="m-galbadge">📷 '+nm+'</span>':'')+'</div>'; })()
       +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>Hasta '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<div class="m-transf"><span>💸 Por transferencia <small>'+d+'% off</small></span><b>'+money(p.precio_transferencia)+'</b></div>'
@@ -614,14 +633,35 @@ function pintarModelos(){
       +'<button class="btn btn-main" style="width:100%;margin-top:12px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'Agregar al carrito')+'</button></div></article>';
   }).join("");
 }
+function MED(dest){ return (C.media||[]).filter(function(m){return m.destino===dest;}).sort(function(a,b){return a.orden-b.orden;}); }
+function principalDe(dest){ var l=MED(dest); return l.filter(function(m){return m.principal&&m.tipo==="img";})[0]||l.filter(function(m){return m.tipo==="img";})[0]||null; }
+function urlImg(id,w){ return "https://lh3.googleusercontent.com/d/"+id+"=w"+(w||1600); }
 function fotos(){
   var hero=document.createElement("img"); hero.className="foto"; hero.alt="Funda tipo canasto colocada en el asiento trasero";
-  hero.onerror=function(){hero.remove();}; hero.src="foto-principal.jpg"; $(".illus").appendChild(hero);
+  var pp=principalDe("portada");
+  hero.onerror=function(){hero.remove();}; hero.src=pp?urlImg(pp.drive,1600):"foto-principal.jpg"; $(".illus").appendChild(hero);
+  var port=MED("portada").filter(function(m){return !pp||m.id!==pp.id;});
+  if(port.length){
+    $("#gallery").innerHTML=port.map(function(m,i){ return m.tipo==="img"?'<img src="'+urlImg(m.drive,900)+'" alt="Foto de la funda" loading="lazy" data-gal="portada" data-i="'+(i+(pp?1:0))+'">':'<button class="galvid" data-gal="portada" data-i="'+(i+(pp?1:0))+'" aria-label="Ver video">▶</button>'; }).join("");
+    $("#fotos").hidden=false; return;
+  }
   var imgs=$$("#gallery img"), pend=imgs.length, ok=0;
   imgs.forEach(function(i){
     function fin(good){ if(good) ok++; else i.remove(); if(--pend===0) $("#fotos").hidden=ok===0; }
     if(i.complete && i.naturalWidth) fin(true); else { i.onload=function(){fin(true);}; i.onerror=function(){fin(false);}; }
   });
+}
+var GAL={lista:[],i:0};
+function abrirGaleria(dest,i){
+  var l=MED(dest), pp=principalDe(dest);
+  if(pp){ l=[pp].concat(l.filter(function(m){return m.id!==pp.id;})); }
+  if(!l.length) return; GAL={lista:l,i:Math.max(0,Math.min(i||0,l.length-1))}; pintarGaleria(); $("#gal").showModal();
+}
+function pintarGaleria(){
+  var m=GAL.lista[GAL.i], box=$("#galBox");
+  box.innerHTML=m.tipo==="img"?'<img src="'+urlImg(m.drive,1600)+'" alt="Foto '+(GAL.i+1)+'">':'<iframe src="https://drive.google.com/file/d/'+m.drive+'/preview" allow="autoplay" title="Video"></iframe>';
+  $("#galN").textContent=(GAL.i+1)+" / "+GAL.lista.length;
+  $("#galPrev").disabled=GAL.i===0; $("#galNext").disabled=GAL.i===GAL.lista.length-1;
 }
 
 /* ---------- carrito y checkout ---------- */
@@ -832,6 +872,9 @@ function enviarDlg(tipo,btn){
 
 /* ---------- eventos ---------- */
 document.addEventListener("click",function(e){
+  var gg=e.target.closest("[data-gal]"); if(gg){ abrirGaleria(gg.dataset.gal,parseInt(gg.dataset.i,10)||0); return; }
+  if(e.target.closest("#galPrev")){ if(GAL.i>0){ GAL.i--; pintarGaleria(); } return; }
+  if(e.target.closest("#galNext")){ if(GAL.i<GAL.lista.length-1){ GAL.i++; pintarGaleria(); } return; }
   var t=e.target.closest("button,a"); if(!t) return;
   if(t.hasAttribute("data-add")){ var m=$("#modelos"); if(m&&!m.hidden){ m.scrollIntoView({behavior:"smooth",block:"start"}); return; } t.setAttribute("data-addp","doble"); }
   if(t.dataset.addp){ var id=t.dataset.addp, pr=PR(id); if(!pr) return; if(pr.disponible<=0){ abrirDlg("aviso"); return; }
@@ -845,6 +888,11 @@ document.addEventListener("click",function(e){
   else if(t.dataset.send){ enviarDlg(t.dataset.send,t); }
   else if(t.hasAttribute("data-close")){ var d=t.closest("dialog"); if(d) d.close(); if(step==="ok"){ step="cart"; } }
 });
+(function(){ var g=$("#gal"), x0=null; g.addEventListener("click",function(e){ if(e.target===g) g.close(); });
+  g.addEventListener("close",function(){ $("#galBox").innerHTML=""; });
+  g.addEventListener("touchstart",function(e){ x0=e.touches[0].clientX; },{passive:true});
+  g.addEventListener("touchend",function(e){ if(x0==null) return; var dx=e.changedTouches[0].clientX-x0; x0=null; if(Math.abs(dx)>50){ if(dx<0&&GAL.i<GAL.lista.length-1){GAL.i++;pintarGaleria();} else if(dx>0&&GAL.i>0){GAL.i--;pintarGaleria();} } });
+  document.addEventListener("keydown",function(e){ if(!g.open) return; if(e.key==="ArrowRight"&&GAL.i<GAL.lista.length-1){GAL.i++;pintarGaleria();} if(e.key==="ArrowLeft"&&GAL.i>0){GAL.i--;pintarGaleria();} }); })();
 [drawer,dlg].forEach(function(d){ d.addEventListener("click",function(e){ if(e.target===d) d.close(); }); });
 document.addEventListener("change",function(e){ if(e.target.name==="entrega") entregaToggle(); else if(e.target.name==="prov_loc_cp") mostrarSucursales(); else if(e.target.name==="sucpick"){ var lb=e.target.closest(".suc"); if(lb) elegirSuc(lb.dataset.n); } });
 document.addEventListener("input",function(e){ if(e.target.name==="cp") buscarCP(e.target.value); });
