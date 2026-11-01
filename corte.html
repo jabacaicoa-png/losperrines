@@ -118,6 +118,7 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
           <label class="f">Lateral: ancho (cm)<input id="la" inputmode="decimal" value="40"></label>
           <label class="f">Lateral: alto (cm)<input id="lb" inputmode="decimal" value="38"></label>
         </div>
+        <div class="row"><label class="f">Tiras en respaldos: ± cm del centro<input id="sr" inputmode="decimal" value="12"></label><label class="f">Tiras en laterales: ± cm del centro<input id="sl" inputmode="decimal" value="5"></label></div>
         <div class="row row3"><label class="f">Tira fija (cm)<input id="tf" inputmode="decimal" value="10"></label><label class="f">Tira regulable (cm)<input id="tr" inputmode="decimal" value="60"></label><div class="f">Cinta por unidad<b id="cintaTot" style="font-size:1.05rem;color:var(--ink);padding:9px 0">—</b></div></div>
         <p class="legend-s">El ancho del lateral es el lado que se cose al asiento. Cada hebilla lleva una tira fija (cosida a la funda) y una regulable (la que abraza el apoyacabezas). La cinta por unidad sirve para comparar con Costos.</p>
         <button class="btn main" id="guardar">Guardar modelo</button>
@@ -233,9 +234,9 @@ function setSync(t){ var e=$("#sync"); if(e) e.textContent=t; }
 function subir(){ if(!nube){ setSync("Guardado solo en este dispositivo. Entrá desde el panel para guardarlo en tu planilla."); return; }
   api("guardarCorte",{data:S}).then(function(){ setSync("Guardado en tu planilla ✓"); }).catch(function(e){ setSync(e.message==="SESION"?"Sesión vencida: volvé a entrar al panel":"No se pudo guardar en la planilla (sin conexión)"); }); }
 function guardarLS(){ try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){} setSync("Guardando…"); clearTimeout(tmr); tmr=setTimeout(subir,600); }
-function capturar(){ S.rollo={rw:$("#rw").value,rl:$("#rl").value,rp:$("#rp").value,mg:$("#mg").value}; S.form={}; ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","prod"].forEach(function(k){ S.form[k]=$("#"+k).value; }); }
+function capturar(){ S.rollo={rw:$("#rw").value,rl:$("#rl").value,rp:$("#rp").value,mg:$("#mg").value}; S.form={}; ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","prod"].forEach(function(k){ S.form[k]=$("#"+k).value; }); }
 function aplicar(){ if(S.rollo){ ["rw","rl","rp","mg"].forEach(function(k){ if(S.rollo[k]!=null&&S.rollo[k]!=="") $("#"+k).value=S.rollo[k]; }); }
-  if(S.form){ ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","prod"].forEach(function(k){ if(S.form[k]!=null&&S.form[k]!=="") $("#"+k).value=S.form[k]; }); } }
+  if(S.form){ ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","prod"].forEach(function(k){ if(S.form[k]!=null&&S.form[k]!=="") $("#"+k).value=S.form[k]; }); } }
 var COSTOS=[];
 function cargarCostos(){
   try{ var loc=JSON.parse(localStorage.getItem("lp-costos")||"null"); if(loc&&loc.productos) COSTOS=loc.productos; }catch(e){}
@@ -249,10 +250,18 @@ function prodCostos(m){ return m&&m.prod?COSTOS.find(function(p){return p.id===m
 function fmtN(x){ return (+x||0).toLocaleString("es-AR",{maximumFractionDigits:2}); }
 function tiraF(m){ return (m.tf!=null&&m.tf!==""&&isFinite(+m.tf))?+m.tf:10; }
 function tiraR(m){ if(m.tr!=null&&m.tr!==""&&isFinite(+m.tr)) return +m.tr; return m.lc?Math.max(0,+m.lc-10):60; }
+function sepR(m){ return (m.sr!=null&&m.sr!==""&&isFinite(+m.sr))?+m.sr:12; }
+function sepL(m){ return (m.sl!=null&&m.sl!==""&&isFinite(+m.sl))?+m.sl:5; }
+function posiciones(m){ // centros y costuras de cada hebilla, en cm desde el borde izquierdo
+  var nc=correas(m), lat=nc>=6?1:0, porR=Math.max(0,Math.round((nc-2*lat)/2)), r=[], i;
+  for(i=0;i<porR;i++){ var c=m.an*(2*i+1)/(2*porR); r.push({c:c,f:c-sepR(m),g:c+sepR(m)}); }
+  var l=lat?{c:m.la/2,f:m.la/2-sepL(m),g:m.la/2+sepL(m)}:null;
+  return {resp:r,lat:l};
+}
 function cintaUnidad(m){ return correas(m)*(tiraF(m)+tiraR(m)); }
 function correas(m){ if(m.nc!=null&&m.nc!==""&&isFinite(+m.nc)) return Math.max(0,Math.round(+m.nc)); return /individual|1 plaza|simple/i.test(m.nom||"")?4:6; }
-function leerForm(){ return {nom:$("#nom").value.trim()||"Modelo",an:num("#an"),t1:num("#t1"),t2:num("#t2"),t3:num("#t3"),la:num("#la"),lb:num("#lb"),nl:num("#nl"),nc:num("#nc"),tf:num("#tf"),tr:num("#tr"),prod:$("#prod").value}; }
-function cargarForm(m){ ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","prod"].forEach(function(k){ $("#"+k).value=(k==="nc"?correas(m):k==="tf"?tiraF(m):k==="tr"?tiraR(m):k==="prod"?(m.prod||""):m[k]); }); calcular(); window.scrollTo({top:0,behavior:"smooth"}); }
+function leerForm(){ return {nom:$("#nom").value.trim()||"Modelo",an:num("#an"),t1:num("#t1"),t2:num("#t2"),t3:num("#t3"),la:num("#la"),lb:num("#lb"),nl:num("#nl"),nc:num("#nc"),tf:num("#tf"),tr:num("#tr"),sr:num("#sr"),sl:num("#sl"),prod:$("#prod").value}; }
+function cargarForm(m){ ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","prod"].forEach(function(k){ $("#"+k).value=(k==="nc"?correas(m):k==="tf"?tiraF(m):k==="tr"?tiraR(m):k==="sr"?sepR(m):k==="sl"?sepL(m):k==="prod"?(m.prod||""):m[k]); }); calcular(); window.scrollTo({top:0,behavior:"smooth"}); }
 
 function calcular(){
   var ct=$("#cintaTot"); if(ct){ var mm=leerForm(); ct.textContent=correas(mm)+" × ("+fmtN(tiraF(mm))+" + "+fmtN(tiraR(mm))+") cm = "+fmtN(cintaUnidad(mm)/100)+" m"; }
@@ -295,27 +304,17 @@ function desplegado(md){
   [x0-lb,x0+cw].forEach(function(xs,i){ o.push('<rect x="'+xs+'" y="'+ys+'" width="'+lb+'" height="'+la+'" fill="#fff" stroke="#4E5B3A" stroke-width="1.5"/>'); T(xs+lb/2,ys+12,'LATERAL',9,'#4E5B3A','middle',1); T(xs+lb/2,ys+la-5,md.la+' × '+md.lb,9,'#5E6656');
     var xe=i?x0+cw:x0, xo=i?xs+lb:xs; Ln(xe,ys,xe,ys+la,'#6B4E8A',3.5); Ln(Math.min(xe,xo),ys,Math.max(xe,xo),ys,'#D98B1E',3.5); Ln(Math.min(xe,xo),ys+la,Math.max(xe,xo),ys+la,'#D98B1E',3.5);
     Ln(xe,y0,xe,ys,'#D98B1E',3.5); Ln(xe,ys+la,xe,y0+L*k,'#D98B1E',3.5); });
-  var nc=correas(md);
-  function hebilla(x,y,dx,dy){ // tira fija + hebilla + tira regulable
-    var x1=x+dx*7,y1=y+dy*7, x2=x+dx*11,y2=y+dy*11, x3=x+dx*24,y3=y+dy*24;
-    Ln(x,y,x1,y1,'#2F5E8A',3); o.push('<rect x="'+(Math.min(x1,x2)-(dx?0:4))+'" y="'+(Math.min(y1,y2)-(dy?0:4))+'" width="'+(dx?4:8)+'" height="'+(dy?4:8)+'" fill="#1E2418"/>');
-    Ln(x2,y2,x3,y3,'#2F5E8A',2,'3 2'); }
-  var dF,dR,arr=[];
-  if(nc===2||nc===3){ arr=[[x0+cw/2,y0,0,-1],[x0+cw/2,y0+L*k,0,1]]; dF=dR=null; }
-  else { dF=md.an>=100?27:Math.max(8,md.an/2-15); dR=md.an>=100?20:Math.max(8,md.an/2-15);
-    arr=[[x0+dF*k,y0,0,-1],[x0+cw-dF*k,y0,0,-1],[x0+dR*k,y0+L*k,0,1],[x0+cw-dR*k,y0+L*k,0,1]]; }
-  arr.slice(0,Math.min(nc,4)).forEach(function(c){
-    o.push('<rect x="'+(c[0]-7)+'" y="'+(c[3]<0?c[1]:c[1]-14)+'" width="14" height="14" fill="#F4B6A6" stroke="#C2553F" stroke-width="1"/>');
-    hebilla(c[0],c[1],0,c[3]); });
-  if(dF!=null&&nc>=4){ T(x0+dF*k,y0-30,dF+' cm',8,'#5E6656'); T(x0+cw-dF*k,y0-30,dF+' cm',8,'#5E6656'); T(x0+dR*k,y0+L*k+32,dR+' cm',8,'#5E6656'); T(x0+cw-dR*k,y0+L*k+32,dR+' cm',8,'#5E6656'); }
-  else if(nc===2||nc===3){ T(x0+cw/2+12,y0-26,'centrada',8,'#5E6656','start'); T(x0+cw/2+12,y0+L*k+30,'centrada',8,'#5E6656','start'); }
-  if(nc>=6){ var ym=ys+la/2, s5=5*k;
-    [[x0-lb,-1],[x0+cw+lb,1]].forEach(function(e2){ var ex=e2[0], sg=e2[1];
-      [ym-s5,ym+s5].forEach(function(yy){ o.push('<rect x="'+(sg<0?ex:ex-12)+'" y="'+(yy-6)+'" width="12" height="12" fill="#F4B6A6" stroke="#C2553F" stroke-width="1"/>'); Ln(ex,yy,ex+sg*8,ym,'#2F5E8A',2.5); });
-      hebilla(ex+sg*8,ym,sg,0);
-      T(ex+sg*36,ym-4,'Manija',8,'#2F5E8A',sg<0?'end':'start'); T(ex+sg*36,ym+6,'o puerta',8,'#2F5E8A',sg<0?'end':'start');
-      T(ex-sg*16,ym+3,'10',7,'#C2553F','middle'); });
-  }
+  var PZ=posiciones(md);
+  function tira(x,y,dx,dy,largo,color){ var x2=x+dx*largo, y2=y+dy*largo; Ln(x,y,x2,y2,'#1E2418',2.5); o.push('<rect x="'+(x2-5)+'" y="'+(y2-5)+'" width="10" height="10" fill="'+color+'" stroke="#1E2418" stroke-width="0.8"/>'); }
+  function parche(x,y,horiz,sg){ if(horiz) o.push('<rect x="'+(sg<0?x:x-12)+'" y="'+(y-6)+'" width="12" height="12" fill="#F4B6A6" stroke="#C2553F" stroke-width="1"/>'); else o.push('<rect x="'+(x-6)+'" y="'+(sg<0?y:y-12)+'" width="12" height="12" fill="#F4B6A6" stroke="#C2553F" stroke-width="1"/>'); }
+  [[y0,-1],[y0+L*k,1]].forEach(function(ed){ PZ.resp.forEach(function(h){
+    var xf=x0+h.f*k, xg=x0+h.g*k; parche(xf,ed[0],false,ed[1]); parche(xg,ed[0],false,ed[1]);
+    tira(xf,ed[0],0,ed[1],12,'#7CB342'); tira(xg,ed[0],0,ed[1],34,'#E8D21D');
+    Ln(x0+h.c*k,ed[0]+ed[1]*3,x0+h.c*k,ed[0]+ed[1]*10,'#888780',0.8,'2 2'); }); });
+  if(PZ.lat){ [[x0-lb,-1],[x0+cw+lb,1]].forEach(function(e2){ var ex=e2[0], sg=e2[1], yf=ys+PZ.lat.f*k, yg=ys+PZ.lat.g*k;
+      parche(ex,yf,true,sg); parche(ex,yg,true,sg); tira(ex,yf,sg,0,12,'#7CB342'); tira(ex,yg,sg,0,34,'#E8D21D');
+      T(ex+sg*50,ym2(),'Manija',8,'#2F5E8A',sg<0?'end':'start'); T(ex+sg*50,ym2()+10,'o puerta',8,'#2F5E8A',sg<0?'end':'start'); }); }
+  function ym2(){ return ys+la/2; }
   var yp=y0+t3+t2; o.push('<rect x="'+(x0+cw*0.3-14)+'" y="'+(yp-2.5)+'" width="28" height="5" fill="#fff" stroke="#C2553F"/><rect x="'+(x0+cw*0.7-14)+'" y="'+(yp-2.5)+'" width="28" height="5" fill="#fff" stroke="#C2553F"/>');
   Ln(x0,y0+L*k+44,x0+cw,y0+L*k+44,'#5E6656'); T(x0+cw/2,y0+L*k+58,md.an+' cm (ancho)',10,'#5E6656');
   var dx=x0+cw+lb+22+(correas(md)>=6?62:0); Ln(dx,y0,dx,y0+L*k,'#5E6656'); T(dx+6,y0+L*k/2,L+' cm',10,'#5E6656','start');
@@ -345,13 +344,17 @@ function fichaHTML(){
     var A=analizar(m,RW,mg), P=A.P, b=A.best, L=m.t1+m.t2+m.t3;
     var bies=(2*(m.an+L)+m.nl*(m.la+2*m.lb))/100, cad=m.nl*2*(m.lb)/100;
     h.push((i?'<div class="pg"></div>':'')+'<h2>'+esc(m.nom)+' · vista desplegada (medidas terminadas)</h2><div class="fig desp">'+desplegado(m)+'</div>');
-    h.push('<p class="ley">Naranja: cierres en las 4 esquinas (se unen los bordes del mismo color) · Violeta: costura fija del lateral al costado del asiento · Azul: '+correas(m)+' hebillas ('+(correas(m)>=6?'4 a los apoyacabezas y 2 en los laterales, a la manija del techo o a la puerta':correas(m)<=3?'1 al apoyacabezas delantero y 1 al trasero':'a los apoyacabezas')+'). Cada una: tira fija (línea llena), hebilla (negro) y tira regulable (punteada) · Rosa: parche de refuerzo en cada correa · Rojo: aberturas para el cinturón en el pliegue asiento/respaldo trasero.</p>');
+    h.push('<p class="ley">Naranja: cierres en las 4 esquinas (se unen los bordes del mismo color) · Violeta: costura fija del lateral al costado del asiento · Verde: tira de '+fmtN(tiraF(m))+' cm con la parte fija de la hebilla · Amarillo: tira de '+fmtN(tiraR(m))+' cm con la parte deslizante ('+correas(m)+' hebillas'+(correas(m)>=6?': 2 en cada respaldo y 1 en cada lateral':'')+') · Rosa: parche de refuerzo en cada correa · Rojo: aberturas para el cinturón en el pliegue asiento/respaldo trasero.</p>');
     h.push('<h3>Piezas a cortar (por unidad)</h3><table><tr><th>Pieza</th><th>Cant.</th><th>Terminada</th><th>Corte</th><th>Notas</th></tr>'
       +'<tr><td>Cuerpo</td><td>1</td><td>'+m.an+' × '+L+'</td><td>'+P.CW+' × '+P.CL+'</td><td>Tramos: respaldo delantero '+m.t3+' · asiento '+m.t2+' · respaldo trasero '+m.t1+'. +'+mg+' cm en cada costado; extremos con bies.</td></tr>'
       +'<tr><td>Lateral</td><td>'+m.nl+'</td><td>'+m.la+' × '+m.lb+'</td><td>'+P.LA+' × '+P.LB+'</td><td>El lado de '+m.la+' se cose al asiento. +'+mg+' cm en ese borde y en los dos bordes con cierre; borde libre con bies.</td></tr>'
       +'<tr><td>Hebillas con sus tiras</td><td>'+correas(m)+'</td><td>—</td><td>Tira fija '+fmtN(tiraF(m))+' cm + tira regulable '+fmtN(tiraR(m))+' cm</td><td>Cinta de 20 mm. Por hebilla: '+fmtN(tiraF(m)+tiraR(m))+' cm de cinta; por unidad: '+fmtN(cintaUnidad(m)/100)+' m. Ver ubicación en el armado.</td></tr>'
       +'<tr><td>Parche de refuerzo</td><td>'+correas(m)+'</td><td>~8 × 8</td><td>8 × 8</td><td>De la misma tela matelaseada (recortes). Uno debajo de cada correa.</td></tr>'
       +'<tr><td>Forro</td><td>1 + '+m.nl+'</td><td>igual al cuerpo y laterales</td><td>'+P.CW+' × '+P.CL+' y '+P.LA+' × '+P.LB+'</td><td>Tracker común, para tapar la friselina. Mismo plano de corte que el matelaseado.</td></tr></table>');
+    var PZ=posiciones(m), filasU=[];
+    ['Respaldo delantero','Respaldo trasero'].forEach(function(nom){ PZ.resp.forEach(function(hh,ii){ filasU.push('<tr><td>'+nom+(PZ.resp.length>1?' · hebilla '+(ii+1):'')+'</td><td>'+fmtN(hh.c)+'</td><td>'+fmtN(hh.f)+'</td><td>'+fmtN(hh.g)+'</td></tr>'); }); });
+    if(PZ.lat) filasU.push('<tr><td>Cada lateral (desde el lado del respaldo delantero)</td><td>'+fmtN(PZ.lat.c)+'</td><td>'+fmtN(PZ.lat.f)+'</td><td>'+fmtN(PZ.lat.g)+'</td></tr>');
+    if(filasU.length) h.push('<h3>Dónde se cosen las tiras de las hebillas</h3><table><tr><th>Borde</th><th>Centro de la hebilla</th><th>Tira de '+fmtN(tiraF(m))+' cm (parte fija)</th><th>Tira de '+fmtN(tiraR(m))+' cm (parte deslizante)</th></tr>'+filasU.join("")+'</table><p class="ley">Medidas en cm desde el borde izquierdo de la funda desplegada (como en el dibujo). La tira corta va del lado izquierdo del centro y la larga del lado derecho. En los respaldos se separan ±'+fmtN(sepR(m))+' cm del centro; en los laterales, ±'+fmtN(sepL(m))+' cm.</p>');
     var bls=(m.q||0)>0?bloquesPara(m.q,A):(b?[{b:b,veces:1}]:[]);
     bls.forEach(function(x){ var bb=x.b;
       h.push('<div class="pg"></div><h3>'+esc(m.nom)+' · plano de corte: bloque de '+bb.n+' unidad'+(bb.n>1?'es':'')+' ('+m2(bb.len)+' m de rollo)'+(x.veces>1?' · cortar '+x.veces+' veces':'')+'</h3><div class="fig plano">'+dibujar(bb,RW)+'</div><p class="ley">'+(bb.giro?'El cuerpo va girado: los '+P.CL+' cm del largo a lo ancho del rollo. ':'El ancho del cuerpo ('+P.CW+' cm) va a lo ancho del rollo. ')+(x.veces>1?'Este bloque se repite '+x.veces+' veces. ':'')+'Celeste: cuerpos · naranja: laterales · gris: sobrante.</p>'); });
@@ -380,11 +383,7 @@ function fichaHTML(){
       +'<li><b>Tira fija</b> (corta): se cose a la funda, con la parte de la hebilla <b>sin deslizador</b>. Va sobre el parche de refuerzo.</li>'
       +'<li><b>Tira regulable</b> (larga): pasa por la parte <b>con deslizador</b>. Un extremo queda cosido a la hebilla (doblez de 3 cm, costura en caja) y el otro queda libre para regular el largo, según el apoyacabezas o la manija de cada auto.</li>'
       +'<li>Largos de cada modelo en la tabla “Piezas a cortar”.</li></ul></li>'
-      +'<li><b>Ubicación de las hebillas</b>:<ul>'
-      +'<li><b>Respaldo delantero</b>: 2 hebillas, a ~27 cm de cada costado (quedan a ~75 cm entre sí, alineadas con los apoyacabezas delanteros).</li>'
-      +'<li><b>Respaldo trasero</b>: 2 hebillas, a ~20 cm de cada costado (quedan a ~90 cm entre sí, alineadas con los apoyacabezas traseros).</li>'
-      +(lista.some(function(m){return correas(m)>=6;})?'<li><b>Laterales</b> (modelos con 6 correas): 1 hebilla por lateral, para la manija del techo o, si el auto no tiene, para la puerta. Va <b>centrada en el borde libre del lateral</b> y se cose en <b>dos puntos separados 10 cm</b> (a 5 cm de cada lado del centro). Así tira desde el medio y el lateral no se cae en el centro.</li>':'')
-      +'<li><b>Modelos de una plaza con 2 hebillas</b>: 1 centrada en el borde del respaldo delantero y 1 centrada en el del respaldo trasero.</li></ul>Confirmar las distancias con el prototipo en 2 o 3 autos distintos.</li>'
+      +'<li><b>Ubicación de las tiras</b>: cada hebilla se cose a la funda en dos puntos, a los lados de su centro: a la <b>izquierda la tira corta</b> (parte fija) y a la <b>derecha la tira larga</b> (parte deslizante). En los respaldos delantero y trasero las hebillas van centradas en cada mitad del ancho (en la de una plaza, una sola, centrada); en los laterales, una centrada en el borde libre. Las medidas exactas de cada modelo están en la tabla “Dónde se cosen las tiras de las hebillas”. Así la tira tira desde el centro y el borde no se cae.</li>'
     +'<li><b>Refuerzo de las correas (importante)</b>: es la zona que más fuerza hace. Debajo de cada correa coser un <b>parche de refuerzo de la misma tela matelaseada</b> (~8 × 8 cm). La cinta va cosida atravesando parche, cuerpo y forro, con <b>costura en caja con una X adentro</b> (rectángulo con cruz), <b>doble pasada</b> e hilo N°20–30. Dejar al menos 4 cm de cinta superpuesta sobre la tela. Ninguna correa tiene que poder arrancarse tirando fuerte.</li>'
     +'<li><b>Otras uniones que hacen fuerza</b> (laterales al asiento, extremos de los cierres): doble costura.</li></ol>');
   h.push('<h2>Especificaciones de costura</h2><table><tr><th>Ítem</th><th>Especificación</th></tr><tr><td>Hilo</td><td>Poliéster reforzado. N°40 general; N°20–30 en refuerzos.</td></tr><tr><td>Aguja</td><td>N°16 a 18.</td></tr><tr><td>Máquina</td><td>Recta industrial, ideal triple arrastre. Ribeteador para el bies.</td></tr><tr><td>Tela plastificada</td><td>Sin alfileres: sujetar con clips.</td></tr></table>');
@@ -395,7 +394,7 @@ function fichaHTML(){
 document.addEventListener("input",function(e){
   if(e.target.dataset.q){ var m=S.modelos.find(function(x){return x.id===e.target.dataset.q;}); m.q=parseFloat(e.target.value)||0; guardarLS();
     var pos=e.target.selectionStart, id=e.target.dataset.q; renderLista(); var el=document.querySelector('[data-q="'+id+'"]'); if(el){ el.focus(); try{el.setSelectionRange(pos,pos);}catch(x){} } return; }
-  if(e.target.closest(".block")||e.target.id){ calcular(); if(["rw","rl","rp","mg","nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","prod"].indexOf(e.target.id)>=0){ capturar(); guardarLS(); } }
+  if(e.target.closest(".block")||e.target.id){ calcular(); if(["rw","rl","rp","mg","nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","prod"].indexOf(e.target.id)>=0){ capturar(); guardarLS(); } }
 });
 document.addEventListener("change",function(e){ if(e.target.id==="prod"){ capturar(); guardarLS(); } });
 document.addEventListener("click",function(e){
