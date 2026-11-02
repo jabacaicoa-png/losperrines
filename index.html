@@ -221,14 +221,14 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .modelo .m-envio{margin:10px 0 0;font-size:.95rem}
 .modelo .m-envio s{color:var(--muted)}
 .modelo .m-det{margin-top:10px;font-size:.93rem}
-.modelo .m-det summary{cursor:pointer;font-weight:700}
+.modelo .m-det-t{margin:0;font-weight:700;color:var(--ink)}
 .modelo .m-det ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
 .modelo .btn{margin-top:auto}
 .hero-pagos{display:flex;flex-direction:column;gap:6px;font-size:1.05rem;margin-bottom:4px}
 .hero-pagos b{color:var(--ok)}
 .modelo h3{margin:6px 0 2px;font-size:1.25rem}
 .modelo .m-sub{margin:0;font-weight:600}
-.modelo .m-det{margin:2px 0 12px;color:var(--muted);font-size:.92rem}
+.modelo .m-det{margin:12px 0 4px;font-size:.93rem}
 .modelo .m-beneficios{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
 .modelo .m-beneficios span{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;background:#eef1db;color:#34452c;border:1px solid #cdd6a7;font-size:.75rem;font-weight:800;letter-spacing:.015em}
 .modelo .m-beneficio-desc{font-size:.9rem;line-height:1.45;margin:8px 0 0;color:var(--muted)}
@@ -631,7 +631,7 @@ function pintarModelos(){
       +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>Hasta '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<div class="m-transf"><span>💸 Por transferencia <small>'+d+'% off</small></span><b>'+money(p.precio_transferencia)+'</b></div>'
       +'<p class="m-envio">🚚 Envío <b>GRATIS</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s> ':'')+'por Andreani</p>'
-      +'<details class="m-det"><summary>Medidas y detalles</summary><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>'
+      +'<div class="m-det"><p class="m-det-t">Medidas y detalles</p><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>'
       +(sin?'<p class="stockline low">Sin stock por el momento</p>':(p.disponible<=5?'<p class="stockline low">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
       +'<button class="btn btn-main" style="width:100%;margin-top:12px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'Agregar al carrito')+'</button></div></article>';
   }).join("");
