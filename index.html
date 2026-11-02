@@ -41,6 +41,9 @@ img,svg{max-width:100%;height:auto}
 :focus-visible{outline:3px solid var(--ball);outline-offset:3px;border-radius:4px}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
 
+/* Logo Andreani integrado: no requiere archivo adicional */
+.andreani-a{width:30px;height:27px;object-fit:contain;vertical-align:middle;flex:none;margin-right:5px}
+.anuncio .andreani-a{width:26px;height:24px;margin-right:3px}
 /* header */
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
 .top .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
@@ -305,7 +308,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 <div id="tienda" hidden>
 <div class="preview-bar" id="previewBar" hidden>Vista previa: la tienda está cerrada al público. Las compras que hagas son reales.</div>
 <header class="top">
-  <div class="anuncio">🚚 ENVÍO GRATIS A TODA ARGENTINA <span>· <span data-p="desc">10</span>% off por transferencia</span></div>
+  <div class="anuncio"> ENVÍO GRATIS POR ANDREANI A TODA ARGENTINA <span>· <span data-p="desc">10</span>% off por transferencia</span></div>
   <div class="wrap">
     <a class="logo" href="#inicio" aria-label="Los Perrines, inicio"><img class="logoimg" src="logo.png" alt="" width="44" height="44" onerror="this.style.display='none'"> Los Perrines</a>
     <button class="cart-btn" id="openCart" aria-label="Abrir carrito">Carrito <b id="cartCount">0</b></button>
@@ -320,7 +323,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
       <p class="lead">Protegé los asientos de tu auto con nuestras fundas <strong>impermeables, acolchadas y resistentes</strong>. Diseñadas para viajar con tu mascota sin preocuparte por el agua, el barro ni los pelos. Disponibles para el asiento trasero completo o para una sola plaza.</p>
       <div class="price-box">
         <div class="hero-pagos"><span>💧 <b>IMPERMEABLE</b> · Protección contra agua, barro y pelos</span><span>💳 Hasta <b><span data-p="ncuotas">3</span> cuotas sin interés</b></span><span>💸 <b><span data-p="desc">10</span>% off</b> por transferencia</span></div>
-        <span class="ship"><span aria-hidden="true">🚚</span><span class="ship-txt"><b>ENVÍO GRATIS a todo el país:</b> <span data-p="envtach"></span></span></span>
+        <span class="ship"><span class="ship-txt"><b>ENVÍO GRATIS por Andreani a todo el país:</b> <span data-p="envtach"></span></span></span>
         <p class="sello">🇦🇷 Diseñada y confeccionada en San Luis · Con garantía de fábrica</p>
         <div class="buy-row">
           <button class="btn btn-main" data-add>Ver productos</button>
@@ -570,6 +573,7 @@ var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDb
 "use strict";
 var C={precio_tarjeta:90000,precio_transferencia:81000,cuotas:3,whatsapp:"",disponible:0,producto:"Funda tipo canasto"};
 var VISTA="", Q={doble:0,individual:0}, step="cart", order=null, LOC=null, SUC=null;
+var ANDREANI_LOGO='';
 var fmt=new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
 function money(v){return fmt.format(Math.round(v));}
 function $(s,r){return (r||document).querySelector(s);}
@@ -629,7 +633,7 @@ function pintarModelos(){
       +(function(){ var pm=principalDe(p.id), nm=MED(p.id).length; return '<div class="m-foto"'+(nm?' role="button" tabindex="0" data-gal="'+p.id+'" data-i="0" aria-label="Ver fotos de '+esc(p.nombre)+'"':'')+'>'+ilus+'<img src="'+(pm?urlImg(pm.drive,900):i.foto)+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()">'+(nm>1?'<span class="m-galbadge">📷 '+nm+'</span>':'')+'</div>'; })()
       +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-beneficio-desc">Funda impermeable para mascotas: protege los asientos del agua, barro y pelos.</p><div class="m-beneficios"><span>💧 IMPERMEABLE</span><span>🛡️ PROTECCIÓN</span><span>ACOLCHADA</span></div><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
-      +'<p class="m-envio">🚚 <b>ENVÍO GRATIS a todo el país:</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s>':'')+'</p>'
+      +'<p class="m-envio">'+ANDREANI_LOGO+' <b>ENVÍO GRATIS por Andreani a todo el país:</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s>':'')+'</p>'
       +'<div class="m-transf"><span>💚 Precio por transferencia <small>'+d+'% off</small></span><b>'+money(p.precio_transferencia)+'</b></div>'
       +'<button class="btn btn-main m-cta" style="width:100%;margin-top:16px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'COMPRAR AHORA')+'</button>'
       +'<div class="m-det"><p class="m-det-t">Medidas y detalles</p><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>'
