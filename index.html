@@ -179,6 +179,9 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .ship{font-size:1.02rem;padding:8px 16px}
 .tachado{color:var(--muted);text-decoration:line-through;font-weight:500;margin-right:6px}
 .gratis{color:var(--ok);font-weight:800}
+.cupon{margin:4px 0 6px}
+.cupon-row{display:flex;gap:8px;margin-top:4px}
+.cupon-row input{flex:1;text-transform:uppercase}
 .modelo .m-foto[data-gal]{cursor:pointer}
 .m-galbadge{position:absolute;right:10px;bottom:10px;background:rgba(30,36,24,.75);color:#fff;font-weight:700;font-size:.85rem;border-radius:999px;padding:3px 10px}
 .galvid{width:100%;aspect-ratio:4/3;border:0;border-radius:16px;background:#2F3822;color:#D9E15A;font-size:2.4rem;cursor:pointer}
@@ -600,6 +603,7 @@ api("config").then(function(c){
   pintarPrecios(); pintarStock(); fotos();
   if(c.whatsapp && c.whatsapp.length>6){ $$(".wa").forEach(function(a){a.href="https://wa.me/"+c.whatsapp;}); } else { $$(".wa").forEach(function(a){a.hidden=true;}); }
   if(qs.get("pedido")) volvioDeMP();
+  else if(qs.get("carrito")){ String(qs.get("carrito")).split(",").forEach(function(x){ var p=x.split(":"), id=p[0]==="individual"?"individual":"doble", q=parseInt(p[1],10)||0; if(PR(id)&&q>0) Q[id]=Math.min(maxQ(id),q); }); setCount(); history.replaceState(null,"",location.pathname); if(totQ()){ step="cart"; abrir(); } }
 }).catch(function(){ show("pronto"); });
 
 function pintarPrecios(){
@@ -710,6 +714,7 @@ function render(){
       +'<div class="g2"><label class="f">DNI<input name="dni" required inputmode="numeric" maxlength="10" value="'+esc(g.dni)+'"></label><label class="f">Email<input name="email" type="email" required autocomplete="email" value="'+esc(g.email)+'"></label></div>'
       +'<div class="g2" style="grid-template-columns:1fr 2fr"><label class="f">Cód. área<input name="cel_cod" required inputmode="numeric" maxlength="5" placeholder="266" value="'+esc(g.cel_cod)+'"></label><label class="f">Celular<input name="cel_num" required inputmode="numeric" maxlength="9" placeholder="4123456" value="'+esc(g.cel_num)+'"></label></div>'
       +'<p class="hint">Sin 0 ni 15. Ej: 266 4123456.</p>'
+      +'<p class="hint">Si no terminás tu compra, te mandamos un único recordatorio al mail. Podés darte de baja cuando quieras.</p>'
       +'<div class="g2" style="grid-template-columns:1fr 2fr"><label class="f">Código postal<input name="cp" inputmode="numeric" maxlength="4" autocomplete="postal-code" value="'+esc(g.cp)+'"></label><label class="f">Localidad<select name="prov_loc_cp"><option value="">Poné tu código postal</option></select></label></div>'
       +'<fieldset><legend>Envío '+(C.valor_envio?'<span class="tachado">'+money(C.valor_envio)+'</span>':'')+'<span class="gratis">GRATIS</span> por Andreani</legend>'
       +'<label class="pay"><input type="radio" name="entrega" value="domicilio" '+(g.entrega!=="sucursal"?"checked":"")+'><span><b>A domicilio</b><small>Te lo llevan a tu casa</small></span></label>'
@@ -720,14 +725,17 @@ function render(){
       +'<div id="sucursal" hidden><input type="hidden" name="sucursal" value="'+esc(g.sucursal)+'"><div id="sucMap" class="sucmap" hidden></div><div id="sucList" class="suclist"><p class="hint">Poné tu código postal y elegí tu localidad para ver las sucursales más cercanas.</p></div></div>'
       +'<fieldset><legend>Forma de pago</legend>'
       +'<label class="pay"><input type="radio" name="pago" value="tarjeta" checked><span><b>Tarjeta: '+money(sumT())+'</b><small>1 pago o hasta '+C.cuotas+' cuotas sin interés de '+money(sumT()/C.cuotas)+', con Mercado Pago.</small></span></label>'
-      +'<label class="pay"><input type="radio" name="pago" value="transferencia"><span><b>Transferencia: '+money(sumX())+'</b><small>Con descuento. Te pasamos los datos al confirmar.</small></span></label>'
-      +'</fieldset><p class="err" id="err" role="alert"></p></form>';
+      +'<label class="pay"><input type="radio" name="pago" value="transferencia"><span><b>Transferencia: <span id="lblTransf">'+money(sumX())+'</span></b><small>Con descuento. Te pasamos los datos al confirmar.</small></span></label>'
+      +'</fieldset>'
+      +'<div class="cupon"><label class="f">¿Tenés un código de descuento?<span class="cupon-row"><input name="cupon_in" placeholder="Código" autocapitalize="characters" autocomplete="off" value="'+esc(CUPON?CUPON.codigo:CUPON_URL)+'"><button type="button" class="btn btn-ghost" data-cupon>Aplicar</button></span></label><p class="hint" id="cuponMsg"></p></div>'
+      +'<p class="err" id="err" role="alert"></p></form>';
     dFoot.innerHTML='<div class="g2"><button class="btn btn-ghost" data-go="cart">Volver</button><button class="btn btn-main" id="pagarBtn" data-pagar>Confirmar compra</button></div>';
     entregaToggle(); if(g.cp) buscarCP(g.cp, g.prov_loc_cp);
+    if(CUPON) pintarCupon(); else if(CUPON_URL) aplicarCupon();
   } else if(step==="ok"){
     dTitle.textContent="¡Gracias!";
     var t=order.transferencia||{};
-    dBody.innerHTML='<p>Tu pedido <b>'+esc(order.id)+'</b> quedó reservado. Te mandamos un mail con todos los datos.</p><div class="big">'+money(order.total)+'</div>'
+    dBody.innerHTML='<p>Tu pedido <b>'+esc(order.id)+'</b> quedó reservado. Te mandamos un mail con todos los datos.</p><div class="big">'+money(order.total)+'</div>'+(order.descuento?'<p class="hint" style="margin-top:4px">Incluye tu código '+esc(order.cupon)+': −'+money(order.descuento)+'</p>':'')
       +'<p>Transferí ese monto antes del <b>'+esc(order.vence)+'</b>:</p><div class="alias">'
       +(t.alias?'Alias: '+esc(t.alias)+'<br>':'')+(t.cbu?'CBU/CVU: '+esc(t.cbu)+'<br>':'')+(t.titular?'Titular: '+esc(t.titular)+'<br>':'')+(t.banco?'Banco: '+esc(t.banco):'')+'</div>'
       +'<p>Después mandanos el comprobante por WhatsApp y despachamos tu pedido.</p>';
@@ -806,6 +814,31 @@ function buscarCP(cp,pre){
     mostrarSucursales();
   }).catch(function(){ sel.innerHTML='<option value="">No pudimos cargar las localidades</option>'; });
 }
+var CUPON=null, CUPON_URL=(new URLSearchParams(location.search).get("cupon")||"").toUpperCase(), carritoT=null, carritoUlt="";
+function pagoSel(){ var r=$('#f [name="pago"]:checked'); return r?r.value:"tarjeta"; }
+function pintarCupon(){
+  var msg=$("#cuponMsg"), lbl=$("#lblTransf"); if(!msg||!lbl) return;
+  if(!CUPON){ lbl.innerHTML=money(sumX()); msg.textContent=""; return; }
+  var conDesc=Math.round(sumX()*(1-CUPON.pct/100));
+  lbl.innerHTML='<s style="opacity:.6;font-weight:600">'+money(sumX())+'</s> '+money(conDesc);
+  msg.innerHTML=pagoSel()==="transferencia"?'<b style="color:var(--ok)">Código '+esc(CUPON.codigo)+' aplicado: '+CUPON.pct+'% off extra. Pagás '+money(conDesc)+'.</b>':'<b>El código '+esc(CUPON.codigo)+' es válido pagando por transferencia</b> ('+CUPON.pct+'% off extra: '+money(conDesc)+').';
+}
+function aplicarCupon(){
+  var f=$("#f"); if(!f) return; var cod=(f.querySelector('[name="cupon_in"]').value||"").trim().toUpperCase(), msg=$("#cuponMsg");
+  if(!cod){ CUPON=null; pintarCupon(); return; }
+  msg.innerHTML='<span class="spinner"></span>';
+  api("cupon",{codigo:cod,email:(f.querySelector('[name="email"]')||{}).value||""}).then(function(r){ CUPON={codigo:r.codigo,pct:r.porcentaje}; pintarCupon(); })
+    .catch(function(e){ CUPON=null; pintarCupon(); msg.innerHTML='<span style="color:#C2553F;font-weight:600">'+esc(e.message)+'</span>'; });
+}
+function guardarCarritoLuego(){
+  clearTimeout(carritoT); carritoT=setTimeout(function(){
+    var f=$("#f"); if(!f) return; var g=function(n){ return ((f.querySelector('[name="'+n+'"]')||{}).value||"").trim(); };
+    var email=g("email"); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return;
+    var items=PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){return {producto:p.id,cantidad:Q[p.id]};});
+    var datos={email:email,nombre:g("nombre"),apellido:g("apellido"),cel:(g("cel_cod")+" "+g("cel_num")).trim(),items:items}, k=JSON.stringify(datos);
+    if(k===carritoUlt) return; carritoUlt=k; api("carrito",datos).catch(function(){});
+  },1500);
+}
 function leerForm(){
   var f=$("#f"), err=$("#err"), d={}, bad=[];
   new FormData(f).forEach(function(v,k){d[k]=String(v).trim();});
@@ -829,17 +862,19 @@ function pagar(btn){
   store("lp_datos",d);
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
   d.items=PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){return {producto:p.id,cantidad:Q[p.id]};});
+  delete d.cupon_in; d.cupon=(CUPON&&d.pago==="transferencia")?CUPON.codigo:"";
   api("pedido",d).then(function(r){
     if(r.pago==="tarjeta"){ store("lp_ultimo",{id:r.id,email:d.email}); location.href=r.init_point; return; }
-    order=r; step="ok"; render(); dBody.scrollTop=0;
+    order=r; step="ok"; CUPON=null; render(); dBody.scrollTop=0;
     PRODS().forEach(function(p){ p.disponible=Math.max(0,p.disponible-(Q[p.id]||0)); }); C.disponible=PR("doble")?PR("doble").disponible:0;
     Q={doble:0,individual:0}; setCount(); pintarStock();
   }).catch(function(e){ $("#err").textContent=e.message; btn.disabled=false; btn.textContent="Confirmar compra"; });
 }
 
 /* ---------- vuelta de Mercado Pago ---------- */
+var RETRY_EMAIL="";
 function volvioDeMP(){
-  var id=qs.get("pedido"), pay=qs.get("payment_id")||qs.get("collection_id")||"", u=store("lp_ultimo")||{};
+  var id=qs.get("pedido"), pay=qs.get("payment_id")||qs.get("collection_id")||"", u=store("lp_ultimo")||{}; if(qs.get("e")){ u={id:id,email:qs.get("e")}; RETRY_EMAIL=u.email; }
   history.replaceState(null,"",location.pathname);
   dTitle.textContent="Tu pago"; dBody.innerHTML='<p><span class="spinner"></span> Confirmando tu pago…</p>'; dFoot.innerHTML=""; drawer.showModal();
   api("estado",{id:id,payment_id:pay&&pay!=="null"?pay:"",email:u.id===id?u.email:""}).then(function(r){
@@ -893,7 +928,8 @@ document.addEventListener("click",function(e){
   else if(t.dataset.q){ var qid=t.dataset.id||"doble"; Q[qid]=Math.max(0,Math.min(maxQ(qid),(Q[qid]||0)+parseInt(t.dataset.q,10))); setCount(); render(); }
   else if(t.dataset.go){ step=t.dataset.go; render(); dBody.scrollTop=0; }
   else if(t.hasAttribute("data-pagar")){ pagar(t); }
-  else if(t.dataset.retry){ var u=store("lp_ultimo")||{}; t.disabled=true; api("reintentar",{id:t.dataset.retry,email:u.email}).then(function(r){location.href=r.init_point;}).catch(function(x){ $("#err").textContent=x.message; t.disabled=false; }); }
+  else if(t.hasAttribute("data-cupon")){ aplicarCupon(); }
+  else if(t.dataset.retry){ var u=store("lp_ultimo")||{}; if(RETRY_EMAIL) u={email:RETRY_EMAIL}; t.disabled=true; api("reintentar",{id:t.dataset.retry,email:u.email}).then(function(r){location.href=r.init_point;}).catch(function(x){ $("#err").textContent=x.message; t.disabled=false; }); }
   else if(t.dataset.dlg){ abrirDlg(t.dataset.dlg); }
   else if(t.dataset.send){ enviarDlg(t.dataset.send,t); }
   else if(t.hasAttribute("data-close")){ var d=t.closest("dialog"); if(d) d.close(); if(step==="ok"){ step="cart"; } }
@@ -904,8 +940,8 @@ document.addEventListener("click",function(e){
   g.addEventListener("touchend",function(e){ if(x0==null) return; var dx=e.changedTouches[0].clientX-x0; x0=null; if(Math.abs(dx)>50){ if(dx<0&&GAL.i<GAL.lista.length-1){GAL.i++;pintarGaleria();} else if(dx>0&&GAL.i>0){GAL.i--;pintarGaleria();} } });
   document.addEventListener("keydown",function(e){ if(!g.open) return; if(e.key==="ArrowRight"&&GAL.i<GAL.lista.length-1){GAL.i++;pintarGaleria();} if(e.key==="ArrowLeft"&&GAL.i>0){GAL.i--;pintarGaleria();} }); })();
 [drawer,dlg].forEach(function(d){ d.addEventListener("click",function(e){ if(e.target===d) d.close(); }); });
-document.addEventListener("change",function(e){ if(e.target.name==="entrega") entregaToggle(); else if(e.target.name==="prov_loc_cp") mostrarSucursales(); else if(e.target.name==="sucpick"){ var lb=e.target.closest(".suc"); if(lb) elegirSuc(lb.dataset.n); } });
-document.addEventListener("input",function(e){ if(e.target.name==="cp") buscarCP(e.target.value); });
+document.addEventListener("change",function(e){ if(e.target.name==="entrega") entregaToggle(); else if(e.target.name==="prov_loc_cp") mostrarSucursales(); else if(e.target.name==="pago") pintarCupon(); else if(e.target.name==="sucpick"){ var lb=e.target.closest(".suc"); if(lb) elegirSuc(lb.dataset.n); } });
+document.addEventListener("input",function(e){ if(e.target.name==="cp") buscarCP(e.target.value); if(e.target.closest&&e.target.closest("#f")&&["email","nombre","apellido","cel_cod","cel_num"].indexOf(e.target.name)>=0) guardarCarritoLuego(); });
 })();
 </script>
 </body>
