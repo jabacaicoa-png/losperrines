@@ -349,7 +349,7 @@ function cargarRecuperar(){ api("recuperar").then(function(r){ RC=r; render(); }
 function vRecuperar(){
   if(!RC){ cargarRecuperar(); return '<h2>Recuperar ventas</h2><p class="sub"><span class="spinner"></span> Cargando…</p>'; }
   var st=RC.stats||{}, L=RC.lista||[], cups=RC.cupones||[];
-  var h='<h2>Recuperar ventas</h2><p class="sub">Clientes que dejaron su mail y no compraron. El primer recordatorio sale solo; desde acá les mandás el segundo mail cuando quieras.</p>'
+  var h='<h2>Recuperar ventas</h2><p class="sub">Clientes sin pago confirmado que ya recibieron el primer recordatorio automático. Desde acá podés enviarles un segundo correo promocional.</p>'
     +'<div class="cards"><div class="kpi"><small>Recordatorios automáticos</small><b>'+(st.recordatorios||0)+'</b></div><div class="kpi"><small>Segundos mails</small><b>'+(st.segundos||0)+'</b></div><div class="kpi"><small>Ventas recuperadas</small><b>'+(st.recuperadas||0)+'</b></div><div class="kpi"><small>Sin comprar ahora</small><b>'+L.length+'</b></div></div>';
   h+='<div class="block"><h3>Clientes sin comprar</h3>';
   if(!L.length) h+='<p class="sub" style="margin:0">No hay nadie en la lista.</p>';
@@ -358,7 +358,7 @@ function vRecuperar(){
       +L.map(function(x){ return '<tr><td><input type="checkbox" class="rcChk" data-em="'+esc(x.email)+'"'+(RCsel[x.email]?' checked':'')+'></td><td><b>'+esc((x.nombre+" "+x.apellido).trim()||"—")+'</b><br><small>'+esc(x.email)+(x.cel?' · '+esc(x.cel):'')+'</small></td><td>'+esc(x.items)+'</td><td>'+esc(x.origen)+'</td><td>'+esc(x.fecha)+'</td><td><small>'+(x.recordatorio?'1°: '+esc(x.recordatorio)+'<br>':'')+(x.segundo?'2°: '+esc(x.segundo):'')+(!x.recordatorio&&!x.segundo?'—':'')+'</small></td></tr>'; }).join("")
       +'</tbody></table></div>';
     var activos=cups.filter(function(c){return c.activo;});
-    h+='<h3 style="margin-top:16px">Segundo mail</h3>'
+    h+='<h3 style="margin-top:16px">Segundo mail promocional</h3>'
       +'<label class="f">Asunto<input id="rcAsunto" value="¡Tenemos un regalo para vos! 🐾"></label>'
       +'<label class="f">Mensaje (escribí {nombre} y se reemplaza por el nombre de cada cliente)<textarea id="rcMsg" rows="5" style="width:100%;font:500 1rem \'Bricolage Grotesque\',sans-serif;background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--ink)">Hola {nombre}, vimos que te quedó pendiente tu funda. Para que te animes, te dejamos un descuento extra pagando por transferencia. ¡Tu mascota y tu auto te lo van a agradecer!</textarea></label>'
       +'<label class="f">Código de descuento (opcional)<select id="rcCupon"><option value="">Sin código</option>'+activos.map(function(c){return '<option value="'+esc(c.codigo)+'">'+esc(c.codigo)+' · '+c.porcentaje+'% off'+(c.vence?' (hasta '+esc(c.vence)+')':'')+'</option>';}).join("")+'</select></label>'
