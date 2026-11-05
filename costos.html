@@ -400,7 +400,11 @@ function planHTML(){
   var P=state.plan, L=planDatos(), h='';
   h+='<div class="sh-h"><h3>🛒 Plan de compras</h3><button class="x" data-a="close" aria-label="Cerrar">×</button></div>';
   h+='<p class="mini">1. Poné cuántas unidades vas a hacer de cada producto. 2. En cada material, cargá cuánto <b>ya tenés</b>. La lista te dice qué pedir a cada proveedor.</p>';
-  h+='<div class="plan-q">'+state.productos.map(function(p){ return '<label class="f">'+esc(p.nombre)+'<input type="number" inputmode="numeric" min="0" data-planq="'+esc(p.id)+'" value="'+esc(P.q[p.id]!=null?P.q[p.id]:"")+'" placeholder="0"></label>'; }).join("")+'</div>';
+  h+='<div class="plan-q">'+state.productos.map(function(p){ return '<label class="f">'+esc(p.nombre)+'<input type="text" inputmode="numeric" autocomplete="off" data-planq="'+esc(p.id)+'" value="'+esc(P.q[p.id]!=null?P.q[p.id]:"")+'" placeholder="0"></label>'; }).join("")+'</div>';
+  return h+'<div id="planRes">'+planResHTML()+'</div>';
+}
+function planResHTML(){
+  var P=state.plan, L=planDatos(), h='';
   if(!L.length) return h+'<div class="empty">Poné la cantidad a producir de al menos un producto.</div>';
   var faltan=L.filter(function(m){return m.falta>0;}), total=faltan.reduce(function(a,m){return a+m.costo;},0);
   h+='<div class="plan-res '+(faltan.length?'mal':'bien')+'">'+(faltan.length?'⚠️ Te faltan <b>'+faltan.length+'</b> material'+(faltan.length>1?'es':'')+'. Compra total: <b>'+$m(total)+'</b>':'✅ Tenés todo lo necesario para esta producción.')+'</div>';
@@ -409,7 +413,7 @@ function planHTML(){
     h+='<div class="plan-prov"><div class="plan-ph"><b>'+esc(pv)+'</b><span>'+(sub?'Comprar: '+$m(sub):'<span class="ok">Completo</span>')+'</span></div>';
     arr.forEach(function(m){ var u=esc(m.unidad);
       h+='<div class="plan-it '+(m.falta>0?'mal':'bien')+'"><div class="plan-t"><b>'+esc(m.concepto)+'</b><small>Necesitás '+Q.format(m.necesito)+' '+u+' ('+esc(m.detalle.join(" + "))+')</small></div>'
-        +'<label class="plan-tengo">Ya tengo<input type="number" inputmode="decimal" min="0" step="any" data-plant="'+esc(m.k)+'" value="'+esc(P.tengo[m.k]!=null?P.tengo[m.k]:"")+'" placeholder="0"> '+u+'</label>'
+        +'<label class="plan-tengo">Ya tengo<input type="text" inputmode="decimal" autocomplete="off" data-plant="'+esc(m.k)+'" value="'+esc(P.tengo[m.k]!=null?P.tengo[m.k]:"")+'" placeholder="0"> '+u+'</label>'
         +'<div class="plan-acc">'+(m.falta>0?'<span class="mal">Faltan '+Q.format(m.falta)+' '+u+'</span><b>Pedir: '+m.envases+' × '+esc(m.envase)+(m.contenido?' ('+Q.format(m.contenido)+' '+u+' c/u)':'')+'</b><small>'+$m(m.costo)+(m.sobra>0?' · te sobran '+Q.format(m.sobra)+' '+u:'')+'</small>':'<span class="ok">✓ Cubierto'+(m.sobra>0?' · sobran '+Q.format(m.sobra)+' '+u:'')+'</span>')+'</div></div>';
     });
     h+='</div>';
@@ -420,12 +424,13 @@ function planSheet(){ openSheet(planHTML()); }
 function planRefrescar(foco){ var y=$("#sheet-in").scrollTop; $("#sheet-in").innerHTML=planHTML(); $("#sheet-in").scrollTop=y; if(foco){ var el=$('#sheet-in [data-'+foco.a+'="'+foco.v+'"]'); if(el){ el.focus(); try{ el.setSelectionRange(foco.p,foco.p); }catch(e){} } } }
 var planT=null;
 document.addEventListener("input",function(e){
-  var t=e.target, P=state.plan; if(!P) return;
-  if(t.dataset&&t.dataset.planq!=null){ P.q[t.dataset.planq]=t.value===""?"":n(t.value); }
-  else if(t.dataset&&t.dataset.plant!=null){ P.tengo[t.dataset.plant]=t.value===""?"":n(t.value); }
-  else return;
-  save(); var foco={a:t.dataset.planq!=null?"planq":"plant",v:t.dataset.planq!=null?t.dataset.planq:t.dataset.plant,p:t.selectionStart};
-  clearTimeout(planT); planT=setTimeout(function(){ planRefrescar(foco); },350);
+  var t=e.target, P=state.plan; if(!P||!t.dataset) return;
+  if(t.dataset.planq!=null){ P.q[t.dataset.planq]=t.value===""?"":n(t.value); save(); clearTimeout(planT); planT=setTimeout(function(){ var r=$("#planRes"); if(r) r.innerHTML=planResHTML(); },300); }
+  else if(t.dataset.plant!=null){ P.tengo[t.dataset.plant]=t.value===""?"":n(t.value); save(); }
+});
+document.addEventListener("change",function(e){
+  var t=e.target; if(!state.plan||!t.dataset||t.dataset.plant==null) return;
+  var r=$("#planRes"); if(r){ var y=$("#sheet-in").scrollTop; r.innerHTML=planResHTML(); $("#sheet-in").scrollTop=y; }
 });
 function openSheet(html){ $("#sheet-in").innerHTML=html; var d=$("#sheet"); if(!d.open) d.showModal(); var f=d.querySelector("input,select,textarea"); if(f) setTimeout(function(){f.focus();},50); }
 function closeSheet(){ var d=$("#sheet"); if(d.open) d.close(); }

@@ -132,9 +132,11 @@ function calcular(){
 }
 
 /* ---------- vistas ---------- */
+function vPlanInputs(){ var plan=D.plan.q||{};
+  return '<div class="block"><h2>¿Cuántas vas a hacer?</h2><div class="g2">'+productos().map(function(p){ return '<label class="f">'+esc(p.nombre)+'<input type="text" inputmode="numeric" autocomplete="off" data-q="'+esc(p.id)+'" value="'+esc(plan[p.id]!=null?plan[p.id]:"")+'" placeholder="0"></label>'; }).join("")+'</div></div>'; }
 function vPlan(){
   var C=calcular(), F=C.filas, plan=D.plan.q||{}, faltan=F.filter(function(f){return f.falta>0;}), total=faltan.reduce(function(a,f){return a+f.costo;},0);
-  var h='<div class="block"><h2>¿Cuántas vas a hacer?</h2><div class="g2">'+productos().map(function(p){ return '<label class="f">'+esc(p.nombre)+'<input type="number" inputmode="numeric" min="0" data-q="'+esc(p.id)+'" value="'+esc(plan[p.id]!=null?plan[p.id]:"")+'" placeholder="0"></label>'; }).join("")+'</div></div>';
+  var h='';
   if(!F.length) return h+'<p class="sub">Poné la cantidad de al menos un producto.</p>'+capHTML(C);
   var T=C.tela;
   h+='<div class="tiles"><div class="tile"><small>Tela</small>'+(T?(T.falta>0?'<b class="bad">No alcanza</b><span class="bad">Usa '+q(T.necesito)+' '+esc(T.i.unidad)+' · faltan '+q(T.falta)+'</span>':'<b class="ok">Alcanza</b><span class="ok">Usa '+q(T.necesito)+' '+esc(T.i.unidad)+' · quedan '+q(T.stock-T.necesito)+' '+esc(T.i.unidad)+'</span>'):'<b>—</b><span>Sin tela en la receta</span>')+'</div>'
@@ -172,7 +174,7 @@ function vHist(){
 }
 function render(){
   document.querySelectorAll(".tab").forEach(function(t){ t.setAttribute("aria-selected",String(t.dataset.tab===TAB)); });
-  $("#app").innerHTML=TAB==="plan"?vPlan():TAB==="stock"?vStock():vHist();
+  $("#app").innerHTML=TAB==="plan"?vPlanInputs()+'<div id="planRes">'+vPlan()+'</div>':TAB==="stock"?vStock():vHist();
 }
 function mov(tipo,detalle){ D.movs.push({fecha:new Date().toLocaleString("es-AR",{dateStyle:"short",timeStyle:"short"}),tipo:tipo,detalle:detalle}); }
 
@@ -211,7 +213,7 @@ function excel(){
 var reT=null;
 document.addEventListener("input",function(e){
   var t=e.target;
-  if(t.dataset.q!=null){ D.plan.q[t.dataset.q]=t.value===""?"":n(t.value); guardar(); clearTimeout(reT); var id=t.dataset.q, pos=t.selectionStart; reT=setTimeout(function(){ render(); var el=document.querySelector('[data-q="'+id+'"]'); if(el){ el.focus(); try{el.setSelectionRange(pos,pos);}catch(x){} } },400); }
+  if(t.dataset.q!=null){ D.plan.q[t.dataset.q]=t.value===""?"":n(t.value); guardar(); clearTimeout(reT); reT=setTimeout(function(){ var r=$("#planRes"); if(r) r.innerHTML=vPlan(); },300); }
 });
 document.addEventListener("change",function(e){
   var t=e.target; if(t.dataset.c==null) return;
