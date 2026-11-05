@@ -116,7 +116,7 @@ function guard() {
   if (!T()) return '<div class="note bad">No pude cargar los datos del taller' + (S.tallerError ? ": " + esc(S.tallerError) : "") + '. Tocá ↻ Actualizar.</div>';
   return "";
 }
-function sinDatos() { return !T().insumos.length && !T().fichas.length; }
+function sinDatos() { return !T().insumos.length; }
 function bannerMigrar() {
   if (!sinDatos()) return "";
   const v = T().viejos || {}, hay = v.costos || v.insumos || v.pagos || v.corte;
@@ -373,6 +373,9 @@ function avisoSinStock() {
 let SC = null;
 function stockDlg() {
   const lista = activos(T().insumos);
+  if (!lista.length) { redlg('<div class="row"><h3>Cargar o contar stock</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
+    + '<div class="note warn" style="margin:0"><b>Todavía no hay insumos en el catálogo.</b> El stock se carga por insumo, así que primero hay que tenerlos. Importalos de tus herramientas anteriores (trae también el stock que tenías) o cargalos a mano.</div>'
+    + '<div class="acts"><button class="btn ghost" data-a="insNuevo">＋ Nuevo insumo</button><button class="btn main" data-a="tMigrar">Importar de las herramientas anteriores</button></div>'); return; }
   redlg('<div class="row"><h3>Cargar o contar stock</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
     + '<p class="muted" style="margin:0 0 10px">Poné lo que tenés de cada insumo, en la unidad indicada. Incluí lo que le diste a Susana para la tanda que está en confección: el panel lo reserva solo. Dejá en blanco lo que no quieras cambiar.</p>'
     + (SC.fuente ? '<div class="note info" style="margin:0 0 10px">' + SC.fuente + "</div>" : "")
@@ -535,7 +538,9 @@ function armarMigracion(r) {
 function migrarDlg() {
   const d = MG.data;
   redlg('<div class="row"><h3>Importar tus datos</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
-    + '<p class="muted" style="margin:0 0 10px">Esto es lo que encontré en tus herramientas anteriores. No borro nada de lo viejo: las planillas Costos, Insumos, Corte y Pagos quedan como estaban.</p>'
+    + (MG.vacio ? '<div class="note bad" style="margin:0 0 10px"><b>No encontré datos de las herramientas anteriores</b>, ni en tu planilla ni en este navegador. Si las usabas en otro dispositivo (por ejemplo el celular), abrí este panel desde ese dispositivo y probá de nuevo. Si no, cargá los insumos a mano con ＋ Nuevo insumo.</div>'
+      : '<p class="muted" style="margin:0 0 10px">Esto es lo que encontré en tus herramientas anteriores. No borro nada de lo viejo: las planillas Costos, Insumos, Corte y Pagos quedan como estaban.</p>')
+    + (MG.origen && MG.origen.length ? '<div class="note info" style="margin:0 0 10px">' + esc(MG.origen.map(a => ({costos: "Costos", pagos: "Pagos", corte: "Corte"})[a]).join(", ")) + ': los datos estaban guardados solo en este navegador. Los traigo de acá.</div>' : "")
     + '<div class="cards" style="margin-top:0"><div class="kpi"><small>Insumos</small><b>' + d.insumos.length + '</b><span class="k2">' + d.stock.length + ' con stock</span></div><div class="kpi"><small>Proveedores</small><b>' + d.proveedores.length + '</b></div><div class="kpi"><small>Recetas</small><b>' + d.fichas.filter(f => f.receta.length).length + '</b></div><div class="kpi"><small>Deudas y pagos</small><b>' + d.compras.length + " / " + d.pagos.length + "</b></div></div>"
     + (d.insumos.length ? '<div class="tw" style="margin-top:12px;max-height:220px;overflow-y:auto"><table><thead><tr><th>Insumo</th><th>Proveedor</th><th class="n">Precio</th><th class="n">Stock</th></tr></thead><tbody>' + d.insumos.map(i => { const s = d.stock.find(x => x.insumo === i.id), pvv = d.proveedores.find(x => x.id === i.proveedor); return "<tr><td>" + esc(i.nombre) + "</td><td>" + esc(pvv ? pvv.nombre : "—") + "</td><td class='n'>" + money(i.precio) + " / " + esc(i.envase) + "</td><td class='n'>" + (s ? q(s.cantidad) + " " + esc(i.unidad) : "—") + "</td></tr>"; }).join("") + "</tbody></table></div>" : "")
     + (MG.avisos.length ? '<div class="note warn"><b>Revisá esto después de importar:</b><ul style="margin:6px 0 0;padding-left:18px">' + MG.avisos.map(a => "<li>" + esc(a) + "</li>").join("") + "</ul></div>" : "")
@@ -706,13 +711,41 @@ C.rsAplicar = b => { const v = {precio_tarjeta: String(nm(RS.precios.doble.t)), 
   pedir("guardarConfig", {valores: v}, "Precios publicados en la web", b).then(() => { RS.init = false; }); };
 // migración
 C.tMigrar = b => { b.disabled = true; b.innerHTML = '<span class="spinner"></span>';
-  Promise.all(["costos", "insumos", "pagos", "corte"].map(a => L.api(a).then(r => r[a]).catch(() => null))).then(r => { MG = armarMigracion(r); migrarDlg(); }).catch(e => L.toast(e.message)).finally(() => { if (document.body.contains(b)) { b.disabled = false; b.textContent = "Revisar e importar"; } }); };
+  const local = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
+  const LSK = {costos: "lp-costos", pagos: "lp-pagos", corte: "lp-corte"}, vacio = (a, d) => !d || (a === "costos" ? !(d.productos || []).length : a === "pagos" ? !((d.compromisos || []).length || (d.pagos || []).length) : a === "corte" ? !(d.modelos || []).length : !(d.insumos || []).length);
+  Promise.all(["costos", "insumos", "pagos", "corte"].map(a => L.api(a).then(r => r[a]).catch(() => null))).then(r => {
+    const origen = [];
+    const docs = ["costos", "insumos", "pagos", "corte"].map((a, ix) => { let d = r[ix]; if (vacio(a, d) && LSK[a] && !vacio(a, local(LSK[a]))) { d = local(LSK[a]); origen.push(a); } return vacio(a, d) ? null : d; });
+    MG = armarMigracion(docs); MG.origen = origen; MG.vacio = docs.every(d => !d); migrarDlg(); }).catch(e => L.toast(e.message)).finally(() => { if (document.body.contains(b)) { b.disabled = false; b.textContent = "Revisar e importar"; } }); };
 I["mgUsar:change"] = t => { MG.tanda.usar = t.checked; migrarDlg(); };
 I.mgT = t => { MG.tanda[t.dataset.k] = t.value; };
 I["mgProv:change"] = t => { MG.tanda.prov = t.value; };
 C.mgOk = b => { const data = Object.assign({}, MG.data);
   if (MG.tanda.usar) { const items = PRODS.map(p => ({producto: p, cantidad: Math.floor(nd(MG.tanda[p]))})).filter(x => x.cantidad > 0); if (items.length) data.tanda = {items: items, estado: "en_confeccion", proveedor: MG.tanda.prov, notas: "Cargada al importar"}; }
-  pedir("tallerMigrar", {data: data}, "Datos importados", b).then(r => { if (r) { L.cerrarDlg(); PD.draft = {}; PD.gastos = null; } }); };
+  const t = T(), limpio = !t.insumos.length && !t.fichas.length && !t.proveedores.length && !t.gastos.length && !t.compras.length && !t.pagos.length && !t.tandas.length;
+  if (limpio) { pedir("tallerMigrar", {data: data}, "Datos importados", b).then(r => { if (r) { L.cerrarDlg(); PD.draft = {}; PD.gastos = null; } }); return; }
+  importarSumando(data, b);
+};
+/* El taller ya tiene algo cargado: se agrega lo que falta, reusando lo que ya existe por nombre. */
+async function importarSumando(d, b) {
+  const t = T(), idP = {}, idI = {}, idC = {}, paso = m => { b.innerHTML = '<span class="spinner"></span> ' + m; };
+  b.disabled = true;
+  try {
+    for (const p of d.proveedores) { const ya = t.proveedores.find(x => clave(x.nombre) === clave(p.nombre)); if (ya) { idP[p.id] = ya.id; continue; } paso("Proveedores"); idP[p.id] = (await L.api("tallerGuardar", {tipo: "proveedor", data: Object.assign({}, p, {id: ""})})).id; }
+    for (const i of d.insumos) { const ya = t.insumos.find(x => clave(x.nombre) === clave(i.nombre)); if (ya) { idI[i.id] = ya.id; continue; } paso("Insumos: " + i.nombre); idI[i.id] = (await L.api("tallerGuardar", {tipo: "insumo", data: Object.assign({}, i, {id: "", proveedor: idP[i.proveedor] || ""})})).id; }
+    for (const f of d.fichas) { const ya = t.fichas.find(x => x.producto === f.producto); if (ya && (ya.receta || []).length) continue; if (!f.receta.length && ya) continue; paso("Recetas");
+      await L.api("tallerGuardar", {tipo: "ficha", data: Object.assign({}, f, {receta: f.receta.map(r => Object.assign({}, r, {insumo: idI[r.insumo] || r.insumo}))})}); }
+    if (!t.gastos.length) for (const g of d.gastos) { paso("Gastos compartidos"); await L.api("tallerGuardar", {tipo: "gasto", data: Object.assign({}, g, {id: ""})}); }
+    for (const x of d.stock) { const id = idI[x.insumo]; if (!id || t.movimientos.some(m => m.insumo === id)) continue; paso("Stock"); await L.api("stockAjuste", {insumo: id, cantidad: x.cantidad, tipo: "inicial", detalle: x.detalle}); }
+    if (!t.compras.length && !t.pagos.length) {
+      for (const c of d.compras) { paso("Deudas"); idC[c.id] = (await L.api("compraRegistrar", {proveedor: idP[c.proveedor], total: c.total, detalle: c.detalle, notas: c.notas, tipo: "otro"})).id; }
+      for (const p of d.pagos) { paso("Pagos"); await L.api("pagoRegistrar", {proveedor: idP[p.proveedor], monto: p.monto, fecha: p.fecha, medio: p.medio, nota: p.nota, compra: idC[p.compra] || ""}); }
+    }
+    if (Object.keys(d.config || {}).length) await L.api("guardarConfig", {valores: Object.assign({}, d.config, {taller_migrado: new Date().toLocaleString("es-AR")})});
+    if (d.tanda && !t.tandas.some(x => x.estado === "en_confeccion")) { paso("Tanda"); await L.api("tandaCrear", Object.assign({}, d.tanda, {proveedor: idP[d.tanda.proveedor] || ""})); }
+    L.cerrarDlg(); PD.draft = {}; PD.gastos = null; await L.cargar("Datos importados");
+  } catch (e) { L.toast("La importación se cortó: " + e.message + ". Lo que se cargó quedó guardado; podés volver a importar y sigue desde ahí.", 8000); b.disabled = false; b.textContent = "Importar"; await L.cargar(); }
+}
 
 /* ================= registro ================= */
 L.vista("planificar", "Taller", "Planificar tanda", vPlanificar);
