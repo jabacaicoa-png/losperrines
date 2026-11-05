@@ -164,7 +164,7 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
 <script>
 (function(){
 "use strict";
-var LS="lp-corte";
+var PANEL=location.hash==="#panel", LS=PANEL?"lp-corte-panel":"lp-corte";
 function $(s){return document.querySelector(s);}
 function num(id){var v=parseFloat(String($(id).value).replace(",","."));return isFinite(v)?v:0;}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
@@ -498,6 +498,11 @@ document.addEventListener("click",function(e){
   else if(t.dataset.ver){ cargarForm(S.modelos.find(function(x){return x.id===t.dataset.ver;})); }
   else if(t.dataset.del){ if(confirm("¿Borrar este modelo?")){ S.modelos=S.modelos.filter(function(x){return x.id!==t.dataset.del;}); guardarLS(); renderLista(); } }
 });
+var DESDE_PANEL=null; if(PANEL){ try{ DESDE_PANEL=JSON.parse(sessionStorage.getItem("lp_corte_panel")||"null"); }catch(e){} }
+if(DESDE_PANEL&&DESDE_PANEL.modelos&&DESDE_PANEL.modelos.length){
+  var m0=DESDE_PANEL.modelos[0]; S={modelos:DESDE_PANEL.modelos,rollo:DESDE_PANEL.rollo,form:{nom:m0.nom,an:m0.an,t1:m0.t1,t2:m0.t2,t3:m0.t3,la:m0.la,lb:m0.lb,nl:m0.nl,nc:m0.nc,tf:m0.tf,tr:m0.tr}};
+  aplicar(); cargarCostos(); calcular(); setSync("Medidas tomadas del panel (Productos y recetas). Para cambiarlas de forma permanente, editalas allá.");
+} else {
 aplicar(); cargarCostos(); calcular();
 if(sessionStorage.getItem("lp_token")){ setSync("Cargando…");
   api("corte").then(function(r){ nube=true;
@@ -505,6 +510,7 @@ if(sessionStorage.getItem("lp_token")){ setSync("Cargando…");
     else { capturar(); subir(); }
   }).catch(function(e){ setSync(e.message==="SESION"?"Sesión vencida: volvé a entrar al panel":"Sin conexión: guardado solo en este dispositivo"); });
 } else setSync("Guardado solo en este dispositivo. Entrá desde el panel para guardarlo en tu planilla.");
+}
 })();
 </script>
 </body>
