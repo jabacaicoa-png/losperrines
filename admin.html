@@ -241,7 +241,11 @@ function accion(nombre,datos,msg,btn){
   return api(nombre,datos).then(function(r){ return cargar(msg).then(function(){return r;}); })
     .catch(function(e){ toast(e.message,4500); if(btn&&document.body.contains(btn)){ btn.disabled=false; btn.innerHTML=btn.dataset.txt; } });
 }
-function dlg(html,wide){ var d=$("#dlg"); d.className=wide?"wide":""; $("#dlgIn").innerHTML=html; if(!d.open) d.showModal(); var f=$("#dlgIn input:not([type=checkbox]),#dlgIn select"); if(f&&!wide) setTimeout(function(){ try{f.focus();}catch(e){} },40); }
+function dlg(html,wide){
+  var d=$("#dlg"), yaAbierto=d.open; d.className=wide?"wide":""; $("#dlgIn").innerHTML=html; if(!yaAbierto) d.showModal();
+  // el cursor va al primer campo solo cuando la ventana se abre, nunca al actualizarla mientras escribís
+  var f=$("#dlgIn input:not([type=checkbox]),#dlgIn select"); if(f&&!wide&&!yaAbierto) setTimeout(function(){ if(document.activeElement===document.body||!$("#dlgIn").contains(document.activeElement)) try{f.focus();}catch(e){} },40);
+}
 function cerrarDlg(){ var d=$("#dlg"); if(d.open) d.close(); }
 
 /* ---------- navegación ---------- */
@@ -549,7 +553,7 @@ return {S:S,api:api,cargar:cargar,cargarTaller:cargarTaller,accion:accion,render
   }};
 })();
 </script>
-<script src="admin-taller.js?v=2026-11-05c"></script>
+<script src="admin-taller.js?v=2026-11-05d"></script>
 <script>LP.arrancar();</script>
 </body>
 </html>
