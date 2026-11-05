@@ -36,6 +36,20 @@ button{font:inherit;color:inherit}
 .chk{display:flex;gap:10px;align-items:flex-start;margin:4px 0 12px;font-size:.92rem;cursor:pointer}
 .chk input{width:20px;height:20px;margin-top:2px;flex:none}
 .chk small{color:var(--muted)}
+.plan-q{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:8px 0 12px}
+.plan-res{border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:.95rem}
+.plan-res.mal{background:color-mix(in srgb,#E27A66 18%,transparent)} .plan-res.bien{background:color-mix(in srgb,#6CC27D 20%,transparent)}
+.plan-prov{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.plan-ph{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--field);font-size:.95rem}
+.plan-it{display:grid;grid-template-columns:1fr;gap:6px;padding:10px 12px;border-top:1px solid var(--line)}
+@media(min-width:620px){.plan-it{grid-template-columns:1.4fr auto 1fr;align-items:center}}
+.plan-t small{display:block;color:var(--muted);font-size:.8rem}
+.plan-tengo{font-size:.85rem;color:var(--muted);white-space:nowrap}
+.plan-tengo input{width:80px;font:600 .95rem inherit;font-family:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:5px 7px;margin:0 3px}
+.plan-acc{display:flex;flex-direction:column;font-size:.9rem}
+.plan-acc small{color:var(--muted)}
+.plan-acc .mal,.plan-it.mal .plan-t b{color:#C2553F} .plan-acc .mal{font-weight:700}
+.plan-acc .ok,.plan-ph .ok{color:#2F7A3E;font-weight:700}
 .gc-info{font-size:.86rem;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line)}
 .gc-calc{font-size:.88rem;padding:10px 14px;background:var(--field);border-top:1px solid var(--line)}
 .gc-warn{font-size:.86rem;padding:10px 14px;color:#A86A12;background:color-mix(in srgb,#E3A84B 14%,transparent);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
@@ -177,7 +191,7 @@ function norm(d){ d=d&&typeof d==="object"?d:{}; var ps=Array.isArray(d.producto
   ps.forEach(function(p){ p.items=(p.items||[]).map(function(it){return upItem(p,it);}); });
   var pv=Array.isArray(d.proveedores)?d.proveedores:buildProvs(ps);
   var gc=d.compartidos&&typeof d.compartidos==="object"?d.compartidos:{};
-  return {productos:ps, proveedores:pv, activo:d.activo||null, compartidos:{rollo:n(gc.rollo)||60, gastos:Array.isArray(gc.gastos)?gc.gastos:[]}}; }
+  return {productos:ps, proveedores:pv, activo:d.activo||null, compartidos:{rollo:n(gc.rollo)||60, gastos:Array.isArray(gc.gastos)?gc.gastos:[]}, plan:(d.plan&&typeof d.plan==="object")?{q:d.plan.q||{},tengo:d.plan.tengo||{}}:{q:{},tengo:{}}}; }
 function buildProvs(ps){ var m={},out=[]; ps.forEach(function(p){ (p.items||[]).forEach(function(i){ var k=(i.proveedor||"").trim(); if(!k) return;
   if(!m[k]){ m[k]={id:uid(),nombre:k,telefono:i.telefono||"",lugar:i.lugar||"",web:"",notas:""}; out.push(m[k]); }
   else { if(!m[k].telefono&&i.telefono) m[k].telefono=i.telefono; if(!m[k].lugar&&i.lugar) m[k].lugar=i.lugar; } }); }); return out; }
@@ -295,7 +309,7 @@ function render(){
   h+='<button class="add" data-a="new-fijo">+ Agregar costo</button></div></div>';
   h+='<div class="sec"><div class="sec-h"><h2>Gastos compartidos</h2><span class="tot">'+$m(gcUnit(p))+'</span></div><div class="list" id="gc">'+gcHTML(p)+'</div></div>';
   h+='<div class="sec"><div class="sec-h"><h2>Lote</h2></div><div class="list" id="lote">'+loteHTML(p)+'</div></div>';
-  h+='<div class="actions"><button class="btn" data-a="lista" style="grid-column:1/-1">Lista de compras</button><button class="btn" data-a="provs">Proveedores</button><button class="btn pri" data-a="share">Compartir cuadro</button></div>';
+  h+='<div class="actions"><button class="btn" data-a="plan" style="grid-column:1/-1">🛒 Plan de compras (todos los productos)</button><button class="btn" data-a="lista" style="grid-column:1/-1">Lista de compras de este producto</button><button class="btn" data-a="provs">Proveedores</button><button class="btn pri" data-a="share">Compartir cuadro</button></div>';
   app.innerHTML=h;
   refresh();
 }
@@ -367,6 +381,52 @@ function refresh(){
 }
 
 /* ---------- hojas (editor) ---------- */
+function planKey(it){ return String(it.concepto||"").trim().toLowerCase().replace(/\s+/g," "); }
+function planDatos(){
+  var P=state.plan||(state.plan={q:{},tengo:{}}), mats={}, orden=[];
+  state.productos.forEach(function(p){
+    var q=Math.max(0,Math.floor(n(P.q[p.id]!=null?P.q[p.id]:0))); if(!q) return;
+    p.items.forEach(function(it){ if(it.clase==="fijo"||it.incluir===false) return;
+      var k=planKey(it); if(!k) return;
+      if(!mats[k]){ mats[k]={k:k,concepto:it.concepto,unidad:it.unidad||"",envase:it.envase||"envase",contenido:n(it.contenido),precio:n(it.precio),proveedor:(it.proveedor||"").trim(),necesito:0,detalle:[]}; orden.push(k); }
+      var nec=n(it.uso)*q; mats[k].necesito+=nec; mats[k].detalle.push(p.nombre+": "+Q.format(n(it.uso))+" × "+q);
+    });
+  });
+  var lista=orden.map(function(k){ var m=mats[k], tengo=n(P.tengo[k]), falta=Math.max(0,m.necesito-tengo);
+    var env=m.contenido>0?Math.ceil(falta/m.contenido-1e-9):0; m.tengo=tengo; m.falta=falta; m.envases=env; m.costo=env*m.precio; m.sobra=env*m.contenido-falta+Math.max(0,tengo-m.necesito); return m; });
+  return lista;
+}
+function planHTML(){
+  var P=state.plan, L=planDatos(), h='';
+  h+='<div class="sh-h"><h3>🛒 Plan de compras</h3><button class="x" data-a="close" aria-label="Cerrar">×</button></div>';
+  h+='<p class="mini">1. Poné cuántas unidades vas a hacer de cada producto. 2. En cada material, cargá cuánto <b>ya tenés</b>. La lista te dice qué pedir a cada proveedor.</p>';
+  h+='<div class="plan-q">'+state.productos.map(function(p){ return '<label class="f">'+esc(p.nombre)+'<input type="number" inputmode="numeric" min="0" data-planq="'+esc(p.id)+'" value="'+esc(P.q[p.id]!=null?P.q[p.id]:"")+'" placeholder="0"></label>'; }).join("")+'</div>';
+  if(!L.length) return h+'<div class="empty">Poné la cantidad a producir de al menos un producto.</div>';
+  var faltan=L.filter(function(m){return m.falta>0;}), total=faltan.reduce(function(a,m){return a+m.costo;},0);
+  h+='<div class="plan-res '+(faltan.length?'mal':'bien')+'">'+(faltan.length?'⚠️ Te faltan <b>'+faltan.length+'</b> material'+(faltan.length>1?'es':'')+'. Compra total: <b>'+$m(total)+'</b>':'✅ Tenés todo lo necesario para esta producción.')+'</div>';
+  var provs={}, po=[]; L.forEach(function(m){ var pv=m.proveedor||"Sin proveedor"; if(!provs[pv]){ provs[pv]=[]; po.push(pv); } provs[pv].push(m); });
+  po.forEach(function(pv){ var arr=provs[pv], sub=arr.reduce(function(a,m){return a+m.costo;},0);
+    h+='<div class="plan-prov"><div class="plan-ph"><b>'+esc(pv)+'</b><span>'+(sub?'Comprar: '+$m(sub):'<span class="ok">Completo</span>')+'</span></div>';
+    arr.forEach(function(m){ var u=esc(m.unidad);
+      h+='<div class="plan-it '+(m.falta>0?'mal':'bien')+'"><div class="plan-t"><b>'+esc(m.concepto)+'</b><small>Necesitás '+Q.format(m.necesito)+' '+u+' ('+esc(m.detalle.join(" + "))+')</small></div>'
+        +'<label class="plan-tengo">Ya tengo<input type="number" inputmode="decimal" min="0" step="any" data-plant="'+esc(m.k)+'" value="'+esc(P.tengo[m.k]!=null?P.tengo[m.k]:"")+'" placeholder="0"> '+u+'</label>'
+        +'<div class="plan-acc">'+(m.falta>0?'<span class="mal">Faltan '+Q.format(m.falta)+' '+u+'</span><b>Pedir: '+m.envases+' × '+esc(m.envase)+(m.contenido?' ('+Q.format(m.contenido)+' '+u+' c/u)':'')+'</b><small>'+$m(m.costo)+(m.sobra>0?' · te sobran '+Q.format(m.sobra)+' '+u:'')+'</small>':'<span class="ok">✓ Cubierto'+(m.sobra>0?' · sobran '+Q.format(m.sobra)+' '+u:'')+'</span>')+'</div></div>';
+    });
+    h+='</div>';
+  });
+  return h;
+}
+function planSheet(){ openSheet(planHTML()); }
+function planRefrescar(foco){ var y=$("#sheet-in").scrollTop; $("#sheet-in").innerHTML=planHTML(); $("#sheet-in").scrollTop=y; if(foco){ var el=$('#sheet-in [data-'+foco.a+'="'+foco.v+'"]'); if(el){ el.focus(); try{ el.setSelectionRange(foco.p,foco.p); }catch(e){} } } }
+var planT=null;
+document.addEventListener("input",function(e){
+  var t=e.target, P=state.plan; if(!P) return;
+  if(t.dataset&&t.dataset.planq!=null){ P.q[t.dataset.planq]=t.value===""?"":n(t.value); }
+  else if(t.dataset&&t.dataset.plant!=null){ P.tengo[t.dataset.plant]=t.value===""?"":n(t.value); }
+  else return;
+  save(); var foco={a:t.dataset.planq!=null?"planq":"plant",v:t.dataset.planq!=null?t.dataset.planq:t.dataset.plant,p:t.selectionStart};
+  clearTimeout(planT); planT=setTimeout(function(){ planRefrescar(foco); },350);
+});
 function openSheet(html){ $("#sheet-in").innerHTML=html; var d=$("#sheet"); if(!d.open) d.showModal(); var f=d.querySelector("input,select,textarea"); if(f) setTimeout(function(){f.focus();},50); }
 function closeSheet(){ var d=$("#sheet"); if(d.open) d.close(); }
 $("#sheet").addEventListener("click",function(e){ if(e.target===this) closeSheet(); });
@@ -529,6 +589,7 @@ document.addEventListener("click",function(e){
   if(a==="new-fijo"){ editItem({id:uid(),clase:"fijo",concepto:"",proveedor:"",telefono:"",lugar:"",monto:"",cuando:"fab",base:"unidad",incluir:true,notas:""},true); return; }
   if(a==="base"){ draft.base=b.dataset.v; editItem(draft,draftNew); return; }
   if(a==="lista"){ listaSheet(); return; }
+  if(a==="plan"){ planSheet(); return; }
   if(a==="save-item"){ ensureProv(draft); if(draftNew) p.items.push(draft); else { var i=p.items.findIndex(function(x){return x.id===draft.id;}); if(i>=0) p.items[i]=draft; }
     draft=null; closeSheet(); save(); render(); toast("Guardado"); return; }
   if(a==="del-item"){ if(confirm("¿Eliminar "+(draft.concepto||"este renglón")+"?")){ p.items=p.items.filter(function(x){return x.id!==draft.id;}); draft=null; closeSheet(); save(); render(); toast("Eliminado"); } return; }
