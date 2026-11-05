@@ -147,7 +147,7 @@ function vPlan(){
     h+='<div class="prov"><div class="prov-h"><span>'+esc(pv)+'</span><span class="'+(sub?'bad':'ok')+'">'+(sub?$m(sub):'Completo')+'</span></div>'+arr.map(function(f){ var u=esc(f.i.unidad);
       var envT=n(f.i.contenido)>0?' ('+q(f.stock/n(f.i.contenido))+' × '+esc(f.i.envase||"envase")+')':'';
       return '<div class="row"><span><b>'+esc(f.i.nombre)+'</b><small>Necesitás '+q(f.necesito)+' '+u+' · tenés '+q(f.stock)+' '+u+envT+'</small><small>'+esc(f.detalle.join(" + "))+'</small></span>'
-        +(f.falta>0?'<span class="pill bad">Comprar '+f.envases+' × '+esc(f.i.envase||"envase")+'<br><small>sobran '+q(f.queda)+' '+u+'</small></span>':'<span class="pill ok">Alcanza<br><small>quedan '+q(f.queda)+' '+u+'</small></span>')+'</div>'; }).join("")+'</div>';
+        +(f.falta>0?'<span class="pill bad">Faltan '+q(f.falta)+' '+u+'<br>Comprar '+f.envases+' × '+esc(f.i.envase||"envase")+'<br><small>después te sobran '+q(f.queda)+' '+u+'</small></span>':'<span class="pill ok">Alcanza<br><small>te sobran '+q(f.queda)+' '+u+'</small></span>')+'</div>'; }).join("")+'</div>';
   });
   h+='<div class="acts"><button class="btn" data-a="tabla">'+(VERTABLA?'Ocultar tabla completa':'Ver tabla completa')+'</button><button class="btn" data-a="excel">Descargar Excel</button><button class="btn main" data-a="compra">Registrar compra</button><button class="btn main" data-a="prod">Registrar producción</button></div>';
   if(VERTABLA) h+=tablaHTML(F);
