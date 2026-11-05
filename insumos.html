@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Los Perrines · Insumos y producción</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{--olive:#4E5B3A;--ball:#D9E15A;--bg:#F2F3EC;--card:#FFFFFF;--ink:#1E2418;--muted:#5E6656;--line:#D9DCCF;--field:#F7F8F3;--ok:#2F7A3E;--okbg:#E3F1E2;--bad:#B4432F;--badbg:#F8E1DC;--warn:#8A5A0E;--warnbg:#FAEFD6;color-scheme:light;box-sizing:border-box}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--olive:#6E7D55;--bg:#14170F;--card:#1D2217;--ink:#EEF0E6;--muted:#A5AD98;--line:#323A28;--field:#181C13;--ok:#6CC27D;--okbg:#1E3320;--bad:#E27A66;--badbg:#3A1F19;--warn:#E3A84B;--warnbg:#3A2C12;color-scheme:dark}}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.45 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ball);outline-offset:2px;border-radius:4px}
+main{max-width:1000px;margin:0 auto;padding:14px}
+h1{font-size:1.3rem;margin:0 0 2px}
+h2{font-size:1.08rem;margin:0 0 10px}
+.sub{color:var(--muted);margin:0 0 12px;font-size:.92rem}
+.sync{font-size:.8rem;color:var(--muted);margin:0 0 10px}
+.tabs{display:flex;gap:6px;margin:10px 0 14px;flex-wrap:wrap}
+.tab{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;font-weight:700;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--olive);border-color:var(--olive);color:#F2F3EC}
+.block{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.f{display:flex;flex-direction:column;gap:4px;font-size:.82rem;font-weight:600;color:var(--muted)}
+.f input{font:700 1.05rem "Bricolage Grotesque",sans-serif;background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink);width:100%}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.tile small{display:block;color:var(--muted);font-size:.8rem}
+.tile b{display:block;font-size:1.2rem}
+.tile span{font-size:.82rem}
+.ok{color:var(--ok)} .bad{color:var(--bad)}
+.aviso{border-radius:10px;padding:9px 12px;font-size:.9rem;margin-bottom:12px;background:var(--warnbg);color:var(--warn)}
+.aviso.bien{background:var(--okbg);color:var(--ok)}
+.prov{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px}
+.prov-h{display:flex;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--field);font-weight:700}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line)}
+.row small{display:block;color:var(--muted);font-size:.8rem}
+.pill{border-radius:8px;padding:4px 9px;font-size:.84rem;font-weight:700;text-align:right;white-space:nowrap}
+.pill.bad{background:var(--badbg);color:var(--bad)} .pill.ok{background:var(--okbg);color:var(--ok)}
+.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;background:var(--field);border:1.5px solid var(--line)}
+.btn.main{background:var(--olive);border-color:var(--olive);color:#F2F3EC}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}
+th{background:var(--field);font-size:.78rem;color:var(--muted);position:sticky;top:0}
+td.n,th.n{text-align:right}
+tr.mal td{background:var(--badbg)}
+td input{width:100%;min-width:70px;border:0;background:transparent;padding:3px 2px;font:600 .9rem "Bricolage Grotesque",sans-serif;color:var(--ink)}
+td input:focus{background:var(--field);outline:2px solid var(--ball)}
+td.n input{text-align:right}
+.x{background:none;border:0;cursor:pointer;color:var(--muted);font-size:1.1rem}
+.hist li{margin-bottom:4px;font-size:.86rem}
+dialog{border:0;border-radius:16px;padding:0;width:min(560px,96vw);max-height:90vh;background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.dl{padding:16px;overflow:auto;max-height:90vh}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<main>
+  <h1>Insumos y producción</h1>
+  <p class="sync" id="sync">Cargando…</p>
+  <div class="tabs" role="tablist">
+    <button class="tab" data-tab="plan" role="tab">Plan de producción</button>
+    <button class="tab" data-tab="stock" role="tab">Stock de insumos</button>
+    <button class="tab" data-tab="hist" role="tab">Historial</button>
+  </div>
+  <div id="app"></div>
+</main>
+<dialog id="dlg"><div class="dl" id="dlb"></div></dialog>
+<div class="toast" id="toast" role="status"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+"use strict";
+var API="https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDbptu4xiogljKkCeJQrGXh4rn7f0PsXDbypAZCxbVQ/exec";
+function $(s){return document.querySelector(s);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function n(v){var x=parseFloat(String(v==null?"":v).replace(",","."));return isFinite(x)?x:0;}
+var Q=new Intl.NumberFormat("es-AR",{maximumFractionDigits:2}), F0=new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
+function q(v){return Q.format(Math.round(v*100)/100);} function $m(v){return F0.format(Math.round(v));}
+function toast(t){var e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove("on");},2200);}
+function api(accion,data){
+  var body=Object.assign({accion:accion,token:sessionStorage.getItem("lp_token")||""},data||{});
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(j){ if(!j.ok) throw new Error(j.error||"Error"); return j; });
+}
+function key(t){ return String(t||"").trim().toLowerCase().replace(/\s+/g," "); }
+function uid(){ return "i"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+var COSTOS=null, D=null, TAB="plan", VERTABLA=false, timer=null;
+function setSync(t){ $("#sync").textContent=t; }
+function guardar(){ setSync("Guardando…"); clearTimeout(timer); timer=setTimeout(function(){
+  if(D.movs.length>400) D.movs=D.movs.slice(-400);
+  api("guardarInsumos",{data:D}).then(function(){ setSync("Guardado en tu planilla ✓"); }).catch(function(e){ setSync(e.message==="SESION"?"Sesión vencida: volvé a entrar al panel":"No se pudo guardar: "+e.message); }); },500); }
+
+/* ---------- datos ---------- */
+function productos(){ return (COSTOS&&COSTOS.productos)||[]; }
+function catalogoInicial(){
+  var out=[], vistos={};
+  productos().forEach(function(p){ (p.items||[]).forEach(function(it){
+    if(it.clase==="fijo") return; var k=key(it.concepto); if(!k||vistos[k]) return; vistos[k]=1;
+    out.push({id:uid(),nombre:it.concepto,proveedor:it.proveedor||"",envase:it.envase||"",contenido:n(it.contenido),unidad:it.unidad||"",precio:n(it.precio),stock:0});
+  }); });
+  return out;
+}
+function insumoDe(k){ return D.insumos.find(function(x){return key(x.nombre)===k;}); }
+function recetas(){ // por producto: [{k, uso}]
+  var r={}; productos().forEach(function(p){ r[p.id]=(p.items||[]).filter(function(it){return it.clase!=="fijo"&&it.incluir!==false&&key(it.concepto);}).map(function(it){ return {k:key(it.concepto),uso:n(it.uso),unidad:it.unidad||"",concepto:it.concepto,costo:n(it.uso)*(n(it.contenido)>0?n(it.precio)/n(it.contenido):0)}; }); });
+  return r;
+}
+function telaKey(p,R){ var best=null,bc=-1; (R[p.id]||[]).forEach(function(x){ if(/^m(etros?)?\.?$/i.test(String(x.unidad).trim())&&x.costo>bc){bc=x.costo;best=x.k;} }); return best; }
+function calcular(){
+  var R=recetas(), plan=D.plan.q||{}, nec={}, orden=[];
+  productos().forEach(function(p){ var u=Math.max(0,Math.floor(n(plan[p.id]))); if(!u) return;
+    (R[p.id]||[]).forEach(function(x){ if(!nec[x.k]){ nec[x.k]={k:x.k,necesito:0,detalle:[]}; orden.push(x.k); } nec[x.k].necesito+=x.uso*u; nec[x.k].detalle.push(p.nombre+": "+q(x.uso)+" × "+u); }); });
+  var filas=orden.map(function(k){ var i=insumoDe(k)||{nombre:nec[k].detalle.length?k:k,proveedor:"",envase:"",contenido:0,unidad:"",precio:0,stock:0,_falta:true};
+    var m=nec[k], stock=n(i.stock), falta=Math.max(0,m.necesito-stock), env=n(i.contenido)>0?Math.ceil(falta/n(i.contenido)-1e-9):(falta>0?1:0);
+    var comprado=env*n(i.contenido), queda=stock+comprado-m.necesito;
+    return {k:k,i:i,necesito:m.necesito,detalle:m.detalle,stock:stock,falta:falta,envases:env,comprado:comprado,queda:queda,costo:env*n(i.precio),sinCatalogo:!!i._falta};
+  });
+  // capacidad con el stock actual, por producto
+  var cap=productos().map(function(p){ var min=Infinity, lim=null; (R[p.id]||[]).forEach(function(x){ if(x.uso<=0) return; var i=insumoDe(x.k), c=Math.floor(n(i&&i.stock)/x.uso+1e-9); if(c<min){min=c;lim=i?i.nombre:x.concepto;} }); return {p:p,max:min===Infinity?0:min,lim:lim}; });
+  // tela
+  var tela=null; productos().some(function(p){ var u=n(plan[p.id]); if(u>0){ var tk=telaKey(p,R); if(tk){ tela=filas.find(function(f){return f.k===tk;}); } } return !!tela; });
+  return {filas:filas,cap:cap,tela:tela};
+}
+
+/* ---------- vistas ---------- */
+function vPlan(){
+  var C=calcular(), F=C.filas, plan=D.plan.q||{}, faltan=F.filter(function(f){return f.falta>0;}), total=faltan.reduce(function(a,f){return a+f.costo;},0);
+  var h='<div class="block"><h2>¿Cuántas vas a hacer?</h2><div class="g2">'+productos().map(function(p){ return '<label class="f">'+esc(p.nombre)+'<input type="number" inputmode="numeric" min="0" data-q="'+esc(p.id)+'" value="'+esc(plan[p.id]!=null?plan[p.id]:"")+'" placeholder="0"></label>'; }).join("")+'</div></div>';
+  if(!F.length) return h+'<p class="sub">Poné la cantidad de al menos un producto.</p>'+capHTML(C);
+  var T=C.tela;
+  h+='<div class="tiles"><div class="tile"><small>Tela</small>'+(T?(T.falta>0?'<b class="bad">No alcanza</b><span class="bad">Usa '+q(T.necesito)+' '+esc(T.i.unidad)+' · faltan '+q(T.falta)+'</span>':'<b class="ok">Alcanza</b><span class="ok">Usa '+q(T.necesito)+' '+esc(T.i.unidad)+' · quedan '+q(T.stock-T.necesito)+' '+esc(T.i.unidad)+'</span>'):'<b>—</b><span>Sin tela en la receta</span>')+'</div>'
+    +'<div class="tile"><small>Comprar</small><b>'+$m(total)+'</b><span class="'+(faltan.length?'bad':'ok')+'">'+(faltan.length?'Faltan '+faltan.length+' insumo'+(faltan.length>1?'s':''):'No hace falta comprar')+'</span></div></div>';
+  h+=capHTML(C);
+  var provs={}, po=[]; F.forEach(function(f){ var pv=f.i.proveedor||"Sin proveedor"; if(!provs[pv]){provs[pv]=[];po.push(pv);} provs[pv].push(f); });
+  po.forEach(function(pv){ var arr=provs[pv], sub=arr.reduce(function(a,f){return a+f.costo;},0);
+    h+='<div class="prov"><div class="prov-h"><span>'+esc(pv)+'</span><span class="'+(sub?'bad':'ok')+'">'+(sub?$m(sub):'Completo')+'</span></div>'+arr.map(function(f){ var u=esc(f.i.unidad);
+      return '<div class="row"><span><b>'+esc(f.i.nombre)+'</b><small>Necesitás '+q(f.necesito)+' '+u+' · tenés '+q(f.stock)+'</small><small>'+esc(f.detalle.join(" + "))+'</small></span>'
+        +(f.falta>0?'<span class="pill bad">Comprar '+f.envases+' × '+esc(f.i.envase||"envase")+'<br><small>sobran '+q(f.queda)+' '+u+'</small></span>':'<span class="pill ok">Alcanza<br><small>quedan '+q(f.queda)+' '+u+'</small></span>')+'</div>'; }).join("")+'</div>';
+  });
+  h+='<div class="acts"><button class="btn" data-a="tabla">'+(VERTABLA?'Ocultar tabla completa':'Ver tabla completa')+'</button><button class="btn" data-a="excel">Descargar Excel</button><button class="btn main" data-a="compra">Registrar compra</button><button class="btn main" data-a="prod">Registrar producción</button></div>';
+  if(VERTABLA) h+=tablaHTML(F);
+  return h;
+}
+function capHTML(C){
+  var t=C.cap.filter(function(c){return c.lim;}).map(function(c){ return 'Con el stock actual podés hacer <b>'+c.max+'</b> '+esc(c.p.nombre)+(c.lim?' (te frena: '+esc(c.lim)+')':''); });
+  return t.length?'<div class="aviso">'+t.join('<br>')+'</div>':'';
+}
+function tablaHTML(F){
+  return '<div class="tw"><table><thead><tr><th>Proveedor</th><th>Insumo</th><th class="n">Necesitás</th><th class="n">Stock</th><th class="n">Falta</th><th>Viene en</th><th class="n">Contenido</th><th class="n">Envases</th><th class="n">Compra</th><th class="n">Queda</th><th class="n">Precio env.</th><th class="n">Costo</th></tr></thead><tbody>'
+    +F.map(function(f){ return '<tr class="'+(f.falta>0?'mal':'')+'"><td>'+esc(f.i.proveedor)+'</td><td>'+esc(f.i.nombre)+'</td><td class="n">'+q(f.necesito)+' '+esc(f.i.unidad)+'</td><td class="n">'+q(f.stock)+'</td><td class="n">'+q(f.falta)+'</td><td>'+esc(f.i.envase)+'</td><td class="n">'+q(n(f.i.contenido))+'</td><td class="n">'+f.envases+'</td><td class="n">'+q(f.comprado)+'</td><td class="n">'+q(f.queda)+'</td><td class="n">'+$m(n(f.i.precio))+'</td><td class="n">'+$m(f.costo)+'</td></tr>'; }).join("")
+    +'<tr><td colspan="11"><b>Total a comprar</b></td><td class="n"><b>'+$m(F.reduce(function(a,f){return a+f.costo;},0))+'</b></td></tr></tbody></table></div>';
+}
+function vStock(){
+  var cols=[["nombre","Insumo",""],["proveedor","Proveedor",""],["envase","Viene en",""],["contenido","Contenido","n"],["unidad","Unidad",""],["precio","Precio envase","n"],["stock","Stock actual","n"]];
+  return '<p class="sub">Editá directo en cada celda, como en una planilla. Si corregís el stock a mano, se registra como ajuste en el historial.</p>'
+    +'<div class="tw"><table><thead><tr>'+cols.map(function(c){return '<th class="'+c[2]+'">'+c[1]+'</th>';}).join("")+'<th></th></tr></thead><tbody>'
+    +D.insumos.map(function(i){ return '<tr>'+cols.map(function(c){ return '<td class="'+c[2]+'"><input '+(c[2]?'type="number" inputmode="decimal" step="any"':'')+' data-id="'+i.id+'" data-c="'+c[0]+'" value="'+esc(i[c[0]])+'" aria-label="'+c[1]+'"></td>'; }).join("")+'<td><button class="x" data-a="del" data-id="'+i.id+'" aria-label="Borrar">×</button></td></tr>'; }).join("")
+    +'</tbody></table></div><div class="acts"><button class="btn" data-a="nuevo">＋ Agregar insumo</button><button class="btn" data-a="excel">Descargar Excel</button></div>';
+}
+function vHist(){
+  if(!D.movs.length) return '<p class="sub">Todavía no hay movimientos.</p>';
+  return '<div class="block"><ul class="hist">'+D.movs.slice().reverse().map(function(m){ return '<li><b>'+esc(m.fecha)+'</b> · '+esc(m.tipo)+' · '+esc(m.detalle)+'</li>'; }).join("")+'</ul></div>';
+}
+function render(){
+  document.querySelectorAll(".tab").forEach(function(t){ t.setAttribute("aria-selected",String(t.dataset.tab===TAB)); });
+  $("#app").innerHTML=TAB==="plan"?vPlan():TAB==="stock"?vStock():vHist();
+}
+function mov(tipo,detalle){ D.movs.push({fecha:new Date().toLocaleString("es-AR",{dateStyle:"short",timeStyle:"short"}),tipo:tipo,detalle:detalle}); }
+
+/* ---------- registrar compra / producción ---------- */
+function dlg(html){ $("#dlb").innerHTML=html; if(!$("#dlg").open) $("#dlg").showModal(); }
+function compraDlg(){
+  var F=calcular().filas;
+  dlg('<h2>Registrar compra</h2><p class="sub">Poné cuántos envases compraste de cada insumo. Viene sugerido lo que indica el plan.</p><div class="tw"><table><thead><tr><th>Insumo</th><th>Viene en</th><th class="n">Envases</th></tr></thead><tbody>'
+    +D.insumos.map(function(i){ var f=F.find(function(x){return x.i===i;}); return '<tr><td>'+esc(i.nombre)+'</td><td>'+esc(i.envase)+' ('+q(n(i.contenido))+' '+esc(i.unidad)+')</td><td class="n"><input type="number" min="0" step="1" data-comp="'+i.id+'" value="'+(f&&f.envases?f.envases:"")+'"></td></tr>'; }).join("")
+    +'</tbody></table></div><div class="acts"><button class="btn" data-a="cerrar">Cancelar</button><button class="btn main" data-a="okCompra">Sumar al stock</button></div>');
+}
+function prodDlg(){
+  var plan=D.plan.q||{};
+  dlg('<h2>Registrar producción</h2><p class="sub">Cuántas fundas te entregó Susana. Se descuentan del stock los insumos que llevan.</p><div class="g2">'
+    +productos().map(function(p){ return '<label class="f">'+esc(p.nombre)+'<input type="number" min="0" data-prod="'+esc(p.id)+'" value="'+esc(plan[p.id]||"")+'"></label>'; }).join("")
+    +'</div><div class="acts"><button class="btn" data-a="cerrar">Cancelar</button><button class="btn main" data-a="okProd">Descontar del stock</button></div>');
+}
+
+/* ---------- Excel ---------- */
+function excel(){
+  if(!window.XLSX){ toast("No se pudo cargar el generador de Excel"); return; }
+  var F=calcular().filas, wb=XLSX.utils.book_new();
+  var a=[["Proveedor","Insumo","Necesitás","Unidad","Stock","Falta","Viene en","Contenido","Envases a comprar","Compra","Queda","Precio envase","Costo"]];
+  F.forEach(function(f){ a.push([f.i.proveedor,f.i.nombre,+f.necesito.toFixed(2),f.i.unidad,f.stock,+f.falta.toFixed(2),f.i.envase,n(f.i.contenido),f.envases,f.comprado,+f.queda.toFixed(2),n(f.i.precio),f.costo]); });
+  a.push([]); a.push(["","Total a comprar","","","","","","","","","","",F.reduce(function(x,f){return x+f.costo;},0)]);
+  var plan=D.plan.q||{}; a.push([]); a.push(["Plan"]); productos().forEach(function(p){ a.push([p.nombre,n(plan[p.id])]); });
+  var s1=XLSX.utils.aoa_to_sheet(a); s1["!cols"]=[{wch:16},{wch:30},{wch:11},{wch:8},{wch:9},{wch:9},{wch:16},{wch:10},{wch:10},{wch:9},{wch:9},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,s1,"Compras");
+  var b=[["Insumo","Proveedor","Viene en","Contenido","Unidad","Precio envase","Stock actual"]].concat(D.insumos.map(function(i){return [i.nombre,i.proveedor,i.envase,n(i.contenido),i.unidad,n(i.precio),n(i.stock)];}));
+  var s2=XLSX.utils.aoa_to_sheet(b); s2["!cols"]=[{wch:30},{wch:16},{wch:16},{wch:10},{wch:8},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,s2,"Stock");
+  XLSX.writeFile(wb,"Los Perrines - compras "+new Date().toISOString().slice(0,10)+".xlsx");
+}
+
+/* ---------- eventos ---------- */
+var reT=null;
+document.addEventListener("input",function(e){
+  var t=e.target;
+  if(t.dataset.q!=null){ D.plan.q[t.dataset.q]=t.value===""?"":n(t.value); guardar(); clearTimeout(reT); var id=t.dataset.q, pos=t.selectionStart; reT=setTimeout(function(){ render(); var el=document.querySelector('[data-q="'+id+'"]'); if(el){ el.focus(); try{el.setSelectionRange(pos,pos);}catch(x){} } },400); }
+});
+document.addEventListener("change",function(e){
+  var t=e.target; if(t.dataset.c==null) return;
+  var i=D.insumos.find(function(x){return x.id===t.dataset.id;}); if(!i) return;
+  var c=t.dataset.c, num=["contenido","precio","stock"].indexOf(c)>=0, v=num?n(t.value):t.value.trim();
+  if(c==="stock"&&n(i.stock)!==v){
+    if(n(i.stock)===0&&!D.movs.some(function(m){return m.detalle.indexOf(i.nombre+":")===0||m.detalle.indexOf(i.nombre+" ")>=0;})) mov("Stock inicial",i.nombre+": "+q(v)+" "+(i.unidad||""));
+    else { var mot=prompt("Motivo del ajuste (por ejemplo: se rompieron 10):","")||"corrección"; mov("Ajuste",i.nombre+": "+q(n(i.stock))+" → "+q(v)+" "+(i.unidad||"")+" ("+mot+")"); } }
+  i[c]=v; guardar();
+});
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button"); if(!t) return;
+  if(t.dataset.tab){ TAB=t.dataset.tab; render(); return; }
+  var a=t.dataset.a;
+  if(a==="tabla"){ VERTABLA=!VERTABLA; render(); }
+  else if(a==="excel") excel();
+  else if(a==="nuevo"){ D.insumos.push({id:uid(),nombre:"Nuevo insumo",proveedor:"",envase:"",contenido:0,unidad:"u",precio:0,stock:0}); guardar(); render(); }
+  else if(a==="del"){ var i=D.insumos.find(function(x){return x.id===t.dataset.id;}); if(i&&confirm("¿Borrar "+i.nombre+" del catálogo?")){ D.insumos=D.insumos.filter(function(x){return x!==i;}); guardar(); render(); } }
+  else if(a==="compra") compraDlg();
+  else if(a==="prod") prodDlg();
+  else if(a==="cerrar") $("#dlg").close();
+  else if(a==="okCompra"){ var det=[];
+    document.querySelectorAll("[data-comp]").forEach(function(inp){ var env=Math.floor(n(inp.value)); if(env<=0) return; var i=D.insumos.find(function(x){return x.id===inp.dataset.comp;}); var c=env*n(i.contenido); i.stock=n(i.stock)+c; det.push(i.nombre+" +"+q(c)+" "+(i.unidad||"")); });
+    if(!det.length){ toast("No cargaste ninguna compra."); return; }
+    mov("Compra",det.join(", ")); guardar(); $("#dlg").close(); render(); toast("Compra sumada al stock"); }
+  else if(a==="okProd"){ var R=recetas(), det2=[], cant=[], neg=[];
+    document.querySelectorAll("[data-prod]").forEach(function(inp){ var u=Math.floor(n(inp.value)); if(u<=0) return; var p=productos().find(function(x){return x.id===inp.dataset.prod;}); cant.push(u+" "+p.nombre);
+      (R[p.id]||[]).forEach(function(x){ var i=insumoDe(x.k); if(!i) return; i.stock=Math.round((n(i.stock)-x.uso*u)*1000)/1000; if(i.stock<0) neg.push(i.nombre); }); });
+    if(!cant.length){ toast("Poné cuántas fundas se hicieron."); return; }
+    mov("Producción",cant.join(" y ")+(neg.length?" (quedó en negativo: "+neg.join(", ")+")":"")); guardar(); $("#dlg").close(); render(); toast("Stock descontado"); }
+});
+
+/* ---------- arranque ---------- */
+if(!sessionStorage.getItem("lp_token")){ setSync("Entrá desde el panel de administración para ver y guardar tus datos."); $("#app").innerHTML=""; return; }
+Promise.all([api("costos"),api("insumos")]).then(function(r){
+  COSTOS=r[0].costos||{productos:[]}; D=r[1].insumos;
+  if(!D||!Array.isArray(D.insumos)){ D={insumos:catalogoInicial(),movs:[],plan:{q:{}}}; mov("Inicio","Catálogo armado desde Costos ("+D.insumos.length+" insumos). Falta cargar el stock."); guardar(); TAB="stock"; toast("Armé el catálogo con tus materiales de Costos. Cargá el stock."); }
+  D.movs=D.movs||[]; D.plan=D.plan||{q:{}}; D.plan.q=D.plan.q||{};
+  setSync("Guardado en tu planilla ✓"); render();
+}).catch(function(e){ setSync(e.message==="SESION"?"Sesión vencida: volvé a entrar al panel":"No se pudo cargar: "+e.message); });
+})();
+</script>
+</body>
+</html>

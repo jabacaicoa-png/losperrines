@@ -189,12 +189,12 @@ function render(){
   if(!S.data){ r.innerHTML='<div style="min-height:100vh;display:grid;place-items:center"><span class="spinner"></span></div>'; cargar(); return; }
   var d=S.data, P=d.pedidos;
   var nRes=P.filter(function(p){return p.estado==="reserva";}).length, nPag=P.filter(function(p){return p.estado==="pagado";}).length, nExp=P.filter(function(p){return p.estado==="exportado";}).length;
-  var tabs=[["resumen","Resumen",0],["pedidos","Pedidos",nRes+nPag+nExp],["stock","Stock",0],["fotos","Fotos y videos",0],["envios","Envíos",nPag+nExp],["recuperar","Recuperar ventas",0],["pagos","Pagos",0],["costos","Costos",0],["corte","Corte",0],["config","Configuración",0]];
+  var tabs=[["resumen","Resumen",0],["pedidos","Pedidos",nRes+nPag+nExp],["stock","Stock",0],["fotos","Fotos y videos",0],["envios","Envíos",nPag+nExp],["recuperar","Recuperar ventas",0],["pagos","Pagos",0],["costos","Costos",0],["insumos","Insumos",0],["corte","Corte",0],["config","Configuración",0]];
   var h='<header class="top"><div class="bar"><div class="brand">'+LOGO+'<span>Los Perrines <small>Administración</small></span></div>'
     +'<div style="display:flex;gap:8px"><button class="btn ghost" data-a="refrescar" aria-label="Actualizar">↻</button><button class="btn ghost" data-a="salir">Salir</button></div></div><nav class="tabs" role="tablist">'
     +tabs.map(function(t){return '<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+t[1]+(t[2]?'<span class="pill">'+t[2]+'</span>':'')+'</button>';}).join("")
     +'</nav></header><main>';
-  h+= S.tab==="resumen"?vResumen(d) : S.tab==="pedidos"?vPedidos(d) : S.tab==="stock"?vStock(d) : S.tab==="recuperar"?vRecuperar() : S.tab==="fotos"?vFotos(d) : S.tab==="envios"?vEnvios(d) : S.tab==="pagos"?vPagos() : S.tab==="costos"?vCostos() : S.tab==="corte"?vCorte() : vConfig(d);
+  h+= S.tab==="resumen"?vResumen(d) : S.tab==="pedidos"?vPedidos(d) : S.tab==="stock"?vStock(d) : S.tab==="recuperar"?vRecuperar() : S.tab==="fotos"?vFotos(d) : S.tab==="envios"?vEnvios(d) : S.tab==="pagos"?vPagos() : S.tab==="costos"?vCostos() : S.tab==="insumos"?vInsumos() : S.tab==="corte"?vCorte() : vConfig(d);
   r.innerHTML=h+'</main>';
 }
 function nombreProd(d,id){ var p=(d.productos||[]).filter(function(x){return x.id===id;})[0]; return p?p.nombre:(id==="individual"?"Individual":"Doble"); }
@@ -348,14 +348,14 @@ var RC=null, RCsel={};
 function cargarRecuperar(){ api("recuperar").then(function(r){ RC=r; render(); }).catch(function(e){ toast(e.message); }); }
 function vRecuperar(){
   if(!RC){ cargarRecuperar(); return '<h2>Recuperar ventas</h2><p class="sub"><span class="spinner"></span> Cargando…</p>'; }
-  var st=RC.stats||{}, L=RC.lista||[], hist=RC.historial||[], cups=RC.cupones||[];
-  var h='<h2>Recuperar ventas</h2><p class="sub">Los abandonos aparecen al registrarse. El segundo correo se habilita únicamente después del primero y se envía cuando vos decidas.</p>'
+  var st=RC.stats||{}, L=RC.lista||[], cups=RC.cupones||[];
+  var h='<h2>Recuperar ventas</h2><p class="sub">Clientes sin pago confirmado que ya recibieron el primer recordatorio automático. Desde acá podés enviarles un segundo correo promocional.</p>'
     +'<div class="cards"><div class="kpi"><small>Recordatorios automáticos</small><b>'+(st.recordatorios||0)+'</b></div><div class="kpi"><small>Segundos mails</small><b>'+(st.segundos||0)+'</b></div><div class="kpi"><small>Ventas recuperadas</small><b>'+(st.recuperadas||0)+'</b></div><div class="kpi"><small>Sin comprar ahora</small><b>'+L.length+'</b></div></div>';
   h+='<div class="block"><h3>Clientes sin comprar</h3>';
   if(!L.length) h+='<p class="sub" style="margin:0">No hay nadie en la lista.</p>';
   else {
-    h+='<label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-weight:700"><input type="checkbox" id="rcAll"'+(L.some(function(x){return x.estadoRecuperacion==='listo_segundo';}) && L.filter(function(x){return x.estadoRecuperacion==='listo_segundo';}).every(function(x){return RCsel[x.email];})?' checked':'')+'> Seleccionar todos</label><div class="tw"><table><thead><tr><th></th><th>Cliente</th><th>Qué dejó</th><th>Origen</th><th>Fecha</th><th>Estado</th><th>Mails</th></tr></thead><tbody>'
-      +L.map(function(x){ return '<tr><td><input type="checkbox" class="rcChk" data-em="'+esc(x.email)+'"'+(x.estadoRecuperacion!=='listo_segundo'?' disabled title="Esperando primer correo"':'')+(RCsel[x.email]?' checked':'')+'></td><td><b>'+esc((x.nombre+" "+x.apellido).trim()||"—")+'</b><br><small>'+esc(x.email)+(x.cel?' · '+esc(x.cel):'')+'</small></td><td>'+esc(x.items)+'</td><td>'+esc(x.origen)+'</td><td>'+esc(x.fecha)+'</td><td><b>'+(x.estadoRecuperacion==='listo_segundo'?'Disponible para segundo correo':'Esperando primer correo')+'</b></td><td><small>'+(x.recordatorio?'1°: '+esc(x.recordatorio)+'<br>':'')+(x.segundo?'2°: '+esc(x.segundo):'')+(!x.recordatorio&&!x.segundo?'—':'')+'</small></td></tr>'; }).join("")
+    h+='<label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-weight:700"><input type="checkbox" id="rcAll"'+(L.every(function(x){return RCsel[x.email];})?' checked':'')+'> Seleccionar todos</label><div class="tw"><table><thead><tr><th></th><th>Cliente</th><th>Qué dejó</th><th>Origen</th><th>Fecha</th><th>Mails</th></tr></thead><tbody>'
+      +L.map(function(x){ return '<tr><td><input type="checkbox" class="rcChk" data-em="'+esc(x.email)+'"'+(RCsel[x.email]?' checked':'')+'></td><td><b>'+esc((x.nombre+" "+x.apellido).trim()||"—")+'</b><br><small>'+esc(x.email)+(x.cel?' · '+esc(x.cel):'')+'</small></td><td>'+esc(x.items)+'</td><td>'+esc(x.origen)+'</td><td>'+esc(x.fecha)+'</td><td><small>'+(x.recordatorio?'1°: '+esc(x.recordatorio)+'<br>':'')+(x.segundo?'2°: '+esc(x.segundo):'')+(!x.recordatorio&&!x.segundo?'—':'')+'</small></td></tr>'; }).join("")
       +'</tbody></table></div>';
     var activos=cups.filter(function(c){return c.activo;});
     h+='<h3 style="margin-top:16px">Segundo mail promocional</h3>'
@@ -364,7 +364,7 @@ function vRecuperar(){
       +'<label class="f">Código de descuento (opcional)<select id="rcCupon"><option value="">Sin código</option>'+activos.map(function(c){return '<option value="'+esc(c.codigo)+'">'+esc(c.codigo)+' · '+c.porcentaje+'% off'+(c.vence?' (hasta '+esc(c.vence)+')':'')+'</option>';}).join("")+'</select></label>'
       +'<button class="btn main big" data-a="rcEnviar">Enviar a los seleccionados ('+Object.keys(RCsel).filter(function(k){return RCsel[k];}).length+')</button>';
   }
-  h+='</div><div class="block"><h3>Historial de segundos correos ('+hist.length+')</h3>'+(hist.length?'<div class="tw"><table><thead><tr><th>Cliente</th><th>Primer correo</th><th>Segundo correo</th><th>Resultado</th></tr></thead><tbody>'+hist.map(function(x){return '<tr><td>'+esc(x.email)+'</td><td>'+esc(x.recordatorio||'—')+'</td><td>'+esc(x.segundo||'—')+'</td><td>'+(x.estadoRecuperacion==='recuperada'?'Venta recuperada':'Segundo contacto realizado')+'</td></tr>';}).join('')+'</tbody></table></div>':'<p class="sub">Todavía no se enviaron segundos correos.</p>')+'</div><div class="block"><h3>Códigos de descuento</h3><p class="sub" style="margin:0 0 10px">Se aplican solo pagando por transferencia, sobre el precio de transferencia.</p>'
+  h+='</div><div class="block"><h3>Códigos de descuento</h3><p class="sub" style="margin:0 0 10px">Se aplican solo pagando por transferencia, sobre el precio de transferencia.</p>'
     +(cups.length?'<div class="tw"><table><thead><tr><th>Código</th><th>Descuento</th><th>Vence</th><th>Uso</th><th>Estado</th><th></th></tr></thead><tbody>'+cups.map(function(c){ return '<tr><td><b>'+esc(c.codigo)+'</b></td><td>'+c.porcentaje+'%</td><td>'+esc(c.vence||"—")+'</td><td>'+(c.unico?'Una vez por cliente':'Ilimitado')+'</td><td>'+(c.activo?'<span class="pos">Activo</span>':'<span class="neg">Pausado</span>')+'</td><td style="white-space:nowrap"><button class="btn ghost" data-a="cupToggle" data-cod="'+esc(c.codigo)+'">'+(c.activo?'Pausar':'Activar')+'</button> <button class="btn ghost" style="color:var(--bad)" data-a="cupDel" data-cod="'+esc(c.codigo)+'">Borrar</button></td></tr>'; }).join("")+'</tbody></table></div>':'<p class="sub">Todavía no creaste códigos.</p>')
     +'<div class="g2" style="margin-top:12px"><label class="f">Código<input id="cpCod" placeholder="Ej. VOLVE10" style="text-transform:uppercase"></label><label class="f">% de descuento<input id="cpPct" type="number" min="1" max="99" value="10"></label></div>'
     +'<div class="g2"><label class="f">Vence (opcional)<input id="cpVence" type="date"></label><label style="display:flex;gap:8px;align-items:center;margin-top:18px"><input type="checkbox" id="cpUnico" checked> Una vez por cliente</label></div>'
@@ -373,11 +373,12 @@ function vRecuperar(){
 }
 function vPagos(){ return '<iframe src="pagos.html" title="Pagos" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function vCorte(){ return '<iframe src="corte.html" title="Calculadora de corte" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
+function vInsumos(){ return '<iframe src="insumos.html" title="Insumos y producción" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function vCostos(){ return '<iframe src="costos.html" title="Costos" style="display:block;width:100%;height:calc(100vh - 130px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:var(--bg)"></iframe>'; }
 function dlg(html){ $("#dlgIn").innerHTML=html; $("#dlg").showModal(); }
 
 /* ---------- eventos ---------- */
-document.addEventListener("change",function(e){ if(e.target.id==="rcAll"){ (RC&&RC.lista||[]).forEach(function(x){ if(x.estadoRecuperacion==="listo_segundo")RCsel[x.email]=e.target.checked; }); render(); return; } if(e.target.classList&&e.target.classList.contains("rcChk")){ RCsel[e.target.dataset.em]=e.target.checked; render(); return; } if(e.target.id==="medFile"&&e.target.files.length){ subirArchivos(e.target.files); e.target.value=""; } });
+document.addEventListener("change",function(e){ if(e.target.id==="rcAll"){ (RC&&RC.lista||[]).forEach(function(x){ RCsel[x.email]=e.target.checked; }); render(); return; } if(e.target.classList&&e.target.classList.contains("rcChk")){ RCsel[e.target.dataset.em]=e.target.checked; render(); return; } if(e.target.id==="medFile"&&e.target.files.length){ subirArchivos(e.target.files); e.target.value=""; } });
 document.addEventListener("submit",function(e){
   if(e.target.id!=="login") return; e.preventDefault();
   var b=$("#loginBtn"); b.disabled=true; b.innerHTML='<span class="spinner"></span>';
