@@ -571,6 +571,9 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 <script>
 /* ===== Pegá acá la URL de tu Apps Script (termina en /exec) ===== */
 var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDbptu4xiogljKkCeJQrGXh4rn7f0PsXDbypAZCxbVQ/exec";
+/* ===== Medición: pegá los códigos y se activa sola. Vacío = apagada ===== */
+var GA_ID = "";          /* Google Analytics 4, empieza con G-  (ej. "G-AB12CD34EF") */
+var META_PIXEL_ID = "";  /* Meta Pixel (Facebook / Instagram), solo números */
 </script>
 <script>
 (function(){
@@ -589,6 +592,32 @@ function api(accion,data){
   return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})
     .then(function(r){return r.json();}).then(function(j){ if(!j.ok) throw new Error(j.error||"Error"); return j; });
 }
+/* ---------- medición (Google Analytics 4 y Meta Pixel) ----------
+   No mide las visitas con el link de vista previa: son tuyas y ensuciarían los números. */
+var TRK={on:false};
+function trkInit(){
+  if(TRK.on||VISTA) return; TRK.on=true;
+  if(/^G-[A-Z0-9]+$/.test(GA_ID)){
+    var g=document.createElement("script"); g.async=true; g.src="https://www.googletagmanager.com/gtag/js?id="+GA_ID; document.head.appendChild(g);
+    window.dataLayer=window.dataLayer||[]; window.gtag=function(){dataLayer.push(arguments);}; gtag("js",new Date()); gtag("config",GA_ID);
+  }
+  if(/^\d{6,}$/.test(META_PIXEL_ID)){
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version="2.0";n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,"script","https://connect.facebook.net/en_US/fbevents.js");
+    fbq("init",META_PIXEL_ID); fbq("track","PageView");
+  }
+}
+function trkItems(lista){ return lista.map(function(x){ var p=PR(x.id)||{}; return {item_id:x.id,item_name:p.nombre||x.id,price:p.precio_tarjeta||0,quantity:x.q||1}; }); }
+/* evento: view | add | checkout | order | purchase */
+function trk(ev,datos){
+  if(!TRK.on) return; datos=datos||{};
+  var items=trkItems(datos.items||[]), valor=datos.valor!=null?datos.valor:items.reduce(function(a,i){return a+i.price*i.quantity;},0);
+  var ga={view:"view_item_list",add:"add_to_cart",checkout:"begin_checkout",order:"add_payment_info",purchase:"purchase"}[ev];
+  var fb={view:"ViewContent",add:"AddToCart",checkout:"InitiateCheckout",order:"AddPaymentInfo",purchase:"Purchase"}[ev];
+  try{ if(window.gtag&&ga) gtag("event",ga,Object.assign({currency:"ARS",value:valor,items:items},datos.pago?{payment_type:datos.pago}:{},datos.id?{transaction_id:datos.id}:{})); }catch(e){}
+  try{ if(window.fbq&&fb) fbq("track",fb,{currency:"ARS",value:valor,content_type:"product",content_ids:items.map(function(i){return i.item_id;}),num_items:items.reduce(function(a,i){return a+i.quantity;},0)}); }catch(e){}
+}
+function carritoItems(){ return PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){return {id:p.id,q:Q[p.id]};}); }
+
 function show(id){ $("#loading").hidden=true; $("#pronto").hidden=id!=="pronto"; $("#tienda").hidden=id!=="tienda"; }
 
 /* ---------- arranque ---------- */
@@ -599,8 +628,8 @@ if(!/^https:\/\/script\.google\.com\//.test(API)){ show("pronto"); return; }
 api("config").then(function(c){
   C=c;
   if(!c.abierta){ show("pronto"); return; }
-  show("tienda"); $("#previewBar").hidden=!c.vista;
-  pintarPrecios(); pintarStock(); fotos();
+  show("tienda"); $("#previewBar").hidden=!c.vista; trkInit();
+  pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
   if(c.whatsapp && c.whatsapp.length>6){ $$(".wa").forEach(function(a){a.href="https://wa.me/"+c.whatsapp;}); } else { $$(".wa").forEach(function(a){a.hidden=true;}); }
   if(qs.get("pedido")) volvioDeMP();
   else if(qs.get("carrito")){ String(qs.get("carrito")).split(",").forEach(function(x){ var p=x.split(":"), id=p[0]==="individual"?"individual":"doble", q=parseInt(p[1],10)||0; if(PR(id)&&q>0) Q[id]=Math.min(maxQ(id),q); }); setCount(); history.replaceState(null,"",location.pathname); if(totQ()){ step="cart"; abrir(); } }
@@ -863,8 +892,10 @@ function pagar(btn){
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
   d.items=PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){return {producto:p.id,cantidad:Q[p.id]};});
   delete d.cupon_in; d.cupon=(CUPON&&d.pago==="transferencia")?CUPON.codigo:"";
+  var trkIt=carritoItems();
   api("pedido",d).then(function(r){
-    if(r.pago==="tarjeta"){ store("lp_ultimo",{id:r.id,email:d.email}); location.href=r.init_point; return; }
+    trk("order",{items:trkIt,pago:r.pago,id:r.id,valor:r.pago==="transferencia"&&r.total?r.total:undefined});
+    if(r.pago==="tarjeta"){ store("lp_trk_items",trkIt); store("lp_ultimo",{id:r.id,email:d.email}); location.href=r.init_point; return; }
     order=r; step="ok"; CUPON=null; render(); dBody.scrollTop=0;
     PRODS().forEach(function(p){ p.disponible=Math.max(0,p.disponible-(Q[p.id]||0)); }); C.disponible=PR("doble")?PR("doble").disponible:0;
     Q={doble:0,individual:0}; setCount(); pintarStock();
@@ -879,6 +910,7 @@ function volvioDeMP(){
   dTitle.textContent="Tu pago"; dBody.innerHTML='<p><span class="spinner"></span> Confirmando tu pago…</p>'; dFoot.innerHTML=""; drawer.showModal();
   api("estado",{id:id,payment_id:pay&&pay!=="null"?pay:"",email:u.id===id?u.email:""}).then(function(r){
     if(["pagado","exportado","despachado"].indexOf(r.estado)>=0){
+      if(!store("lp_trk_"+r.id)){ store("lp_trk_"+r.id,1); trk("purchase",{items:store("lp_trk_items")||[],pago:"tarjeta",id:r.id,valor:r.total}); }
       dTitle.textContent="¡Gracias, "+r.nombre+"!";
       dBody.innerHTML='<p>Tu pago fue aprobado. Tu pedido es el <b>'+esc(r.id)+'</b>.</p><p>Te mandamos un mail con el detalle, y otro con el número de seguimiento cuando salga.</p>';
       dFoot.innerHTML='<button class="btn btn-main" style="width:100%" data-close>Listo</button>';
@@ -923,10 +955,10 @@ document.addEventListener("click",function(e){
   var t=e.target.closest("button,a"); if(!t) return;
   if(t.hasAttribute("data-add")){ var m=$("#modelos"); if(m&&!m.hidden){ m.scrollIntoView({behavior:"smooth",block:"start"}); return; } t.setAttribute("data-addp","doble"); }
   if(t.dataset.addp){ var id=t.dataset.addp, pr=PR(id); if(!pr) return; if(pr.disponible<=0){ abrirDlg("aviso"); return; }
-    Q[id]=Math.max(1,Math.min(maxQ(id),(Q[id]||0)+1)); setCount(); step="cart"; abrir(); return; }
+    Q[id]=Math.max(1,Math.min(maxQ(id),(Q[id]||0)+1)); setCount(); step="cart"; abrir(); trk("add",{items:[{id:id,q:1}]}); return; }
   else if(t.id==="openCart"){ if(step==="ok"){ step="cart"; } abrir(); }
   else if(t.dataset.q){ var qid=t.dataset.id||"doble"; Q[qid]=Math.max(0,Math.min(maxQ(qid),(Q[qid]||0)+parseInt(t.dataset.q,10))); setCount(); render(); }
-  else if(t.dataset.go){ step=t.dataset.go; render(); dBody.scrollTop=0; }
+  else if(t.dataset.go){ step=t.dataset.go; render(); dBody.scrollTop=0; if(step==="datos") trk("checkout",{items:carritoItems()}); }
   else if(t.hasAttribute("data-pagar")){ pagar(t); }
   else if(t.hasAttribute("data-cupon")){ aplicarCupon(); }
   else if(t.dataset.retry){ var u=store("lp_ultimo")||{}; if(RETRY_EMAIL) u={email:RETRY_EMAIL}; t.disabled=true; api("reintentar",{id:t.dataset.retry,email:u.email}).then(function(r){location.href=r.init_point;}).catch(function(x){ $("#err").textContent=x.message; t.disabled=false; }); }
