@@ -48,7 +48,7 @@ h1,h2,h3{letter-spacing:-.02em;text-wrap:balance}
 /* estructura */
 .shell{display:grid;grid-template-columns:1fr;min-height:100vh}
 @media(min-width:960px){.shell{grid-template-columns:var(--side) minmax(0,1fr)}}
-aside.nav{background:var(--card);border-right:1px solid var(--line);padding:16px 12px 24px;display:flex;flex-direction:column;gap:4px}
+aside.nav{background:var(--card);border-right:1px solid var(--line);padding:14px 12px 18px;display:flex;flex-direction:column;gap:2px}
 @media(min-width:960px){aside.nav{position:sticky;top:env(safe-area-inset-top,0px);height:calc(100vh - env(safe-area-inset-top,0px));overflow-y:auto}}
 @media(max-width:959px){
   aside.nav{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:40;transform:translateX(-105%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.25);padding-top:calc(16px + env(safe-area-inset-top,0px));overflow-y:auto}
@@ -59,8 +59,8 @@ aside.nav{background:var(--card);border-right:1px solid var(--line);padding:16px
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.05rem;padding:4px 8px 12px}
 .brand svg{width:30px;height:30px;flex:none}
 .brand small{display:block;font-weight:600;color:var(--muted);font-size:.8rem}
-.ngroup{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:14px 10px 4px}
-.nlink{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:9px 10px;font-weight:600;cursor:pointer;color:var(--ink)}
+.ngroup{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 10px 2px}
+.nlink{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:7px 10px;font-weight:600;cursor:pointer;color:var(--ink)}
 .nlink:hover{background:var(--field)}
 .nlink[aria-current="page"]{background:var(--olive);color:var(--on-olive)}
 .nlink .pill{background:var(--ball);color:#1E2418;border-radius:999px;font-size:.72rem;font-weight:800;padding:0 7px;line-height:19px;min-width:19px;text-align:center}
@@ -268,10 +268,12 @@ function render(){
     +'<div class="foot"><button class="btn ghost sm" data-a="refrescar">↻ Actualizar</button><button class="btn ghost sm" data-a="salir">Salir</button></div>';
   var body; try{ body=V.fn(S.data); }catch(e){ console.error(e); body='<div class="note bad">No pude mostrar esta sección: '+esc(e.message)+'</div>'; }
   var a=document.activeElement, fid=a&&a.id, pos=null; try{ pos=a&&a.selectionStart; }catch(e){}
+  var navAnt=$("aside.nav"), navY=navAnt?navAnt.scrollTop:0;   // el menú queda donde estaba
   var y=window.scrollY;
   r.innerHTML='<div class="shell'+(S.menu?' menu':'')+'"><aside class="nav" aria-label="Secciones">'+nav+'</aside><div style="min-width:0">'
     +'<div class="topm"><button class="btn ghost sm" data-a="menu" aria-label="Abrir menú">☰ Menú</button><b>'+esc(V.titulo)+'</b><button class="btn ghost sm" data-a="refrescar" aria-label="Actualizar">↻</button></div>'
     +'<main id="main">'+body+'</main></div></div>';
+  var navN=$("aside.nav"); if(navN) navN.scrollTop=navY;
   if(fid){ var el=document.getElementById(fid); if(el){ el.focus({preventScroll:true}); try{ if(pos!=null) el.setSelectionRange(pos,pos); }catch(e){} } }
   window.scrollTo(0,y);
 }

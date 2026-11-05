@@ -333,7 +333,7 @@ function vInsumos() {
   const res = reservado(), lista = T().insumos.filter(i => IV.archivados || i.activo !== false), bajos = bajoMinimo();
   const valor = activos(T().insumos).reduce((a, i) => a + Math.max(0, i.stock) * precioU(i), 0);
   let h = cabecera("Insumos", "Un solo catálogo para todo: recetas, compras y stock. El stock se mueve solo con cada compra y cada tanda recibida; si algo no coincide, corregilo desde el insumo.",
-    '<button class="btn ghost" data-a="compraNueva">Registrar compra</button><button class="btn main" data-a="insNuevo">＋ Nuevo insumo</button>') + bannerMigrar();
+    '<button class="btn ghost" data-a="stockCargar">Cargar o contar stock</button><button class="btn ghost" data-a="compraNueva">Registrar compra</button><button class="btn main" data-a="insNuevo">＋ Nuevo insumo</button>') + bannerMigrar() + avisoSinStock();
   h += '<div class="cards" style="margin-top:0"><div class="kpi"><small>Insumos</small><b>' + activos(T().insumos).length + '</b></div><div class="kpi' + (bajos.length ? " bad" : " ok") + '"><small>Bajo el mínimo</small><b>' + bajos.length + '</b></div><div class="kpi"><small>Valor del stock</small><b>' + money(valor) + '</b></div><div class="kpi"><small>Reservado para el taller</small><b>' + Object.keys(res).filter(k => res[k] > 0).length + '</b><span class="k2">insumos en tandas en confección</span></div></div>';
   if (!lista.length) return h + '<div class="empty" style="margin-top:14px">Todavía no hay insumos cargados.</div>';
   h += '<div class="block"><div class="tw"><table><thead><tr><th>Insumo</th><th>Proveedor</th><th class="n">Precio</th><th class="n">Stock</th><th class="n">Taller</th><th class="n">Disponible</th><th></th></tr></thead><tbody>'
@@ -365,6 +365,24 @@ function insDlg() {
       + (movs.length ? '<div class="tw" style="margin-top:12px"><table><tbody>' + movs.map(m => "<tr><td class='small'>" + esc(m.fecha) + "</td><td class='small'>" + esc(m.tipo) + " · " + esc(m.detalle) + "</td><td class='n " + (m.cantidad > 0 ? "pos" : "neg") + "'>" + (m.cantidad > 0 ? "+" : "") + q(m.cantidad) + "</td></tr>").join("") + "</tbody></table></div>" : "")));
 }
 
+function avisoSinStock() {
+  const L2 = activos(T().insumos); if (!L2.length || L2.some(i => i.stock !== 0)) return "";
+  return '<div class="note warn" style="margin:0 0 14px"><b>Todavía no cargaste el stock de los insumos.</b> Contá lo que tenés (incluido lo que le diste a Susana para la tanda en confección) y cargalo todo junto. Si lo tenías en las herramientas anteriores, lo traigo para que solo lo revises.<div class="acts" style="margin-top:10px"><button class="btn main" data-a="stockCargar">Cargar stock</button></div></div>';
+}
+/* ---------- cargar o contar el stock de todos los insumos juntos ---------- */
+let SC = null;
+function stockDlg() {
+  const lista = activos(T().insumos);
+  redlg('<div class="row"><h3>Cargar o contar stock</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
+    + '<p class="muted" style="margin:0 0 10px">Poné lo que tenés de cada insumo, en la unidad indicada. Incluí lo que le diste a Susana para la tanda que está en confección: el panel lo reserva solo. Dejá en blanco lo que no quieras cambiar.</p>'
+    + (SC.fuente ? '<div class="note info" style="margin:0 0 10px">' + SC.fuente + "</div>" : "")
+    + '<div class="tw"><table><thead><tr><th>Insumo</th><th class="n">En el sistema</th><th class="n">Lo que tenés</th></tr></thead><tbody>'
+    + lista.map(i => { const v = SC.v[i.id] != null ? SC.v[i.id] : "", cambia = v !== "" && Math.abs(nd(v) - i.stock) > 1e-9;
+      return "<tr><td><b>" + esc(i.nombre) + "</b>" + (i.contenido !== 1 ? "<br><span class='muted small'>" + esc(i.envase) + " de " + q(i.contenido) + " " + esc(i.unidad) + "</span>" : "") + (SC.viejo[i.id] != null ? "<br><span class='small' style='color:var(--info)'>Valor anterior: " + q(SC.viejo[i.id]) + " " + esc(i.unidad) + "</span>" : "") + "</td>"
+        + "<td class='n'>" + q(i.stock) + " " + esc(i.unidad) + "</td><td class='n'><span class='unitw'><input class='inp xs' id='sc-" + esc(i.id) + "' data-in='scV' data-id='" + esc(i.id) + "' inputmode='decimal' value='" + esc(v) + "' placeholder='" + esc(L.qi(i.stock)) + "' aria-label='Stock de " + esc(i.nombre) + "'> " + esc(i.unidad) + "</span>" + (cambia ? "<br><span class='pill " + (nd(v) > i.stock ? "ok" : "warn") + "'>" + (nd(v) > i.stock ? "+" : "") + q(nd(v) - i.stock) + "</span>" : "") + "</td></tr>"; }).join("")
+    + '</tbody></table></div><label class="f" style="margin-top:12px">Motivo<input id="sc-m" data-in="scM" value="' + esc(SC.motivo) + '"></label>'
+    + '<p class="err" id="scErr"></p><div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="scOk">Guardar stock</button></div>', true);
+}
 /* ================= PROVEEDORES Y PAGOS ================= */
 function vProveedores() {
   const g = guard(); if (g) return cabecera("Proveedores y pagos") + g;
@@ -474,10 +492,12 @@ function armarMigracion(r) {
     const o = {id: id, nombre: String(x.nombre || x.concepto).trim(), descripcion: "", proveedor: pv(x.proveedor, x), envase: x.envase || "unidad", contenido: nd(x.contenido) || 1, unidad: x.unidad || "u", precio: nm(x.precio), minimo: 0, _fuente: fuente};
     insumos.push(o); iIdx[k] = o; return o; }
   (insDoc.insumos || []).forEach(x => { const o = addIns(x, "Insumos"); if (o && nd(x.stock)) stock.push({insumo: o.id, cantidad: nd(x.stock), detalle: "Stock importado de la herramienta Insumos"}); });
+  const tengo = (costos.plan && costos.plan.tengo) || {};
   const cprods = costos.productos || [];
   cprods.forEach(p => (p.items || []).forEach(it => { if (it.clase === "fijo") return; const ya = iIdx[clave(it.concepto)];
     if (ya) { if (nm(it.precio) && Math.abs(nm(it.precio) - ya.precio) > 0.5 && ya._fuente === "Insumos") avisos.push("Precio de " + ya.nombre + ": en Costos " + money(it.precio) + ", en Insumos " + money(ya.precio) + ". Usé el de Insumos."); }
     else addIns(it, "Costos"); }));
+  Object.keys(tengo).forEach(k => { const i = iIdx[clave(k)]; if (i && nd(tengo[k]) && !stock.some(x => x.insumo === i.id)) stock.push({insumo: i.id, cantidad: nd(tengo[k]), detalle: "Stock importado de Costos (Ya tengo)"}); });
   // medidas desde Corte
   const modelos = corteDoc.modelos || [], rollo = corteDoc.rollo || {};
   function medidasPara(cp, prod) { let m = modelos.find(x => x.prod && x.prod === cp.id) || modelos.find(x => (prod === "individual") === /indiv|1 plaza|simple/i.test(x.nom || "") && /actual/i.test(x.nom || "")) || modelos.find(x => (prod === "individual") === /indiv|1 plaza|simple/i.test(x.nom || ""));
@@ -617,6 +637,33 @@ C.insAjustar = b => { const i = ins(ID.id), v = $("#aj-n").value.trim(), mot = $
   const inicial = !T().movimientos.some(m => m.insumo === i.id);
   pedir("stockAjuste", {insumo: i.id, cantidad: delta, tipo: inicial ? "inicial" : "ajuste", detalle: mot || (inicial ? "Stock inicial" : "Corrección por conteo")}, "Stock actualizado", b).then(r => { if (r) insDlg(); }); };
 C.insBorrar = b => { if (!confirm("¿Archivar o borrar este insumo? Si ya tiene movimientos o está en una receta, queda archivado.")) return; pedir("tallerBorrar", {tipo: "insumo", id: ID.id}, null, b).then(r => { if (r) { L.cerrarDlg(); L.toast(r.archivado ? "Insumo archivado" : "Insumo borrado"); } }); };
+C.stockCargar = b => {
+  const lista = activos(T().insumos), primeraVez = !T().movimientos.length;
+  SC = {v: {}, viejo: {}, motivo: primeraVez ? "Stock inicial" : "Conteo", fuente: ""};
+  b.disabled = true;
+  Promise.all([L.api("insumos").then(r => r.insumos).catch(() => null), L.api("costos").then(r => r.costos).catch(() => null)]).then(r => {
+    const viejoIns = {}, viejoCos = {};
+    ((r[0] && r[0].insumos) || []).forEach(x => { if (nd(x.stock)) viejoIns[clave(x.nombre)] = nd(x.stock); });
+    const tengo = (r[1] && r[1].plan && r[1].plan.tengo) || {}; Object.keys(tengo).forEach(k => { if (nd(tengo[k])) viejoCos[clave(k)] = nd(tengo[k]); });
+    let n = 0;
+    lista.forEach(i => { const k = clave(i.nombre), v = viejoIns[k] != null ? viejoIns[k] : viejoCos[k];
+      if (v != null) { SC.viejo[i.id] = v; n++; if (i.stock === 0) SC.v[i.id] = L.qi(v); } });
+    if (n) SC.fuente = "Encontré el stock de " + n + " insumo" + (n > 1 ? "s" : "") + " en tus herramientas anteriores (Insumos o Costos → “Ya tengo”). Lo puse en los que están en cero: revisalo antes de guardar.";
+    stockDlg();
+  }).finally(() => { if (document.body.contains(b)) b.disabled = false; });
+};
+I.scV = t => { SC.v[t.dataset.id] = t.value; stockDlg(); };
+I.scM = t => { SC.motivo = t.value; };
+C.scOk = async b => {
+  const cambios = activos(T().insumos).map(i => { const v = SC.v[i.id]; if (v == null || String(v).trim() === "") return null; const d = Math.round((nd(v) - i.stock) * 1000) / 1000; return d ? {i: i, d: d} : null; }).filter(Boolean);
+  if (!cambios.length) { errEn("scErr", "No hay cambios para guardar."); return; }
+  b.disabled = true; let ok = 0;
+  try {
+    for (const c of cambios) { b.innerHTML = '<span class="spinner"></span> ' + (ok + 1) + " de " + cambios.length;
+      await L.api("stockAjuste", {insumo: c.i.id, cantidad: c.d, tipo: T().movimientos.some(m => m.insumo === c.i.id) ? "ajuste" : "inicial", detalle: SC.motivo || "Stock inicial"}); ok++; }
+    L.cerrarDlg(); await L.cargar("Stock guardado: " + ok + " insumo" + (ok > 1 ? "s" : ""));
+  } catch (e) { L.toast("Se guardaron " + ok + " de " + cambios.length + ". " + e.message, 6000); await L.cargar(); }
+};
 // compras y pagos
 function nuevaCompra(pv) { return {modo: "compra", proveedor: pv || "", fecha: hoyISO(), items: {}, extras: [], extra: "", pagado: "", medio: "Transferencia", notas: "", actualizar: true}; }
 C.compraNueva = t => { CD = nuevaCompra(t.dataset.prov); compraDlg(); };
