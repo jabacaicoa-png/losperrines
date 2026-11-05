@@ -57,7 +57,7 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
 #print{display:none}
 @media print{
   :root,:root:not([data-theme="light"]){--teal:#9FE1CB !important;--teal-s:#0F6E56 !important;--amber:#FAC775 !important;--amber-s:#854F0B !important;--gray:#E4E6DD !important;--muted:#5E6656 !important;color-scheme:light}
-  @page{size:A4;margin:14mm 13mm}
+  @page{margin:12mm}
   body{background:#fff;color:#1E2418}
   main{display:none!important}
   #print{display:block;font-size:12pt;line-height:1.45}
@@ -91,6 +91,15 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
   #print li{margin-bottom:3px}
   #print .note-lines div{border-bottom:1px solid #C9CDBF;height:22px}
   #print .muted{color:#5E6656}
+  #print .plano1{font-size:10.5pt}
+  #print .pl-grid{display:grid;grid-template-columns:1fr 74mm;gap:4mm;align-items:start}
+  #print .pl-svg svg{width:100%;height:auto;max-height:178mm}
+  #print .pl-side h3{font-size:11.5pt;margin:4px 0 3px;border-bottom:1.5px solid #1E2418}
+  #print .pl-side table td{padding:2px 4px;font-size:9.5pt;border-bottom:1px solid #C9CDBF}
+  #print .pl-side td.medida{font-size:12.5pt;font-weight:800;white-space:nowrap;text-align:right}
+  #print .pl-side ol{margin:2px 0 3px 16px;padding:0} #print .pl-side li{margin:0 0 1px;font-size:9.5pt}
+  #print .mini{font-size:8.5pt;margin:2px 0;line-height:1.3}
+  #print .plano1 .top{margin-bottom:6px}
   #print table.leyenda td{border:0;padding:2px 6px;font-size:9.5pt;vertical-align:middle}
 }
 .linkbtn{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;color:var(--ink);font-weight:600}
@@ -131,7 +140,7 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
           <label class="f">Lateral: ancho (cm)<input id="la" inputmode="decimal" value="40"></label>
           <label class="f">Lateral: alto (cm)<input id="lb" inputmode="decimal" value="38"></label>
         </div>
-        <div class="row"><label class="f">Tiras en respaldos: ± cm del centro<input id="sr" inputmode="decimal" value="12"></label><label class="f">Tiras en laterales: ± cm del centro<input id="sl" inputmode="decimal" value="5"></label></div>
+        <div class="row"><label class="f">Tiras en respaldos: ± cm del centro<input id="sr" inputmode="decimal" value="12"></label><label class="f">Radio de esquinas (cm)<input id="re" inputmode="decimal" value="5"></label><label class="f">Tiras en laterales: ± cm del centro<input id="sl" inputmode="decimal" value="5"></label></div>
         <div class="row row3"><label class="f">Tira fija (cm)<input id="tf" inputmode="decimal" value="10"></label><label class="f">Tira regulable (cm)<input id="tr" inputmode="decimal" value="60"></label><div class="f">Cinta por unidad<b id="cintaTot" style="font-size:1.05rem;color:var(--ink);padding:9px 0">—</b></div></div>
         <p class="legend-s">El ancho del lateral es el lado que se cose al asiento. Cada hebilla lleva una tira fija (cosida a la funda) y una regulable (la que abraza el apoyacabezas). La cinta por unidad sirve para comparar con Costos.</p>
         <button class="btn main" id="guardar">Guardar modelo</button>
@@ -148,7 +157,7 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
     <p class="sub" style="margin-bottom:8px">Poné cuántas unidades querés hacer de cada uno y te digo cuánta tela usan y cuánto queda del rollo.</p>
     <div class="tw"><table><thead><tr><th>Modelo</th><th class="n">Uso por unidad</th><th class="n">Cortar de a</th><th class="n">Cantidad</th><th class="n">Metros</th><th></th></tr></thead><tbody id="lista"></tbody></table></div>
     <div class="tot" id="tot"></div>
-    <div class="fichabar"><button class="btn main" id="ficha">📄 Generar ficha (PDF)</button><span class="legend-s" style="margin:0">Incluye los modelos con cantidad mayor a cero. Si no hay ninguno, el modelo de arriba. En la ventana de impresión elegí “Guardar como PDF”.</span></div>
+    <div class="fichabar"><button class="btn main" id="plano">📐 Plano en una hoja (PDF)</button><button class="btn main" id="ficha">📄 Generar ficha (PDF)</button><span class="legend-s" style="margin:0">Incluye los modelos con cantidad mayor a cero. Si no hay ninguno, el modelo de arriba. En la ventana de impresión elegí “Guardar como PDF”.</span></div>
   </div>
 </main>
 <div id="print"></div>
@@ -249,9 +258,9 @@ function setSync(t){ var e=$("#sync"); if(e) e.textContent=t; }
 function subir(){ if(!nube){ setSync("Guardado solo en este dispositivo. Entrá desde el panel para guardarlo en tu planilla."); return; }
   api("guardarCorte",{data:S}).then(function(){ setSync("Guardado en tu planilla ✓"); }).catch(function(e){ setSync(e.message==="SESION"?"Sesión vencida: volvé a entrar al panel":"No se pudo guardar en la planilla (sin conexión)"); }); }
 function guardarLS(){ try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){} setSync("Guardando…"); clearTimeout(tmr); tmr=setTimeout(subir,600); }
-function capturar(){ S.rollo={rw:$("#rw").value,rl:$("#rl").value,rp:$("#rp").value,mg:$("#mg").value}; S.form={}; ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","prod"].forEach(function(k){ S.form[k]=$("#"+k).value; }); }
+function capturar(){ S.rollo={rw:$("#rw").value,rl:$("#rl").value,rp:$("#rp").value,mg:$("#mg").value}; S.form={}; ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","re","prod"].forEach(function(k){ S.form[k]=$("#"+k).value; }); }
 function aplicar(){ if(S.rollo){ ["rw","rl","rp","mg"].forEach(function(k){ if(S.rollo[k]!=null&&S.rollo[k]!=="") $("#"+k).value=S.rollo[k]; }); }
-  if(S.form){ ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","prod"].forEach(function(k){ if(S.form[k]!=null&&S.form[k]!=="") $("#"+k).value=S.form[k]; }); } }
+  if(S.form){ ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","re","prod"].forEach(function(k){ if(S.form[k]!=null&&S.form[k]!=="") $("#"+k).value=S.form[k]; }); } }
 var COSTOS=[];
 function cargarCostos(){
   try{ var loc=JSON.parse(localStorage.getItem("lp-costos")||"null"); if(loc&&loc.productos) COSTOS=loc.productos; }catch(e){}
@@ -266,6 +275,7 @@ function fmtN(x){ return (+x||0).toLocaleString("es-AR",{maximumFractionDigits:2
 function tiraF(m){ return (m.tf!=null&&m.tf!==""&&isFinite(+m.tf))?+m.tf:10; }
 function tiraR(m){ if(m.tr!=null&&m.tr!==""&&isFinite(+m.tr)) return +m.tr; return m.lc?Math.max(0,+m.lc-10):60; }
 function sepR(m){ return (m.sr!=null&&m.sr!==""&&isFinite(+m.sr))?+m.sr:12; }
+function radio(m){ return (m.re!=null&&m.re!==""&&isFinite(+m.re))?Math.max(0,+m.re):5; }
 function sepL(m){ return (m.sl!=null&&m.sl!==""&&isFinite(+m.sl))?+m.sl:5; }
 function posiciones(m){ // centros y costuras de cada hebilla, en cm desde el borde izquierdo
   var nc=correas(m), lat=nc>=6?1:0, porR=Math.max(0,Math.round((nc-2*lat)/2)), r=[], i;
@@ -275,8 +285,8 @@ function posiciones(m){ // centros y costuras de cada hebilla, en cm desde el bo
 }
 function cintaUnidad(m){ return correas(m)*(tiraF(m)+tiraR(m)); }
 function correas(m){ if(m.nc!=null&&m.nc!==""&&isFinite(+m.nc)) return Math.max(0,Math.round(+m.nc)); return /individual|1 plaza|simple/i.test(m.nom||"")?4:6; }
-function leerForm(){ return {nom:$("#nom").value.trim()||"Modelo",an:num("#an"),t1:num("#t1"),t2:num("#t2"),t3:num("#t3"),la:num("#la"),lb:num("#lb"),nl:num("#nl"),nc:num("#nc"),tf:num("#tf"),tr:num("#tr"),sr:num("#sr"),sl:num("#sl"),prod:$("#prod").value}; }
-function cargarForm(m){ ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","prod"].forEach(function(k){ $("#"+k).value=(k==="nc"?correas(m):k==="tf"?tiraF(m):k==="tr"?tiraR(m):k==="sr"?sepR(m):k==="sl"?sepL(m):k==="prod"?(m.prod||""):m[k]); }); calcular(); window.scrollTo({top:0,behavior:"smooth"}); }
+function leerForm(){ return {nom:$("#nom").value.trim()||"Modelo",an:num("#an"),t1:num("#t1"),t2:num("#t2"),t3:num("#t3"),la:num("#la"),lb:num("#lb"),nl:num("#nl"),nc:num("#nc"),tf:num("#tf"),tr:num("#tr"),sr:num("#sr"),sl:num("#sl"),re:num("#re"),prod:$("#prod").value}; }
+function cargarForm(m){ ["nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","re","prod"].forEach(function(k){ $("#"+k).value=(k==="nc"?correas(m):k==="tf"?tiraF(m):k==="tr"?tiraR(m):k==="sr"?sepR(m):k==="sl"?sepL(m):k==="re"?radio(m):k==="prod"?(m.prod||""):m[k]); }); calcular(); window.scrollTo({top:0,behavior:"smooth"}); }
 
 function calcular(){
   var ct=$("#cintaTot"); if(ct){ var mm=leerForm(); ct.textContent=correas(mm)+" × ("+fmtN(tiraF(mm))+" + "+fmtN(tiraR(mm))+") cm = "+fmtN(cintaUnidad(mm)/100)+" m"; }
@@ -327,7 +337,7 @@ function desplegado(md){
   function Ln(x1,y1,x2,y2,c,w,d){ o.push('<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+c+'" stroke-width="'+(w||1)+'"'+(d?' stroke-dasharray="'+d+'"':'')+'/>'); }
   var PID='ry'+Math.random().toString(36).slice(2,7);
   o.push('<defs><pattern id="'+PID+'" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#fff"/><line x1="0" y1="0" x2="0" y2="4" stroke="#1E2418" stroke-width="1.3"/></pattern></defs>');
-  o.push('<rect x="'+x0+'" y="'+y0+'" width="'+cw+'" height="'+(L*k)+'" fill="#DDE3D3" stroke="#4E5B3A" stroke-width="1.5"/>');
+  o.push('<rect rx="'+(radio(md)*k)+'" x="'+x0+'" y="'+y0+'" width="'+cw+'" height="'+(L*k)+'" fill="#DDE3D3" stroke="#4E5B3A" stroke-width="1.5"/>');
   Ln(x0,y0+t3,x0+cw,y0+t3,'#1E2418',1.4,'4 3'); Ln(x0,y0+t3+t2,x0+cw,y0+t3+t2,'#1E2418',1.4,'4 3'); T(x0+cw-8,y0+t3-3,'P',9,'#1E2418','end',1); T(x0+cw-8,y0+t3+t2-3,'P',9,'#1E2418','end',1);
   T(x0+cw/2,y0+t3/2+4,'Respaldo delantero '+md.t3,10,'#1E2418','middle',1); T(x0+cw/2,y0+t3+t2/2+4,'Asiento '+md.t2,10,'#1E2418','middle',1); T(x0+cw/2,y0+t3+t2+t1/2+4,'Respaldo trasero '+md.t1,10,'#1E2418','middle',1);
   [x0-lb,x0+cw].forEach(function(xs,i){ o.push('<rect x="'+xs+'" y="'+ys+'" width="'+lb+'" height="'+la+'" fill="#fff" stroke="#4E5B3A" stroke-width="1.5"/>'); T(xs+lb/2,ys+12,'LATERAL',9,'#4E5B3A','middle',1); T(xs+lb/2,ys+la-5,md.la+' × '+md.lb,9,'#5E6656');
@@ -352,6 +362,66 @@ function desplegado(md){
   Ln(x0,y0+L*k+44,x0+cw,y0+L*k+44,'#5E6656'); T(x0+cw/2,y0+L*k+58,md.an+' cm (ancho)',10,'#5E6656');
   var dx=x0+cw+lb+22+(correas(md)>=6?62:0); Ln(dx,y0,dx,y0+L*k,'#5E6656'); T(dx+6,y0+L*k/2,L+' cm',10,'#5E6656','start');
   o.push('</svg>'); return o.join("");
+}
+function paginaApaisada(si){ var st=document.getElementById("pgsize"); if(!st){ st=document.createElement("style"); st.id="pgsize"; document.head.appendChild(st); } st.textContent=si?"@media print{@page{size:A4 landscape;margin:7mm}}":"@media print{@page{size:A4 portrait;margin:12mm}}"; }
+function planoSVG(m,mg){
+  var L=m.t1+m.t2+m.t3, P=piezas(m,mg), PZ=posiciones(m), r=radio(m);
+  var VW=1100, k=Math.min(700/(m.an+2*m.lb), 470/L), cw=m.an*k, lb=m.lb*k, la=m.la*k, t3=m.t3*k, t2=m.t2*k, t1=m.t1*k;
+  var x0=240+lb+Math.max(0,(700-(m.an+2*m.lb)*k)/2), y0=90, ys=y0+t3+(t2-la)/2, o=[], ID='pl'+Math.random().toString(36).slice(2,7);
+  function T(x,y,t,sz,an,b,c){ o.push('<text x="'+x+'" y="'+y+'" font-size="'+(sz||13)+'" text-anchor="'+(an||'middle')+'"'+(b?' font-weight="700"':'')+' fill="'+(c||'#1E2418')+'">'+t+'</text>'); }
+  function Ln(a,b,c,d,w,da,col){ o.push('<line x1="'+a+'" y1="'+b+'" x2="'+c+'" y2="'+d+'" stroke="'+(col||'#1E2418')+'" stroke-width="'+(w||1)+'"'+(da?' stroke-dasharray="'+da+'"':'')+'/>'); }
+  function cotaV(x,ya,yb,txt){ Ln(x,ya,x,yb,1); Ln(x-5,ya,x+5,ya,1); Ln(x-5,yb,x+5,yb,1); o.push('<text x="'+(x-8)+'" y="'+((ya+yb)/2+5)+'" font-size="14" font-weight="700" text-anchor="end">'+txt+'</text>'); }
+  function cotaH(y,xa,xb,txt){ Ln(xa,y,xb,y,1); Ln(xa,y-5,xa,y+5,1); Ln(xb,y-5,xb,y+5,1); T((xa+xb)/2,y-6,txt,14,'middle',1); }
+  o.push('<defs><pattern id="'+ID+'" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#fff"/><line x1="0" y1="0" x2="0" y2="4" stroke="#1E2418" stroke-width="1.2"/></pattern></defs>');
+  // laterales (esquinas exteriores redondeadas)
+  var rr=Math.min(r*k,lb/2,la/2);
+  [[x0-lb,-1],[x0+cw,1]].forEach(function(e){ var xa=e[0], sg=e[1], xo=sg<0?xa:xa+lb, xi=sg<0?xa+lb:xa;
+    var d=sg<0?'M'+xi+','+ys+' L'+(xo+rr)+','+ys+' Q'+xo+','+ys+' '+xo+','+(ys+rr)+' L'+xo+','+(ys+la-rr)+' Q'+xo+','+(ys+la)+' '+(xo+rr)+','+(ys+la)+' L'+xi+','+(ys+la)+' Z'
+             :'M'+xi+','+ys+' L'+(xo-rr)+','+ys+' Q'+xo+','+ys+' '+xo+','+(ys+rr)+' L'+xo+','+(ys+la-rr)+' Q'+xo+','+(ys+la)+' '+(xo-rr)+','+(ys+la)+' L'+xi+','+(ys+la)+' Z';
+    o.push('<path d="'+d+'" fill="#fff" stroke="#1E2418" stroke-width="2"/>');
+    T(xa+lb/2,ys+la/2-6,'LATERAL',14,'middle',1); T(xa+lb/2,ys+la/2+12,m.la+' × '+m.lb,13);
+    // costura fija (doble línea)
+    Ln(xi-2,ys,xi-2,ys+la,2); Ln(xi+2,ys,xi+2,ys+la,2);
+    // cierres
+    Ln(Math.min(xi,xo),ys,Math.max(xi,xo),ys,5,'8 4','#6B3C06'); Ln(Math.min(xi,xo),ys+la,Math.max(xi,xo),ys+la,5,'8 4','#6B3C06');
+    Ln(xi,y0+r*k,xi,ys,5,'8 4','#6B3C06'); Ln(xi,ys+la,xi,y0+L*k-r*k,5,'8 4','#6B3C06');
+    T((xi+xo)/2,ys-8,'C · cierre '+m.lb+' cm',11,'middle',1,'#6B3C06'); T((xi+xo)/2,ys+la+18,'C · cierre '+m.lb+' cm',11,'middle',1,'#6B3C06');
+  });
+  // cuerpo con esquinas redondeadas
+  o.push('<rect x="'+x0+'" y="'+y0+'" width="'+cw+'" height="'+(L*k)+'" rx="'+(r*k)+'" fill="#EEF1E8" stroke="#1E2418" stroke-width="2.2"/>');
+  // pliegues
+  [y0+t3,y0+t3+t2].forEach(function(yy){ Ln(x0,yy,x0+cw,yy,1.6,'6 4'); T(x0+cw-6,yy-6,'P · pliegue: doblar y coser a 1 cm',11,'end',1); });
+  T(x0+cw/2,y0+t3/2+5,'RESPALDO DELANTERO',15,'middle',1); T(x0+cw/2,y0+t3+t2/2+5,'ASIENTO',15,'middle',1); T(x0+cw/2,y0+t3+t2+t1/2+5,'RESPALDO TRASERO',15,'middle',1);
+  // aberturas del cinturón (15 cm, al 30% y 70%)
+  var yp=y0+t3+t2; [0.3,0.7].forEach(function(fr){ var c=m.an*fr, a=c-7.5; o.push('<rect x="'+(x0+a*k)+'" y="'+(yp-4)+'" width="'+(15*k)+'" height="8" fill="#fff" stroke="#1E2418" stroke-width="1.6"/>'); T(x0+c*k,yp+20,'A · cinturón '+fmtN(a)+' a '+fmtN(a+15),11,'middle',1); });
+  // tiras
+  function tira(x,y,dx,dy,reg,txt){ var lg=reg?40:16, x2=x+dx*lg, y2=y+dy*lg;
+    o.push('<rect x="'+(x-7)+'" y="'+(dy<0?y:dy>0?y-14:y-7)+'" width="14" height="14" fill="url(#'+ID+')" stroke="#1E2418"/>');
+    Ln(x,y,x2,y2,3,reg?'5 3':null); o.push('<rect x="'+(x2-9)+'" y="'+(y2-9)+'" width="18" height="18" fill="'+(reg?'#1E2418':'#fff')+'" stroke="#1E2418" stroke-width="1.5"/>');
+    T(x2,y2+5,reg?'R':'F',13,'middle',1,reg?'#fff':'#1E2418'); if(txt!=null){ if(dy) T(x+(reg?14:-14),y2+(dy<0?-14:24),txt,12,'middle',1); else T(x2+dx*30,y2+5,txt,12,'middle',1); } }
+  PZ.resp.forEach(function(h){ [[y0,-1],[y0+L*k,1]].forEach(function(ed){ tira(x0+h.f*k,ed[0],0,ed[1],false,fmtN(h.f)); tira(x0+h.g*k,ed[0],0,ed[1],true,fmtN(h.g)); }); });
+  if(PZ.lat){ [[x0-lb,-1],[x0+cw+lb,1]].forEach(function(e){ tira(e[0],ys+PZ.lat.f*k,e[1],0,false,null); tira(e[0],ys+PZ.lat.g*k,e[1],0,true,null);
+      T(e[0]+e[1]*70,ys+PZ.lat.f*k+5,'F a '+fmtN(PZ.lat.f),11,e[1]<0?'end':'start',1); T(e[0]+e[1]*70,ys+PZ.lat.g*k+5,'R a '+fmtN(PZ.lat.g),11,e[1]<0?'end':'start',1); }); }
+  // cotas
+  cotaH(y0+L*k+105,x0,x0+cw,'Ancho '+m.an+' cm');
+  var cx=x0-lb-95; cotaV(cx,y0,y0+t3,m.t3); cotaV(cx,y0+t3,y0+t3+t2,m.t2); cotaV(cx,y0+t3+t2,y0+L*k,m.t1);
+  cotaV(cx-55,y0,y0+L*k,'Total '+L);
+  var VH=y0+L*k+125;
+  return '<svg viewBox="0 0 '+VW+' '+VH+'" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif">'+o.join("")+'</svg>';
+}
+function planoHTML(){
+  var mg=num("#mg"), lista=S.modelos.filter(function(m){return (m.q||0)>0;}); if(!lista.length) lista=[leerForm()];
+  return lista.map(function(m,i){ var P=piezas(m,mg), L=m.t1+m.t2+m.t3;
+    return (i?'<div class="pg"></div>':'')+'<div class="plano1">'
+      +'<div class="top"><span><b>LOS PERRINES</b> · Plano de confección · '+esc(m.nom)+(m.q?' · '+m.q+' unidades':'')+'</span><span>'+new Date().toLocaleDateString("es-AR")+'</span></div>'
+      +'<div class="pl-grid"><div class="pl-svg">'+planoSVG(m,mg)+'</div><div class="pl-side">'
+      +'<h3>Cortar (ya incluye costuras)</h3><table><tr><td>Cuerpo ×1</td><td class="medida">'+P.CW+' × '+P.CL+'</td></tr><tr><td>Lateral ×'+P.nl+'</td><td class="medida">'+P.LA+' × '+P.LB+'</td></tr><tr><td>Parches de refuerzo ×'+(correas(m)*2)+'</td><td class="medida">8 × 8</td></tr><tr><td>Tiras F ×'+correas(m)+'</td><td class="medida">'+fmtN(tiraF(m))+' cm</td></tr><tr><td>Tiras R ×'+correas(m)+'</td><td class="medida">'+fmtN(tiraR(m))+' cm</td></tr></table>'
+      +'<p class="mini">Números junto a F y R: distancia en cm desde el borde izquierdo (en los laterales, desde el lado del respaldo delantero).</p>'
+      +'<p class="mini">El forro se corta igual, en tracker común. Cuerpo terminado '+m.an+' × '+L+'; el largo de corte suma 2 cm por cada pliegue. Esquinas exteriores redondeadas, radio '+fmtN(radio(m))+' cm.</p>'
+      +'<h3>Orden</h3><ol><li>Forro contra la friselina, coser el contorno.</li><li><b>P</b>: doblar y coser a 1 cm.</li><li>Bies en todo el borde libre.</li><li>Laterales: doble costura al asiento.</li><li><b>C</b>: cierres en las 4 esquinas.</li><li><b>A</b>: cortes de 15 cm con bies.</li><li><b>F</b> y <b>R</b>: tiras sobre parche rayado, costura en caja con X.</li></ol>'
+      +'<h3>Símbolos</h3><p class="mini"><b>Rayas gruesas C</b>: cierre · <b>Doble línea</b>: costura fija · <b>P</b>: pliegue · <b>A</b>: abertura cinturón · <b>F</b> (blanco): tira fija sin deslizador · <b>R</b> (negro, punteada): tira regulable con deslizador · <b>Rayado</b>: parche.</p>'
+      +'</div></div></div>';
+  }).join("");
 }
 function fichaHTML(){
   var RW=num("#rw"), RL=num("#rl")*100, mg=num("#mg");
@@ -416,12 +486,13 @@ function fichaHTML(){
 document.addEventListener("input",function(e){
   if(e.target.dataset.q){ var m=S.modelos.find(function(x){return x.id===e.target.dataset.q;}); m.q=parseFloat(e.target.value)||0; guardarLS();
     var pos=e.target.selectionStart, id=e.target.dataset.q; renderLista(); var el=document.querySelector('[data-q="'+id+'"]'); if(el){ el.focus(); try{el.setSelectionRange(pos,pos);}catch(x){} } return; }
-  if(e.target.closest(".block")||e.target.id){ calcular(); if(["rw","rl","rp","mg","nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","prod"].indexOf(e.target.id)>=0){ capturar(); guardarLS(); } }
+  if(e.target.closest(".block")||e.target.id){ calcular(); if(["rw","rl","rp","mg","nom","an","t1","t2","t3","la","lb","nl","nc","tf","tr","sr","sl","re","prod"].indexOf(e.target.id)>=0){ capturar(); guardarLS(); } }
 });
 document.addEventListener("change",function(e){ if(e.target.id==="prod"){ capturar(); guardarLS(); } });
 document.addEventListener("click",function(e){
   var t=e.target.closest("button"); if(!t) return;
-  if(t.id==="ficha"){ $("#print").innerHTML=fichaHTML(); setTimeout(function(){ window.print(); },150); return; }
+  if(t.id==="plano"){ $("#print").innerHTML=planoHTML(); paginaApaisada(true); setTimeout(function(){ window.print(); },150); return; }
+  if(t.id==="ficha"){ paginaApaisada(false); $("#print").innerHTML=fichaHTML(); setTimeout(function(){ window.print(); },150); return; }
   if(t.id==="guardar"){ var md=leerForm(), ex=S.modelos.find(function(x){return x.nom.toLowerCase()===md.nom.toLowerCase();});
     if(ex){ Object.assign(ex,md); } else { md.id="m"+Date.now().toString(36); md.q=0; S.modelos.push(md); } guardarLS(); renderLista(); t.textContent="Guardado ✓"; setTimeout(function(){t.textContent="Guardar modelo";},1500); }
   else if(t.dataset.ver){ cargarForm(S.modelos.find(function(x){return x.id===t.dataset.ver;})); }
