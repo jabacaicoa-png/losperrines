@@ -1,7 +1,8 @@
 /**
- * LOS PERRINES · Backend (Google Apps Script)
- * Pedidos, stock, cobro con Mercado Pago, mails, panel de administración
- * y exportación de envíos al formato de carga masiva de Andreani.
+ * LOS PERRINES · Backend (Google Apps Script) · versión 2 (taller conectado)
+ * Pedidos, stock, cobro con Mercado Pago, mails, panel de administración,
+ * exportación de envíos a Andreani y el taller: insumos, recetas, tandas de
+ * producción, compras y pagos a proveedores.
  *
  * Se pega completo en el editor de Apps Script de la planilla.
  * Primera vez: ejecutar la función instalar().
@@ -22,7 +23,15 @@ var COLS = {
   Carritos: ['email','fecha','actualizado','nombre','apellido','cel','items','estado','pedido','origen','recordatorio','segundo'],
   Cupones: ['codigo','porcentaje','vence','unico','activo','creado'],
   Bajas: ['fecha','email'],
-  Config: ['clave','valor','descripcion']
+  Config: ['clave','valor','descripcion'],
+  TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
+  TallerInsumos: ['id','nombre','descripcion','proveedor','envase','contenido','unidad','precio','minimo','activo','actualizado'],
+  TallerFichas: ['producto','medidas','receta','confeccion','envio','otros','notas','actualizado'],
+  TallerGastos: ['id','concepto','total','activo'],
+  TallerTandas: ['id','fecha','estado','items','recibido','proveedor','notas','actualizado'],
+  TallerStock: ['fecha','insumo','cantidad','tipo','ref','detalle'],
+  TallerCompras: ['id','fecha','tipo','proveedor','detalle','items','total','ref','notas'],
+  TallerPagos: ['id','fecha','proveedor','monto','medio','nota','compra']
 };
 var CONFIG_DEF = [
   ['tienda_abierta','NO','SI para que el público vea la tienda. NO muestra "Muy pronto".'],
@@ -55,7 +64,14 @@ var CONFIG_DEF = [
   ['alto_cm','10','Alto del paquete (cm).'],
   ['ancho_cm','20','Ancho del paquete (cm).'],
   ['profundidad_cm','20','Profundidad del paquete (cm).'],
-  ['valor_declarado','35000','Valor declarado para Andreani.']
+  ['valor_declarado','35000','Valor declarado para Andreani.'],
+  ['rollo_ancho','150','Taller: ancho del rollo de tela (cm).'],
+  ['rollo_largo','60','Taller: metros de un rollo, para repartir los gastos compartidos.'],
+  ['margen_costura','1','Taller: margen de costura (cm).'],
+  ['comision_mp','20','Rentabilidad: % que te descuenta Mercado Pago en las ventas con tarjeta.'],
+  ['rentabilidad_objetivo','60','Rentabilidad mínima que buscás, sobre el costo (%).'],
+  ['mix_tarjeta','50','% estimado de ventas con tarjeta (se usa hasta tener ventas reales).'],
+  ['taller_migrado','','Fecha en que se importaron los datos de las herramientas viejas.']
 ];
 var VENDIDO = ['pagado','exportado','despachado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -146,6 +162,18 @@ function rutear(r) {
     case 'insumos': return {insumos: leerDoc('Insumos')};
     case 'guardarInsumos': return guardarDoc('Insumos', r.data);
     case 'guardarCorte': return guardarDoc('Corte', r.data);
+    case 'taller': return tallerDatos();
+    case 'tallerGuardar': return conLock(function () { return tallerGuardar(r); });
+    case 'tallerBorrar': return conLock(function () { return tallerBorrar(r); });
+    case 'stockAjuste': return conLock(function () { return stockAjuste(r); });
+    case 'compraRegistrar': return conLock(function () { return compraRegistrar(r); });
+    case 'compraAnular': return conLock(function () { return compraAnular(r); });
+    case 'pagoRegistrar': return conLock(function () { return pagoRegistrar(r); });
+    case 'pagoBorrar': return conLock(function () { return pagoBorrar(r); });
+    case 'tandaCrear': return conLock(function () { return tandaCrear(r); });
+    case 'tandaEstado': return conLock(function () { return tandaEstado(r); });
+    case 'tandaRecibir': return conLock(function () { return tandaRecibir(r); });
+    case 'tallerMigrar': return conLock(function () { return tallerMigrar(r); });
   }
   throw new Error('Acción desconocida');
 }
@@ -167,7 +195,7 @@ function setear(n, fila, obj) {
   var sh = hoja(n), cols = COLS[n];
   Object.keys(obj).forEach(function (k) { var j = cols.indexOf(k); if (j >= 0) sh.getRange(fila, j + 1).setValue(obj[k]); });
 }
-function agregar(n, obj) { hoja(n).appendRow(COLS[n].map(function (c) { return obj[c] === undefined ? '' : obj[c]; })); }
+function agregar(n, obj) { (hoja(n) || asegurarHoja(n)).appendRow(COLS[n].map(function (c) { return obj[c] === undefined ? '' : obj[c]; })); }
 function cfg() {
   var o = {};
   filas(H.config).forEach(function (r) { o[r.clave] = String(r.valor); });
@@ -431,8 +459,11 @@ function procesarPago(pago) {
   var p = filas(H.pedidos).filter(function (x) { return x.id === pago.external_reference; })[0];
   if (!p) return;
   if (pago.status === 'approved' && ['pendiente_mp','vencido','cancelado'].indexOf(p.estado) >= 0) {
-    var c = cfg();
-    setear(H.pedidos, p._fila, {estado: 'pagado', mp_pago: String(pago.id), total: num(pago.transaction_amount) || p.total});
+    var c = cfg(), sinStock = p.estado !== 'pendiente_mp' && !hayStock(p);
+    setear(H.pedidos, p._fila, {estado: 'pagado', mp_pago: String(pago.id), total: num(pago.transaction_amount) || p.total,
+      notas: sinStock ? (p.notas ? p.notas + ' | ' : '') + 'PAGÓ DESPUÉS DE VENCER Y NO HABÍA STOCK: coordinar con el cliente' : p.notas});
+    if (sinStock && c.email_aviso) enviar(c.email_aviso, 'URGENTE: pago aprobado sin stock · ' + p.id, plantilla('Pago aprobado sin stock',
+      '<p>El pedido <b>' + p.id + '</b> se pagó con tarjeta después de que venció la reserva y ya no hay stock para cubrirlo. Contactá al cliente para coordinar la entrega o la devolución.</p>', c), c);
     p.estado = 'pagado'; p.total = num(pago.transaction_amount) || p.total;
     mailPagoTarjeta(p, c);
     avisoDueño('Pago con tarjeta aprobado ' + p.id, p, c);
@@ -446,8 +477,14 @@ function procesarPago(pago) {
 function login(r) {
   var pass = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
   if (!pass) throw new Error('Falta ADMIN_PASSWORD en Propiedades del script.');
-  Utilities.sleep(400);
-  if (String(r.password || '') !== pass) throw new Error('Contraseña incorrecta.');
+  var cache = CacheService.getScriptCache(), fallos = num(cache.get('login_fallos'));
+  if (fallos >= 8) throw new Error('Demasiados intentos fallidos. Esperá 15 minutos y probá de nuevo.');
+  Utilities.sleep(400 + fallos * 400);
+  if (String(r.password || '') !== pass) {
+    cache.put('login_fallos', String(fallos + 1), 900);
+    throw new Error('Contraseña incorrecta.');
+  }
+  cache.remove('login_fallos');
   var t = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('adm_' + t, '1', 21600);
   return {token: t};
@@ -456,7 +493,7 @@ function auth(r) {
   if (!r.token || !CacheService.getScriptCache().get('adm_' + r.token)) throw new Error('SESION');
 }
 function resumen() {
-  vencerReservas();
+  conLock(vencerReservas);
   var c = cfg(), s = stock(), mes = Utilities.formatDate(ahora(), TZ, 'yyyyMM');
   var ped = filas(H.pedidos).map(function (p) {
     var o = {}; COLS.Pedidos.forEach(function (k) { o[k] = (p[k] instanceof Date) ? fmtFecha(p[k]) : p[k]; });
@@ -519,15 +556,16 @@ function movimiento(r) {
 function avisarStock() {
   var c = cfg(), s = stock();
   if (s.doble.disponible <= 0 && s.individual.disponible <= 0) throw new Error('Todavía no hay stock disponible.');
-  var n = 0;
+  var n = 0, cupo = MailApp.getRemainingDailyQuota() - 5, faltan = 0;
   filas(H.avisos).forEach(function (a) {
     if (a.avisado === 'SI') return;
+    if (n >= cupo) { faltan++; return; }
     enviar(a.email, '¡Volvieron las fundas de Los Perrines!', plantilla('Ya hay stock',
       '<p>Nos pediste que te avisemos: ya tenemos stock de nuevo.</p>' +
       boton(c.url_web, 'Comprar ahora'), c), c);
     setear(H.avisos, a._fila, {avisado: 'SI'}); n++;
   });
-  return {avisados: n};
+  return {avisados: n, faltan: faltan};
 }
 function guardarConfig(vals) {
   var sh = hoja(H.config), hechas = {};
@@ -654,6 +692,7 @@ function avisoDueño(asunto, p, c) {
   enviar(c.email_aviso, asunto, plantilla(asunto, '<p>' + esc(p.nombre + ' ' + p.apellido) + ' · ' + esc(p.email) + ' · ' + esc(p.cel_cod + ' ' + p.cel_num) + '</p>' + detalle(p, c), c), c);
 }
 function enviar(to, asunto, html, c) {
+  if (MailApp.getRemainingDailyQuota() < 1) throw new Error('Se alcanzó el límite diario de mails de Google. Los que faltan se pueden mandar mañana.');
   MailApp.sendEmail({to: to, subject: asunto, htmlBody: html, name: 'Los Perrines', replyTo: c.email_aviso || undefined});
 }
 
@@ -706,7 +745,7 @@ function listaMedia() {
   }).sort(function (a, b) { return a.destino === b.destino ? a.orden - b.orden : (a.destino < b.destino ? -1 : 1); });
 }
 function subirMedia(r) {
-  if (!hoja(H.media)) instalar();
+  asegurarHoja(H.media);
   var destino = limpiar(r.destino, 30) || 'portada', mime = String(r.mime || ''), tipo = /^video\//.test(mime) ? 'video' : 'img';
   if (!/^(image|video)\//.test(mime)) throw new Error('Solo se pueden subir fotos o videos.');
   if (!r.data) throw new Error('El archivo llegó vacío.');
@@ -744,9 +783,13 @@ function principalMedia(id) {
 }
 
 /* ================= RECUPERAR VENTAS ================= */
-function hojaOk(n) { if (!hoja(n)) instalar(); return hoja(n); }
+function hojaOk(n) { return asegurarHoja(n); }
 function emailOk(e) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e || ''); }
-function dadoDeBaja(email) { hojaOk(H.bajas); email = String(email || '').toLowerCase(); return filas(H.bajas).some(function (b) { return String(b.email).toLowerCase() === email; }); }
+var _bajas = null;
+function dadoDeBaja(email) {
+  if (!_bajas) { hojaOk(H.bajas); _bajas = {}; filas(H.bajas).forEach(function (b) { _bajas[String(b.email).toLowerCase()] = 1; }); }
+  return !!_bajas[String(email || '').toLowerCase()];
+}
 function firmaBaja(email) {
   var props = PropertiesService.getScriptProperties(), k = props.getProperty('secreto_bajas');
   if (!k) { k = Utilities.getUuid(); props.setProperty('secreto_bajas', k); }
@@ -757,7 +800,7 @@ function pieBaja(email) { return '<p style="font-size:12px;color:#8A9180;margin-
 function darDeBaja(email, t) {
   email = String(email || '').toLowerCase();
   var ok = emailOk(email) && t === firmaBaja(email);
-  if (ok && !dadoDeBaja(email)) agregar(H.bajas, {fecha: ahora(), email: email});
+  if (ok && !dadoDeBaja(email)) { agregar(H.bajas, {fecha: ahora(), email: email}); _bajas = null; }
   return HtmlService.createHtmlOutput('<div style="font-family:Arial;max-width:420px;margin:60px auto;text-align:center;color:#1E2418"><h2>🐾 Los Perrines</h2><p>' +
     (ok ? 'Listo, no vas a recibir más recordatorios.' : 'El link no es válido.') + '</p></div>').setTitle('Los Perrines');
 }
@@ -934,4 +977,267 @@ function borrarCupon(codigo) {
   var x = filas(H.cupones).filter(function (k) { return String(k.codigo).toUpperCase() === String(codigo).toUpperCase(); })[0];
   if (x) hoja(H.cupones).deleteRow(x._fila);
   return {};
+}
+
+/* =====================================================================
+ * TALLER: insumos, proveedores, fichas de producto, tandas, compras y pagos.
+ * Cada operación escribe todo lo que corresponde en un solo paso (con lock),
+ * así el stock de insumos, el de la tienda y lo que se debe a cada proveedor
+ * no pueden quedar desparejos.
+ * ===================================================================== */
+var T = {prov: 'TallerProveedores', ins: 'TallerInsumos', fichas: 'TallerFichas', gastos: 'TallerGastos',
+         tandas: 'TallerTandas', stock: 'TallerStock', compras: 'TallerCompras', pagos: 'TallerPagos'};
+var PRODUCTOS_ID = ['doble', 'individual'];
+var MEDIDAS_KEYS = ['an','t1','t2','t3','la','lb','nl','nc','tf','tr','sr','sl','re'];
+var AUTOS = ['tela', 'correas', 'cinta'];
+
+function asegurarHoja(n) {
+  var ss = SpreadsheetApp.getActive(), sh = ss.getSheetByName(n);
+  if (!sh) {
+    sh = ss.insertSheet(n);
+    sh.getRange(1, 1, 1, COLS[n].length).setValues([COLS[n]]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function tFilas(n) { asegurarHoja(n); return filas(n); }
+function agregarVarios(n, objs) {
+  if (!objs.length) return;
+  var sh = asegurarHoja(n), cols = COLS[n], start = sh.getLastRow() + 1;
+  sh.getRange(start, 1, objs.length, cols.length).setValues(objs.map(function (o) {
+    return cols.map(function (c) { return o[c] === undefined || o[c] === null ? '' : o[c]; });
+  }));
+}
+function upsert(n, key, obj) {
+  var x = tFilas(n).filter(function (r) { return String(r[key]) === String(obj[key]); })[0];
+  if (x) setear(n, x._fila, obj); else agregar(n, obj);
+}
+function r3(x) { return Math.round(num(x) * 1000) / 1000; }
+function nuevoId(pref) { return pref + '-' + Utilities.getUuid().slice(0, 8).toUpperCase(); }
+function idOk(v, pref) { v = String(v || ''); return /^[A-Za-z0-9_-]{1,40}$/.test(v) ? v : nuevoId(pref); }
+function jsonDe(v, def) { if (v === '' || v == null) return def; try { return JSON.parse(v); } catch (e) { return def; } }
+function fechaDe(v) { var m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : ahora(); }
+function iso(d) { return d ? Utilities.formatDate(new Date(d), TZ, 'yyyy-MM-dd') : ''; }
+function existe(n, id) { return tFilas(n).some(function (r) { return String(r.id) === String(id); }); }
+function prodOk(p) { if (PRODUCTOS_ID.indexOf(p) < 0) throw new Error('Producto desconocido: ' + p); return p; }
+
+/* ---------- lectura ---------- */
+function tallerDatos() {
+  var c = cfg(), stockIns = {};
+  var movs = tFilas(T.stock).map(function (m) {
+    var k = String(m.insumo), q = r3(m.cantidad);
+    stockIns[k] = r3((stockIns[k] || 0) + q);
+    return {fecha: fmtFecha(m.fecha), _ts: new Date(m.fecha).getTime() || 0, insumo: k, cantidad: q, tipo: String(m.tipo), ref: String(m.ref), detalle: String(m.detalle)};
+  });
+  movs.sort(function (a, b) { return b._ts - a._ts; });
+  var mix = {tarjeta: 0, transferencia: 0};
+  filas(H.pedidos).forEach(function (p) { if (VENDIDO.indexOf(p.estado) >= 0) mix[p.pago === 'tarjeta' ? 'tarjeta' : 'transferencia'] += num(p.cantidad) || 1; });
+  var claves = ['rollo_ancho','rollo_largo','margen_costura','comision_mp','rentabilidad_objetivo','mix_tarjeta','producto','producto2',
+                'precio_tarjeta','precio_transferencia','precio2_tarjeta','precio2_transferencia','activo2','taller_migrado'], conf = {};
+  claves.forEach(function (k) { var d = CONFIG_DEF.filter(function (x) { return x[0] === k; })[0]; conf[k] = c[k] != null && c[k] !== '' ? c[k] : (d ? d[1] : ''); });
+  return {
+    proveedores: tFilas(T.prov).map(function (p) { return {id: String(p.id), nombre: String(p.nombre), telefono: String(p.telefono), lugar: String(p.lugar), web: String(p.web), notas: String(p.notas), activo: p.activo !== 'NO'}; }),
+    insumos: tFilas(T.ins).map(function (i) { return {id: String(i.id), nombre: String(i.nombre), descripcion: String(i.descripcion), proveedor: String(i.proveedor), envase: String(i.envase), contenido: num(i.contenido), unidad: String(i.unidad), precio: num(i.precio), minimo: num(i.minimo), activo: i.activo !== 'NO', actualizado: fmtFecha(i.actualizado), stock: stockIns[String(i.id)] || 0}; }),
+    fichas: tFilas(T.fichas).map(function (f) { return {producto: String(f.producto), medidas: jsonDe(f.medidas, {}), receta: jsonDe(f.receta, []), confeccion: num(f.confeccion), envio: num(f.envio), otros: jsonDe(f.otros, []), notas: String(f.notas), actualizado: fmtFecha(f.actualizado)}; }),
+    gastos: tFilas(T.gastos).map(function (g) { return {id: String(g.id), concepto: String(g.concepto), total: num(g.total), activo: g.activo !== 'NO'}; }),
+    tandas: tFilas(T.tandas).map(function (t) { return {id: String(t.id), fecha: iso(t.fecha), estado: String(t.estado), items: jsonDe(t.items, []), recibido: jsonDe(t.recibido, {}), proveedor: String(t.proveedor), notas: String(t.notas)}; }).reverse(),
+    compras: tFilas(T.compras).map(function (x) { return {id: String(x.id), fecha: iso(x.fecha), tipo: String(x.tipo), proveedor: String(x.proveedor), detalle: String(x.detalle), items: jsonDe(x.items, []), total: num(x.total), ref: String(x.ref), notas: String(x.notas)}; }).reverse(),
+    pagos: tFilas(T.pagos).map(function (x) { return {id: String(x.id), fecha: iso(x.fecha), proveedor: String(x.proveedor), monto: num(x.monto), medio: String(x.medio), nota: String(x.nota), compra: String(x.compra)}; }).reverse(),
+    movimientos: movs.slice(0, 500),
+    config: conf, productos: productos(c), stockTienda: stock(), ventas: mix,
+    viejos: {costos: !!leerDoc('Costos'), insumos: !!leerDoc('Insumos'), pagos: !!leerDoc('Pagos'), corte: !!leerDoc('Corte')}
+  };
+}
+
+/* ---------- validación ---------- */
+function sanProv(d, todos) {
+  var o = {id: idOk(d.id, 'PV'), nombre: limpiar(d.nombre, 60), telefono: limpiar(d.telefono, 30), lugar: limpiar(d.lugar, 60),
+           web: limpiar(d.web, 120), notas: limpiar(d.notas, 300), activo: d.activo === false ? 'NO' : 'SI'};
+  if (!o.nombre) throw new Error('Poné el nombre del proveedor.');
+  if ((todos || []).some(function (p) { return String(p.id) !== o.id && String(p.nombre).toLowerCase() === o.nombre.toLowerCase(); })) throw new Error('Ya hay un proveedor que se llama ' + o.nombre + '.');
+  return o;
+}
+function sanIns(d) {
+  var o = {id: idOk(d.id, 'IN'), nombre: limpiar(d.nombre, 80), descripcion: limpiar(d.descripcion, 200), proveedor: limpiar(d.proveedor, 40),
+           envase: limpiar(d.envase, 30) || 'unidad', contenido: r3(d.contenido), unidad: limpiar(d.unidad, 10) || 'u',
+           precio: Math.max(0, num(d.precio)), minimo: Math.max(0, r3(d.minimo)), activo: d.activo === false ? 'NO' : 'SI', actualizado: ahora()};
+  if (!o.nombre) throw new Error('Poné el nombre del insumo.');
+  if (!(o.contenido > 0)) throw new Error('Cargá cuánto trae cada ' + o.envase + ' (mayor a cero).');
+  return o;
+}
+function sanFicha(d) {
+  var med = {}, src = d.medidas || {};
+  MEDIDAS_KEYS.forEach(function (k) { if (src[k] !== undefined && src[k] !== '') med[k] = r3(src[k]); });
+  var receta = (Array.isArray(d.receta) ? d.receta : []).slice(0, 40).map(function (x) {
+    var auto = AUTOS.indexOf(x.auto) >= 0 ? x.auto : '';
+    var manual = x.uso === '' || x.uso == null ? null : r3(x.uso);
+    if (!auto && manual == null) manual = 0;
+    return {insumo: limpiar(x.insumo, 40), auto: auto, uso: manual};
+  }).filter(function (x) { return x.insumo; });
+  var otros = (Array.isArray(d.otros) ? d.otros : []).slice(0, 20).map(function (x) { return {concepto: limpiar(x.concepto, 80), monto: num(x.monto)}; }).filter(function (x) { return x.concepto; });
+  return {producto: prodOk(d.producto), medidas: JSON.stringify(med), receta: JSON.stringify(receta), confeccion: Math.max(0, num(d.confeccion)),
+          envio: Math.max(0, num(d.envio)), otros: JSON.stringify(otros), notas: limpiar(d.notas, 300), actualizado: ahora()};
+}
+function sanGasto(d) {
+  var o = {id: idOk(d.id, 'GA'), concepto: limpiar(d.concepto, 80), total: Math.max(0, num(d.total)), activo: d.activo === false ? 'NO' : 'SI'};
+  if (!o.concepto) throw new Error('Poné el concepto del gasto.');
+  return o;
+}
+
+/* ---------- catálogo ---------- */
+function tallerGuardar(r) {
+  var d = r.data || {}, o;
+  if (r.tipo === 'proveedor') { o = sanProv(d, tFilas(T.prov)); upsert(T.prov, 'id', o); }
+  else if (r.tipo === 'insumo') { o = sanIns(d); upsert(T.ins, 'id', o); }
+  else if (r.tipo === 'ficha') { o = sanFicha(d); upsert(T.fichas, 'producto', o); }
+  else if (r.tipo === 'gasto') { o = sanGasto(d); upsert(T.gastos, 'id', o); }
+  else throw new Error('Tipo desconocido.');
+  return {id: o.id || o.producto};
+}
+function tallerBorrar(r) {
+  var id = String(r.id || ''), n = r.tipo === 'proveedor' ? T.prov : r.tipo === 'insumo' ? T.ins : r.tipo === 'gasto' ? T.gastos : null;
+  if (!n) throw new Error('Tipo desconocido.');
+  var x = tFilas(n).filter(function (f) { return String(f.id) === id; })[0];
+  if (!x) throw new Error('No lo encontré.');
+  var usado = false;
+  if (r.tipo === 'insumo') usado = tFilas(T.stock).some(function (m) { return String(m.insumo) === id; }) ||
+    tFilas(T.fichas).some(function (f) { return jsonDe(f.receta, []).some(function (e) { return e.insumo === id; }); });
+  if (r.tipo === 'proveedor') usado = tFilas(T.ins).some(function (i) { return String(i.proveedor) === id; }) ||
+    tFilas(T.compras).some(function (c) { return String(c.proveedor) === id; }) || tFilas(T.pagos).some(function (p) { return String(p.proveedor) === id; });
+  if (usado) { setear(n, x._fila, {activo: 'NO'}); return {archivado: true}; }
+  hoja(n).deleteRow(x._fila);
+  return {borrado: true};
+}
+
+/* ---------- stock de insumos ---------- */
+function stockAjuste(r) {
+  var id = String(r.insumo || ''), q = r3(r.cantidad), det = limpiar(r.detalle, 150);
+  if (!existe(T.ins, id)) throw new Error('No existe ese insumo.');
+  if (!q) throw new Error('La cantidad no puede ser cero.');
+  if (!det) throw new Error('Escribí el motivo del ajuste.');
+  agregar(T.stock, {fecha: ahora(), insumo: id, cantidad: q, tipo: r.tipo === 'inicial' ? 'inicial' : 'ajuste', ref: '', detalle: det});
+  return {};
+}
+
+/* ---------- compras y pagos ---------- */
+function idCompra() { return 'C-' + Utilities.formatDate(ahora(), TZ, 'yyMMdd') + '-' + Utilities.getUuid().slice(0, 4).toUpperCase(); }
+function compraRegistrar(r) {
+  var prov = String(r.proveedor || '');
+  if (!existe(T.prov, prov)) throw new Error('Elegí el proveedor.');
+  var ins = {}; tFilas(T.ins).forEach(function (i) { ins[String(i.id)] = i; });
+  var items = (Array.isArray(r.items) ? r.items : []).map(function (x) {
+    var i = ins[String(x.insumo)]; if (!i) throw new Error('Hay un insumo que no existe en el catálogo.');
+    var env = r3(x.envases), pr = Math.max(0, num(x.precio));
+    if (!(env > 0)) return null;
+    return {insumo: String(i.id), nombre: String(i.nombre), envases: env, precio: pr, cantidad: r3(env * num(i.contenido)), unidad: String(i.unidad), envase: String(i.envase), _fila: i._fila, _precioAnt: num(i.precio)};
+  }).filter(Boolean);
+  var extra = Math.max(0, num(r.extra)), total = items.reduce(function (a, x) { return a + x.envases * x.precio; }, 0) + extra;
+  if (!items.length && !(num(r.total) > 0)) throw new Error('Cargá al menos un insumo o un monto.');
+  if (!items.length) total = num(r.total);
+  var tipo = items.length ? 'insumos' : (r.tipo === 'confeccion' ? 'confeccion' : 'otro');
+  var id = idCompra(), fecha = fechaDe(r.fecha);
+  var detalle = limpiar(r.detalle, 200) || items.map(function (x) { return x.nombre + ' ' + x.envases + ' ' + x.envase; }).join(', ');
+  agregar(T.compras, {id: id, fecha: fecha, tipo: tipo, proveedor: prov, detalle: detalle,
+    items: JSON.stringify(items.map(function (x) { return {insumo: x.insumo, envases: x.envases, precio: x.precio, cantidad: x.cantidad}; }).concat(extra ? [{extra: extra}] : [])),
+    total: Math.round(total), ref: limpiar(r.ref, 40), notas: limpiar(r.notas, 300)});
+  agregarVarios(T.stock, items.map(function (x) { return {fecha: fecha, insumo: x.insumo, cantidad: x.cantidad, tipo: 'compra', ref: id, detalle: x.envases + ' × ' + x.envase + ' a ' + plata(x.precio)}; }));
+  if (r.actualizarPrecios !== false) items.forEach(function (x) { if (x.precio > 0 && x.precio !== x._precioAnt) setear(T.ins, x._fila, {precio: x.precio, actualizado: ahora()}); });
+  var pagado = Math.max(0, num(r.pagado));
+  if (pagado > 0) agregar(T.pagos, {id: nuevoId('PG'), fecha: fecha, proveedor: prov, monto: Math.min(pagado, Math.round(total)) || pagado, medio: limpiar(r.medio, 30) || 'Transferencia', nota: 'Pago de la compra ' + id, compra: id});
+  return {id: id, total: Math.round(total)};
+}
+function compraAnular(r) {
+  var x = tFilas(T.compras).filter(function (c) { return String(c.id) === String(r.id); })[0];
+  if (!x) throw new Error('No encontré esa compra.');
+  if (tFilas(T.pagos).some(function (p) { return String(p.compra) === String(x.id); })) throw new Error('Esta compra tiene pagos asociados. Borrá primero los pagos.');
+  var movs = tFilas(T.stock).filter(function (m) { return String(m.ref) === String(x.id) && m.tipo === 'compra'; });
+  agregarVarios(T.stock, movs.map(function (m) { return {fecha: ahora(), insumo: String(m.insumo), cantidad: -r3(m.cantidad), tipo: 'anulación', ref: String(x.id), detalle: 'Compra anulada'}; }));
+  hoja(T.compras).deleteRow(x._fila);
+  return {};
+}
+function pagoRegistrar(r) {
+  var prov = String(r.proveedor || ''), m = Math.round(num(r.monto));
+  if (!existe(T.prov, prov)) throw new Error('Elegí el proveedor.');
+  if (!(m > 0)) throw new Error('Poné un monto mayor a cero.');
+  agregar(T.pagos, {id: nuevoId('PG'), fecha: fechaDe(r.fecha), proveedor: prov, monto: m, medio: limpiar(r.medio, 30) || 'Transferencia', nota: limpiar(r.nota, 150), compra: limpiar(r.compra, 40)});
+  return {};
+}
+function pagoBorrar(r) {
+  var x = tFilas(T.pagos).filter(function (p) { return String(p.id) === String(r.id); })[0];
+  if (!x) throw new Error('No encontré ese pago.');
+  hoja(T.pagos).deleteRow(x._fila);
+  return {};
+}
+
+/* ---------- tandas de producción ---------- */
+function sanItems(lista) {
+  var out = {};
+  (Array.isArray(lista) ? lista : []).forEach(function (x) { var p = prodOk(x.producto), q = Math.max(0, Math.min(1000, Math.floor(num(x.cantidad)))); if (q) out[p] = (out[p] || 0) + q; });
+  var items = Object.keys(out).map(function (p) { return {producto: p, cantidad: out[p]}; });
+  if (!items.length) throw new Error('Poné cuántas fundas tiene la tanda.');
+  return items;
+}
+function tandaCrear(r) {
+  var items = sanItems(r.items), estado = r.estado === 'planificada' ? 'planificada' : 'en_confeccion';
+  var pref = 'T-' + Utilities.formatDate(ahora(), TZ, 'yyMMdd') + '-', n = 0;
+  tFilas(T.tandas).forEach(function (t) { var s = String(t.id); if (s.indexOf(pref) === 0) n = Math.max(n, num(s.slice(pref.length))); });
+  var id = pref + (n + 1);
+  agregar(T.tandas, {id: id, fecha: fechaDe(r.fecha), estado: estado, items: JSON.stringify(items), recibido: '{}', proveedor: limpiar(r.proveedor, 40), notas: limpiar(r.notas, 300), actualizado: ahora()});
+  return {id: id};
+}
+function tanda(id) { var t = tFilas(T.tandas).filter(function (x) { return String(x.id) === String(id); })[0]; if (!t) throw new Error('No encontré la tanda ' + id); return t; }
+function tandaEstado(r) {
+  var t = tanda(r.id), de = String(t.estado), a = String(r.estado);
+  var ok = {planificada: ['en_confeccion', 'cancelada'], en_confeccion: ['planificada', 'cancelada', 'recibida']}[de] || [];
+  if (ok.indexOf(a) < 0) throw new Error('No se puede pasar de ' + de + ' a ' + a + '.');
+  if (a === 'planificada' && Object.keys(jsonDe(t.recibido, {})).length) throw new Error('Ya recibiste fundas de esta tanda.');
+  var cambios = {estado: a, actualizado: ahora()};
+  if (r.items) cambios.items = JSON.stringify(sanItems(r.items));
+  if (r.proveedor != null) cambios.proveedor = limpiar(r.proveedor, 40);
+  if (r.notas != null) cambios.notas = limpiar(r.notas, 300);
+  setear(T.tandas, t._fila, cambios);
+  return {};
+}
+function tandaRecibir(r) {
+  var t = tanda(r.id);
+  if (t.estado !== 'en_confeccion') throw new Error('Solo se reciben fundas de una tanda en confección.');
+  var rec = {}, total = 0;
+  PRODUCTOS_ID.forEach(function (p) { var q = Math.max(0, Math.floor(num((r.recibido || {})[p]))); if (q) { rec[p] = q; total += q; } });
+  if (!total && !r.cerrar) throw new Error('Poné cuántas fundas recibiste.');
+  var ins = {}; tFilas(T.ins).forEach(function (i) { ins[String(i.id)] = 1; });
+  var cons = (Array.isArray(r.consumos) ? r.consumos : []).map(function (x) { return {insumo: String(x.insumo), cantidad: r3(x.cantidad)}; })
+    .filter(function (x) { if (!ins[x.insumo]) throw new Error('Hay un insumo de la receta que no existe.'); return x.cantidad > 0; });
+  var fecha = ahora(), desc = PRODUCTOS_ID.filter(function (p) { return rec[p]; }).map(function (p) { return rec[p] + ' ' + (p === 'doble' ? 'doble' : 'individual') + (rec[p] > 1 ? 's' : ''); }).join(' + ');
+  agregarVarios(T.stock, cons.map(function (x) { return {fecha: fecha, insumo: x.insumo, cantidad: -x.cantidad, tipo: 'consumo', ref: String(t.id), detalle: 'Tanda ' + t.id + ': ' + desc}; }));
+  agregarVarios(H.mov, PRODUCTOS_ID.filter(function (p) { return rec[p]; }).map(function (p) { return {fecha: fecha, tipo: 'ingreso', cantidad: rec[p], motivo: 'Tanda ' + t.id + ' recibida', producto: p}; }));
+  var conf = r.confeccion || {}, monto = Math.round(num(conf.total));
+  if (monto > 0) {
+    if (!existe(T.prov, conf.proveedor)) throw new Error('Elegí quién confeccionó.');
+    agregar(T.compras, {id: idCompra(), fecha: fecha, tipo: 'confeccion', proveedor: String(conf.proveedor), detalle: 'Confección ' + desc + ' (tanda ' + t.id + ')', items: '[]', total: monto, ref: String(t.id), notas: ''});
+  }
+  var acum = jsonDe(t.recibido, {});
+  Object.keys(rec).forEach(function (p) { acum[p] = (acum[p] || 0) + rec[p]; });
+  var completa = sanItems(jsonDe(t.items, [])).every(function (it) { return (acum[it.producto] || 0) >= it.cantidad; });
+  setear(T.tandas, t._fila, {recibido: JSON.stringify(acum), estado: (r.cerrar || completa) ? 'recibida' : 'en_confeccion', actualizado: ahora()});
+  return {recibidas: total, cerrada: !!(r.cerrar || completa)};
+}
+
+/* ---------- migración desde las herramientas viejas ---------- */
+function tallerMigrar(r) {
+  var d = r.data || {};
+  if (!r.forzar && (tFilas(T.ins).length || tFilas(T.fichas).length)) throw new Error('El taller ya tiene datos. No importé nada para no duplicar.');
+  var provs = [], vistos = [];
+  (d.proveedores || []).forEach(function (p) { var o = sanProv(p, vistos); vistos.push(o); provs.push(o); });
+  agregarVarios(T.prov, provs);
+  agregarVarios(T.ins, (d.insumos || []).map(sanIns));
+  agregarVarios(T.fichas, (d.fichas || []).map(sanFicha));
+  agregarVarios(T.gastos, (d.gastos || []).map(sanGasto));
+  agregarVarios(T.stock, (d.stock || []).filter(function (x) { return r3(x.cantidad); }).map(function (x) { return {fecha: ahora(), insumo: String(x.insumo), cantidad: r3(x.cantidad), tipo: 'inicial', ref: '', detalle: limpiar(x.detalle, 150) || 'Stock inicial (importado)'}; }));
+  agregarVarios(T.compras, (d.compras || []).map(function (x) { return {id: idOk(x.id, 'C'), fecha: fechaDe(x.fecha), tipo: 'otro', proveedor: String(x.proveedor), detalle: limpiar(x.detalle, 200), items: '[]', total: Math.round(num(x.total)), ref: '', notas: limpiar(x.notas, 300)}; }));
+  agregarVarios(T.pagos, (d.pagos || []).filter(function (x) { return num(x.monto) > 0; }).map(function (x) { return {id: idOk(x.id, 'PG'), fecha: fechaDe(x.fecha), proveedor: String(x.proveedor), monto: Math.round(num(x.monto)), medio: limpiar(x.medio, 30), nota: limpiar(x.nota, 150), compra: limpiar(x.compra, 40)}; }));
+  var conf = {}; Object.keys(d.config || {}).forEach(function (k) { if (['rollo_ancho','rollo_largo','margen_costura','comision_mp','rentabilidad_objetivo','mix_tarjeta'].indexOf(k) >= 0) conf[k] = String(num(d.config[k])); });
+  conf.taller_migrado = fmtFecha(ahora());
+  guardarConfig(conf);
+  if (d.tanda && d.tanda.items) tandaCrear(d.tanda);
+  return {proveedores: provs.length, insumos: (d.insumos || []).length};
 }
