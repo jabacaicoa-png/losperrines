@@ -145,7 +145,8 @@ function vPlan(){
   var provs={}, po=[]; F.forEach(function(f){ var pv=f.i.proveedor||"Sin proveedor"; if(!provs[pv]){provs[pv]=[];po.push(pv);} provs[pv].push(f); });
   po.forEach(function(pv){ var arr=provs[pv], sub=arr.reduce(function(a,f){return a+f.costo;},0);
     h+='<div class="prov"><div class="prov-h"><span>'+esc(pv)+'</span><span class="'+(sub?'bad':'ok')+'">'+(sub?$m(sub):'Completo')+'</span></div>'+arr.map(function(f){ var u=esc(f.i.unidad);
-      return '<div class="row"><span><b>'+esc(f.i.nombre)+'</b><small>Necesitás '+q(f.necesito)+' '+u+' · tenés '+q(f.stock)+'</small><small>'+esc(f.detalle.join(" + "))+'</small></span>'
+      var envT=n(f.i.contenido)>0?' ('+q(f.stock/n(f.i.contenido))+' × '+esc(f.i.envase||"envase")+')':'';
+      return '<div class="row"><span><b>'+esc(f.i.nombre)+'</b><small>Necesitás '+q(f.necesito)+' '+u+' · tenés '+q(f.stock)+' '+u+envT+'</small><small>'+esc(f.detalle.join(" + "))+'</small></span>'
         +(f.falta>0?'<span class="pill bad">Comprar '+f.envases+' × '+esc(f.i.envase||"envase")+'<br><small>sobran '+q(f.queda)+' '+u+'</small></span>':'<span class="pill ok">Alcanza<br><small>quedan '+q(f.queda)+' '+u+'</small></span>')+'</div>'; }).join("")+'</div>';
   });
   h+='<div class="acts"><button class="btn" data-a="tabla">'+(VERTABLA?'Ocultar tabla completa':'Ver tabla completa')+'</button><button class="btn" data-a="excel">Descargar Excel</button><button class="btn main" data-a="compra">Registrar compra</button><button class="btn main" data-a="prod">Registrar producción</button></div>';
@@ -162,10 +163,10 @@ function tablaHTML(F){
     +'<tr><td colspan="11"><b>Total a comprar</b></td><td class="n"><b>'+$m(F.reduce(function(a,f){return a+f.costo;},0))+'</b></td></tr></tbody></table></div>';
 }
 function vStock(){
-  var cols=[["nombre","Insumo",""],["proveedor","Proveedor",""],["envase","Viene en",""],["contenido","Contenido","n"],["unidad","Unidad",""],["precio","Precio envase","n"],["stock","Stock actual","n"]];
-  return '<p class="sub">Editá directo en cada celda, como en una planilla. Si corregís el stock a mano, se registra como ajuste en el historial.</p>'
+  var cols=[["nombre","Insumo",""],["proveedor","Proveedor",""],["envase","Viene en",""],["contenido","Trae (por envase)","n"],["unidad","Unidad",""],["precio","Precio envase","n"],["stockEnv","Stock (envases)","n"],["stock","Stock (unidad)","n"]];
+  return '<p class="sub">Editá directo en cada celda, como en una planilla. El stock lo podés cargar en <b>envases</b> (por ejemplo, 9 rollos de bies) o en la <b>unidad</b> (225 m): la otra columna se calcula sola. Si corregís el stock a mano, se registra como ajuste en el historial.</p>'
     +'<div class="tw"><table><thead><tr>'+cols.map(function(c){return '<th class="'+c[2]+'">'+c[1]+'</th>';}).join("")+'<th></th></tr></thead><tbody>'
-    +D.insumos.map(function(i){ return '<tr>'+cols.map(function(c){ return '<td class="'+c[2]+'"><input '+(c[2]?'type="number" inputmode="decimal" step="any"':'')+' data-id="'+i.id+'" data-c="'+c[0]+'" value="'+esc(i[c[0]])+'" aria-label="'+c[1]+'"></td>'; }).join("")+'<td><button class="x" data-a="del" data-id="'+i.id+'" aria-label="Borrar">×</button></td></tr>'; }).join("")
+    +D.insumos.map(function(i){ return '<tr>'+cols.map(function(c){ var v=c[0]==="stockEnv"?(n(i.contenido)>0?Math.round(n(i.stock)/n(i.contenido)*100)/100:""):i[c[0]]; return '<td class="'+c[2]+'"><input '+(c[2]?'inputmode="decimal" autocomplete="off"':'')+' data-id="'+i.id+'" data-c="'+c[0]+'" value="'+esc(v)+'" aria-label="'+c[1]+'"'+(c[0]==="stockEnv"&&!(n(i.contenido)>0)?' disabled title="Cargá cuánto trae cada envase"':'')+'></td>'; }).join("")+'<td><button class="x" data-a="del" data-id="'+i.id+'" aria-label="Borrar">×</button></td></tr>'; }).join("")
     +'</tbody></table></div><div class="acts"><button class="btn" data-a="nuevo">＋ Agregar insumo</button><button class="btn" data-a="excel">Descargar Excel</button></div>';
 }
 function vHist(){
@@ -211,6 +212,7 @@ function excel(){
 
 /* ---------- eventos ---------- */
 var reT=null;
+document.addEventListener("focusin",function(e){ var t=e.target; if(t.tagName==="INPUT"&&(t.closest("td")||t.dataset.q!=null)) setTimeout(function(){ try{ t.select(); }catch(x){} },0); });
 document.addEventListener("input",function(e){
   var t=e.target;
   if(t.dataset.q!=null){ D.plan.q[t.dataset.q]=t.value===""?"":n(t.value); guardar(); clearTimeout(reT); reT=setTimeout(function(){ var r=$("#planRes"); if(r) r.innerHTML=vPlan(); },300); }
@@ -218,11 +220,14 @@ document.addEventListener("input",function(e){
 document.addEventListener("change",function(e){
   var t=e.target; if(t.dataset.c==null) return;
   var i=D.insumos.find(function(x){return x.id===t.dataset.id;}); if(!i) return;
-  var c=t.dataset.c, num=["contenido","precio","stock"].indexOf(c)>=0, v=num?n(t.value):t.value.trim();
+  var c=t.dataset.c, num=["contenido","precio","stock","stockEnv"].indexOf(c)>=0, v=num?n(t.value):t.value.trim();
+  if(c==="stockEnv"){ c="stock"; v=Math.round(v*n(i.contenido)*1000)/1000; }
   if(c==="stock"&&n(i.stock)!==v){
     if(n(i.stock)===0&&!D.movs.some(function(m){return m.detalle.indexOf(i.nombre+":")===0||m.detalle.indexOf(i.nombre+" ")>=0;})) mov("Stock inicial",i.nombre+": "+q(v)+" "+(i.unidad||""));
     else { var mot=prompt("Motivo del ajuste (por ejemplo: se rompieron 10):","")||"corrección"; mov("Ajuste",i.nombre+": "+q(n(i.stock))+" → "+q(v)+" "+(i.unidad||"")+" ("+mot+")"); } }
   i[c]=v; guardar();
+  if(["stock","contenido"].indexOf(c)>=0){ var tr=t.closest("tr"); if(tr){ var a=tr.querySelector('[data-c="stockEnv"]'), b=tr.querySelector('[data-c="stock"]');
+    if(b&&b!==t) b.value=n(i.stock); if(a&&a!==t){ a.disabled=!(n(i.contenido)>0); a.value=n(i.contenido)>0?Math.round(n(i.stock)/n(i.contenido)*100)/100:""; } } }
 });
 document.addEventListener("click",function(e){
   var t=e.target.closest("button"); if(!t) return;
