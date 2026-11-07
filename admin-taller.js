@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "7/11 · 3";
+window.PANEL_VERSION = "7/11 · 4";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -398,7 +398,8 @@ function vProveedores() {
   if (!lista.length) return h + '<div class="empty" style="margin-top:14px">Todavía no cargaste proveedores.</div>';
   h += '<div class="cols2" style="margin-top:14px">' + lista.map(p => { const s = sal[p.id] || {saldo: 0, cargos: 0, pagos: 0}, tel = String(p.telefono || "").replace(/\D/g, ""), cosas = T().insumos.filter(i => i.proveedor === p.id && i.activo !== false).map(i => i.nombre);
     return '<div class="block" style="margin-top:0"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="min-width:0"><b style="font-size:1.06rem">' + esc(p.nombre) + '</b><div class="muted small">' + esc([p.lugar, p.telefono].filter(Boolean).join(" · ") || "Sin contacto") + "</div>" + (cosas.length ? '<div class="small" style="margin-top:4px">' + esc(cosas.join(", ")) + "</div>" : "") + "</div>"
-      + '<div style="text-align:right;white-space:nowrap">' + (s.saldo > 0 ? '<b class="neg" style="font-size:1.15rem">' + money(s.saldo) + '</b><br><span class="muted small">le debés</span>' : s.saldo < 0 ? '<b class="pos">' + money(-s.saldo) + '</b><br><span class="muted small">a tu favor</span>' : '<span class="pill ok">Al día</span>') + "</div></div>"
+      + '<div style="text-align:right;white-space:nowrap">' + (s.saldo > 0 ? '<b class="neg" style="font-size:1.15rem">' + money(s.saldo) + '</b><br><span class="muted small">le debés</span>' : s.saldo < 0 ? '<b style="color:var(--info);font-size:1.15rem">' + money(-s.saldo) + '</b><br><span class="muted small">pagado sin compra cargada</span>' : '<span class="pill ok">Al día</span>') + "</div></div>"
+      + (s.saldo < 0 ? '<div class="note info" style="margin-top:10px">Le pagaste ' + money(s.pagos) + " pero solo figuran " + money(s.cargos) + " en compras. Falta cargar la compra que corresponde a ese pago." + '<div class="acts" style="margin-top:8px"><button class="btn main sm" data-a="cargoFalta" data-prov="' + esc(p.id) + '" data-monto="' + Math.round(-s.saldo) + '">Cargar la compra (' + money(-s.saldo) + ')</button></div></div>' : "")
       + '<div class="acts" style="margin-top:12px">' + (s.saldo > 0 ? '<button class="btn main sm" data-a="pagoNuevo" data-prov="' + esc(p.id) + '">Registrar pago</button>' : "") + '<button class="btn ghost sm" data-a="compraNueva" data-prov="' + esc(p.id) + '">Compra</button><button class="btn ghost sm" data-a="provCuenta" data-prov="' + esc(p.id) + '">Ver cuenta</button><button class="btn ghost sm" data-a="provEditar" data-prov="' + esc(p.id) + '">Editar</button>'
       + (tel ? '<a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel.length <= 10 ? "549" + tel : tel) + '">WhatsApp</a>' : "") + "</div></div>"; }).join("") + "</div>";
   return h;
@@ -413,6 +414,7 @@ function compraDlg() {
   const esCargo = CD.modo === "cargo";
   redlg('<div class="row"><h3>' + (esCargo ? "Otro gasto o deuda" : "Registrar compra") + '</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
     + '<div class="g2"><label class="f">Proveedor<select id="cp-p" data-ch="cpProv">' + opts(provs, CD.proveedor, "Elegí…") + '</select></label><label class="f">Fecha<input type="date" id="cp-f" data-in="cpF" data-k="fecha" value="' + esc(CD.fecha) + '"></label></div>'
+    + (esCargo ? '<p class="muted small" style="margin:0 0 8px">Queda como deuda con el proveedor <b>sin sumar stock</b>. Usalo para compras viejas cuyo stock ya cargaste a mano, o para gastos que no son insumos (flete, publicidad, intereses).</p>' : "")
     + (esCargo ? '<label class="f">Concepto<input id="cp-d" data-in="cpF" data-k="detalle" value="' + esc(CD.detalle || "") + '" placeholder="Ej. Flete del rollo, publicación"></label><label class="f">Monto<input id="cp-t" data-in="cpF" data-k="total" inputmode="numeric" value="' + esc(CD.total || "") + '"></label>'
       : (CD.proveedor ? (ids.length ? '<div class="tw"><table><thead><tr><th>Insumo</th><th class="n">Cantidad</th><th class="n">Precio c/u</th><th class="n">Subtotal</th></tr></thead><tbody>' + ids.map(id => { const i = ins(id), x = CD.items[id] || {}, pr = x.precio != null ? x.precio : i.precio, sub = nd(x.envases) * nm(pr);
           return "<tr><td><b>" + esc(i.nombre) + "</b><br><span class='muted small'>" + esc(i.envase) + (i.contenido !== 1 ? " de " + q(i.contenido) + " " + esc(i.unidad) : "") + "</span></td><td class='n'><input class='inp xs' id='cp-e-" + esc(id) + "' data-in='cpItem' data-id='" + esc(id) + "' data-k='envases' inputmode='decimal' value='" + esc(x.envases || "") + "' placeholder='0' aria-label='Cantidad'></td><td class='n'><input class='inp xs' style='width:96px' id='cp-pr-" + esc(id) + "' data-in='cpItem' data-id='" + esc(id) + "' data-k='precio' inputmode='numeric' value='" + esc(pr) + "' aria-label='Precio'></td><td class='n'>" + (sub ? money(sub) : "—") + "</td></tr>"; }).join("") + "</tbody></table></div>" : '<p class="muted">Este proveedor no tiene insumos asignados.</p>')
@@ -686,6 +688,7 @@ C.tExport = () => {
 // compras y pagos
 function nuevaCompra(pv) { return {modo: "compra", proveedor: pv || "", fecha: hoyISO(), items: {}, extras: [], extra: "", pagado: "", medio: "Transferencia", notas: "", actualizar: true}; }
 C.compraNueva = t => { CD = nuevaCompra(t.dataset.prov); compraDlg(); };
+C.cargoFalta = t => { CD = nuevaCompra(t.dataset.prov); CD.modo = "cargo"; CD.total = t.dataset.monto; CD.detalle = "Compra anterior (el stock ya está cargado)"; compraDlg(); };
 C.cargoNuevo = () => { CD = nuevaCompra(""); CD.modo = "cargo"; compraDlg(); };
 I["cpProv:change"] = t => { CD.proveedor = t.value; compraDlg(); };
 I["cpAdd:change"] = t => { if (t.value) CD.extras.push(t.value); compraDlg(); };
