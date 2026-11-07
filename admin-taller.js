@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "8/11 · 1";
+window.PANEL_VERSION = "8/11 · 2";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -68,6 +68,10 @@ function bolsaTela(b) { // metros de tela por bolsa, con la mejor ubicación en 
   if (o1 === Infinity && o2 === Infinity) return {m: 0, porFila: 0, noEntra: true};
   return o1 <= o2 ? {m: Math.ceil(o1 - 1e-9) / 100, porFila: k1, atravesado: "largo"} : {m: Math.ceil(o2 - 1e-9) / 100, porFila: k2, atravesado: "ancho"};
 }
+/* cuántas bolsas salen de un largo de tela, y cuánta tela hace falta para N bolsas (por filas enteras) */
+function bolsaFila(b) { const P = bolsaCorte(b), t = bolsaTela(b); return t.porFila ? {k: t.porFila, cm: t.atravesado === "largo" ? P.ancho : P.largo} : null; }
+function bolsasDe(b, metros) { const f = bolsaFila(b); return f ? Math.floor(metros * 100 / f.cm + 1e-9) * f.k : 0; }
+function metrosPara(b, n) { const f = bolsaFila(b); return f && n > 0 ? Math.ceil(n / f.k - 1e-9) * f.cm / 100 : 0; }
 function bolsaUso(b, x) { if (x.calc === "tela") return bolsaTela(b).m; if (x.calc === "abertura") return nd(b.ancho) / 100; return nd(x.uso); }
 function bolsaCosto(f) {
   if (!bolsaActiva(f)) return {mat: 0, conf: 0, serv: 0, total: 0};
@@ -296,7 +300,7 @@ function recibirDlg() {
 }
 
 /* ================= PRODUCTOS Y RECETAS ================= */
-const PD = {tab: "doble", draft: {}, gastos: null, rollo: null, dirty: false};
+const PD = {tab: "doble", draft: {}, gastos: null, rollo: null, dirty: false, calcM: "40", calcN: "12"};
 function draft(p) { if (!PD.draft[p]) { const f = JSON.parse(JSON.stringify(fichaGuardada(p))); PD.draft[p] = f; } return PD.draft[p]; }
 function gastosDraft() { if (!PD.gastos) PD.gastos = JSON.parse(JSON.stringify(T().gastos)); return PD.gastos; }
 function rolloDraft() { if (!PD.rollo) PD.rollo = {rollo_ancho: String(conf("rollo_ancho", 150)), margen_costura: String(conf("margen_costura", 1)), rollo_largo: String(conf("rollo_largo", 60))}; return PD.rollo; }
@@ -367,6 +371,7 @@ function vBolsa(f, cat) {
     + '<label class="f">Ancho del rollo<input id="bo-ro" data-in="pdBolsa" data-k="rollo" inputmode="decimal" value="' + esc(nd(b.rollo) ? b.rollo : "") + '" placeholder="' + esc(conf("rollo_ancho", 150)) + '"></label></div>'
     + '<div class="note" style="margin-top:0' + (off ? ";opacity:.6" : "") + '"><b>Corte: ' + q(P.largo) + " × " + q(P.ancho) + " cm</b> (una pieza; se dobla al medio y queda " + q(nd(b.ancho)) + " × " + q(nd(b.alto)) + ")"
     + (tl.noEntra ? '<br><span class="neg">La pieza no entra en el ancho del rollo.</span>' : "<br><span class='small'>En un rollo de " + q(bolsaRollo(b)) + " cm entran " + tl.porFila + " por fila (con el lado de " + q(tl.atravesado === "largo" ? P.largo : P.ancho) + " cm a lo ancho del rollo): <b>" + q(tl.m) + " m de tela por bolsa</b>.</span>") + "</div>"
+    + (tl.porFila ? bolsaCalc(f) : "")
     + '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Insumo</th><th>Cómo se calcula</th><th class="n">Por bolsa</th><th class="n">Costo</th><th></th></tr></thead><tbody>'
     + (b.items || []).map((x, ix) => { const i = ins(x.insumo), u = bolsaUso(b, x);
       return "<tr><td style='min-width:180px'><select class='inp' id='bi-i-" + ix + "' data-ch='pdBolsaIns' data-ix='" + ix + "' aria-label='Insumo'>" + opts(cat.concat(i && !i.activo ? [i] : []), x.insumo, "Elegí…") + "</select></td>"
@@ -380,6 +385,19 @@ function vBolsa(f, cat) {
     + '<div class="acts" style="justify-content:space-between"><button class="btn ghost sm" data-a="pdBolsaServAdd">＋ Agregado (sublimación, etiqueta…)</button><b>Total bolsa: ' + money(bc.total) + (off ? ' <span class="pill mute">no se suma</span>' : "") + "</b></div>"
     + '<div class="acts" style="margin-top:10px"><button class="linkb small" data-a="pdBolsaQuitar">Quitar la bolsa de este producto</button></div></div>';
   return h;
+}
+function bolsaCalc(f) {
+  const m = nd(PD.calcM), n = Math.max(0, Math.floor(nd(PD.calcN))), b = f.bolsa;
+  const otro = PRODS.filter(p => p !== f.producto).map(p => PD.draft[p] || fichaGuardada(p)).find(x => x.bolsa && bolsaFila(x.bolsa));
+  return '<div style="border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px"><b>¿Cuántas salen?</b>'
+    + '<div class="g2" style="margin-top:8px;align-items:start"><div>'
+    + '<label class="f" style="margin-bottom:4px">Si comprás<span class="unitw"><input class="inp xs" id="bk-m" data-in="pdCalc" data-k="calcM" inputmode="decimal" value="' + esc(PD.calcM) + '"> metros</span></label>'
+    + '<div>salen <b style="font-size:1.25rem">' + bolsasDe(b, m) + "</b> bolsas de " + q(nd(b.ancho)) + " × " + q(nd(b.alto))
+    + (otro ? '<br><span class="muted small">o ' + bolsasDe(otro.bolsa, m) + " de " + q(nd(otro.bolsa.ancho)) + " × " + q(nd(otro.bolsa.alto)) + " (" + esc(nombreP(otro.producto)) + ")</span>" : "")
+    + '<br><span class="muted small">Un rollo de 100 m: ' + bolsasDe(b, 100) + " bolsas</span></div></div><div>"
+    + '<label class="f" style="margin-bottom:4px">Para hacer<span class="unitw"><input class="inp xs" id="bk-n" data-in="pdCalc" data-k="calcN" inputmode="numeric" value="' + esc(PD.calcN) + '"> bolsas</span></label>'
+    + '<div>necesitás <b style="font-size:1.25rem">' + q(metrosPara(b, n)) + " m</b>" + (n ? '<br><span class="muted small">' + money(metrosPara(b, n) * precioU(ins((b.items.find(x => x.calc === "tela") || {}).insumo))) + " de tela</span>" : "") + "</div></div></div>"
+    + '<p class="muted small" style="margin:8px 0 0">Calculado por filas enteras de ' + bolsaFila(b).k + " bolsas a lo ancho del rollo. Si hacés bolsas de los dos tamaños, en Planificar tanda ves la tela total que lleva la tanda.</p></div>";
 }
 function rentConFicha(p, f, C) {
   initRS(); const pr = RS.precios[p]; const pt = nm(pr.t), px = nm(pr.x), com = nd(RS.comision) / 100; if (!pt && !px) return null;
@@ -679,6 +697,7 @@ I.pdGasto = t => { gastosDraft()[+t.dataset.ix][t.dataset.k] = t.value; gastosDr
 I["pdGastoAct:change"] = t => { const g = gastosDraft()[+t.dataset.ix]; g.activo = t.checked; g._cambio = true; sucio(); soloMain(); };
 C.pdGastoAdd = () => { gastosDraft().push({id: "", concepto: "", total: "", activo: true, _cambio: true}); sucio(); soloMain(); };
 C.pdGastoDel = t => { const g = gastosDraft()[+t.dataset.ix]; if (g.id) { PD.gastosBorrar = (PD.gastosBorrar || []).concat(g.id); } gastosDraft().splice(+t.dataset.ix, 1); sucio(); soloMain(); };
+I.pdCalc = t => { PD[t.dataset.k] = t.value; soloMain(); };
 C.pdBolsaAdd = () => { draft(PD.tab).bolsa = bolsaDefault(PD.tab); sucio(); soloMain(); };
 C.pdBolsaQuitar = () => { if (!confirm("¿Quitar la bolsa de este producto?")) return; draft(PD.tab).bolsa = null; sucio(); soloMain(); };
 I["pdBolsaAct:change"] = t => { draft(PD.tab).bolsa.activa = t.checked; sucio(); soloMain(); };
