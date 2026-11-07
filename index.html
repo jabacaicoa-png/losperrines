@@ -596,7 +596,9 @@ function api(accion,data){
    No mide las visitas con el link de vista previa: son tuyas y ensuciarían los números. */
 var TRK={on:false};
 function trkInit(){
-  if(TRK.on||VISTA) return; TRK.on=true;
+  /* ?probar_medicion=1 activa la medición también con la vista previa, para comprobar que funciona */
+  var probar=false; try{ if(qs.get("probar_medicion")==="1") sessionStorage.setItem("lp_probar_medicion","1"); probar=sessionStorage.getItem("lp_probar_medicion")==="1"; }catch(e){}
+  if(TRK.on||(VISTA&&!probar)) return; TRK.on=true;
   if(/^G-[A-Z0-9]+$/.test(GA_ID)){
     var g=document.createElement("script"); g.async=true; g.src="https://www.googletagmanager.com/gtag/js?id="+GA_ID; document.head.appendChild(g);
     window.dataLayer=window.dataLayer||[]; window.gtag=function(){dataLayer.push(arguments);}; gtag("js",new Date()); gtag("config",GA_ID);
@@ -627,7 +629,7 @@ VISTA=store("lp_vista")||"";
 if(!/^https:\/\/script\.google\.com\//.test(API)){ show("pronto"); return; }
 api("config").then(function(c){
   C=c;
-  if(!c.abierta){ show("pronto"); return; }
+  if(!c.abierta){ show("pronto"); trkInit(); return; }   /* con la tienda cerrada solo se registra la visita */
   show("tienda"); $("#previewBar").hidden=!c.vista; trkInit();
   pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
   if(c.whatsapp && c.whatsapp.length>6){ $$(".wa").forEach(function(a){a.href="https://wa.me/"+c.whatsapp;}); } else { $$(".wa").forEach(function(a){a.hidden=true;}); }
