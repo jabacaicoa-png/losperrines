@@ -279,7 +279,7 @@ function vProductos() {
     + '<p class="muted small" style="margin:-4px 0 10px">Centímetros, medidas terminadas. El margen de costura se suma solo.</p>'
     + '<div class="note" style="margin-top:0"><b>' + q(telaU(f)) + ' m de tela por funda</b><br><span class="small">Piezas de corte: cuerpo ' + Math.round(A.P.CW) + " × " + Math.round(A.P.CL) + " · " + A.P.nl + " laterales de " + Math.round(A.P.LA) + " × " + Math.round(A.P.LB) + ". Conviene cortar de a " + (A.best ? A.best.n : "—") + " (" + (A.best ? q(A.best.len / 100) : "—") + " m). Un rollo de " + esc(rd.rollo_largo) + " m rinde " + porLargo(A, nd(rd.rollo_largo) * 100) + " fundas.</span></div>"
     + '<div class="acts" style="margin-top:10px"><button class="btn ghost sm" data-a="pdPlano">Ver plano e imprimir ficha</button></div>'
-    + '<details style="margin-top:12px"><summary class="small" style="cursor:pointer;font-weight:700">Rollo y margen (para todos los productos)</summary><div class="g3" style="margin-top:10px">'
+    + '<details id="pdRolloDet" style="margin-top:12px"' + (PD.rolloAbierto ? " open" : "") + '><summary class="small" style="cursor:pointer;font-weight:700">Rollo y margen (para todos los productos)</summary><div class="g3" style="margin-top:10px">'
     + '<label class="f">Ancho del rollo (cm)<input id="rl-a" data-in="pdRollo" data-k="rollo_ancho" inputmode="decimal" value="' + esc(rd.rollo_ancho) + '"></label>'
     + '<label class="f">Margen de costura (cm)<input id="rl-m" data-in="pdRollo" data-k="margen_costura" inputmode="decimal" value="' + esc(rd.margen_costura) + '"></label>'
     + '<label class="f">Metros por rollo<input id="rl-l" data-in="pdRollo" data-k="rollo_largo" inputmode="decimal" value="' + esc(rd.rollo_largo) + '"></label></div></details></div>';
@@ -767,6 +767,8 @@ L.vista("productos", "Taller", "Productos y recetas", vProductos, () => ({n: PD.
 L.vista("insumos", "Taller", "Insumos", vInsumos, () => ({n: T() ? bajoMinimo().length : 0, bad: true}));
 L.vista("proveedores", "Taller", "Proveedores y pagos", vProveedores);
 L.vista("rentabilidad", "Números", "Precios y rentabilidad", vRentabilidad);
+// las secciones plegables recuerdan si estaban abiertas al redibujar la pantalla
+document.addEventListener("toggle", e => { if (e.target && e.target.id === "pdRolloDet") PD.rolloAbierto = e.target.open; }, true);
 window.addEventListener("beforeunload", e => { if (PD.dirty) { e.preventDefault(); e.returnValue = ""; } });
 window.TALLER = {inicio: inicio, pendientes: pendientes, _test: {analizar: analizar, largoPara: largoPara, costo: costo, rent: rent, armarMigracion: armarMigracion, fichaGuardada: fichaGuardada, RS: RS}};
 })();
