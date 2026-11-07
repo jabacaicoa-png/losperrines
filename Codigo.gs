@@ -1,5 +1,5 @@
 /**
- * LOS PERRINES · Backend (Google Apps Script) · versión 2 (taller conectado)
+ * LOS PERRINES · Backend (Google Apps Script) · versión 3 (taller conectado + bolsa de guardado)
  * Pedidos, stock, cobro con Mercado Pago, mails, panel de administración,
  * exportación de envíos a Andreani y el taller: insumos, recetas, tandas de
  * producción, compras y pagos a proveedores.
@@ -26,7 +26,7 @@ var COLS = {
   Config: ['clave','valor','descripcion'],
   TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
   TallerInsumos: ['id','nombre','descripcion','proveedor','envase','contenido','unidad','precio','minimo','activo','actualizado'],
-  TallerFichas: ['producto','medidas','receta','confeccion','envio','otros','notas','actualizado'],
+  TallerFichas: ['producto','medidas','receta','confeccion','envio','otros','notas','actualizado','bolsa'],
   TallerGastos: ['id','concepto','total','activo'],
   TallerTandas: ['id','fecha','estado','items','recibido','proveedor','notas','actualizado'],
   TallerStock: ['fecha','insumo','cantidad','tipo','ref','detalle'],
@@ -1038,13 +1038,14 @@ function tallerDatos() {
   return {
     proveedores: tFilas(T.prov).map(function (p) { return {id: String(p.id), nombre: String(p.nombre), telefono: String(p.telefono), lugar: String(p.lugar), web: String(p.web), notas: String(p.notas), activo: p.activo !== 'NO'}; }),
     insumos: tFilas(T.ins).map(function (i) { return {id: String(i.id), nombre: String(i.nombre), descripcion: String(i.descripcion), proveedor: String(i.proveedor), envase: String(i.envase), contenido: num(i.contenido), unidad: String(i.unidad), precio: num(i.precio), minimo: num(i.minimo), activo: i.activo !== 'NO', actualizado: fmtFecha(i.actualizado), stock: stockIns[String(i.id)] || 0}; }),
-    fichas: tFilas(T.fichas).map(function (f) { return {producto: String(f.producto), medidas: jsonDe(f.medidas, {}), receta: jsonDe(f.receta, []), confeccion: num(f.confeccion), envio: num(f.envio), otros: jsonDe(f.otros, []), notas: String(f.notas), actualizado: fmtFecha(f.actualizado)}; }),
+    fichas: tFilas(T.fichas).map(function (f) { return {producto: String(f.producto), medidas: jsonDe(f.medidas, {}), receta: jsonDe(f.receta, []), confeccion: num(f.confeccion), envio: num(f.envio), otros: jsonDe(f.otros, []), notas: String(f.notas), actualizado: fmtFecha(f.actualizado), bolsa: jsonDe(f.bolsa, null)}; }),
     gastos: tFilas(T.gastos).map(function (g) { return {id: String(g.id), concepto: String(g.concepto), total: num(g.total), activo: g.activo !== 'NO'}; }),
     tandas: tFilas(T.tandas).map(function (t) { return {id: String(t.id), fecha: iso(t.fecha), estado: String(t.estado), items: jsonDe(t.items, []), recibido: jsonDe(t.recibido, {}), proveedor: String(t.proveedor), notas: String(t.notas)}; }).reverse(),
     compras: tFilas(T.compras).map(function (x) { return {id: String(x.id), fecha: iso(x.fecha), tipo: String(x.tipo), proveedor: String(x.proveedor), detalle: String(x.detalle), items: jsonDe(x.items, []), total: num(x.total), ref: String(x.ref), notas: String(x.notas)}; }).reverse(),
     pagos: tFilas(T.pagos).map(function (x) { return {id: String(x.id), fecha: iso(x.fecha), proveedor: String(x.proveedor), monto: num(x.monto), medio: String(x.medio), nota: String(x.nota), compra: String(x.compra)}; }).reverse(),
     movimientos: movs.slice(0, 500),
     config: conf, productos: productos(c), stockTienda: stock(), ventas: mix,
+    version: 3,
     viejos: {costos: !!leerDoc('Costos'), insumos: !!leerDoc('Insumos'), pagos: !!leerDoc('Pagos'), corte: !!leerDoc('Corte')}
   };
 }
@@ -1076,7 +1077,20 @@ function sanFicha(d) {
   }).filter(function (x) { return x.insumo; });
   var otros = (Array.isArray(d.otros) ? d.otros : []).slice(0, 20).map(function (x) { return {concepto: limpiar(x.concepto, 80), monto: num(x.monto)}; }).filter(function (x) { return x.concepto; });
   return {producto: prodOk(d.producto), medidas: JSON.stringify(med), receta: JSON.stringify(receta), confeccion: Math.max(0, num(d.confeccion)),
-          envio: Math.max(0, num(d.envio)), otros: JSON.stringify(otros), notas: limpiar(d.notas, 300), actualizado: ahora()};
+          envio: Math.max(0, num(d.envio)), otros: JSON.stringify(otros), notas: limpiar(d.notas, 300), actualizado: ahora(),
+          bolsa: d.bolsa ? JSON.stringify(sanBolsa(d.bolsa)) : ''};
+}
+/* Bolsa de guardado: una pieza de tela doblada, con sus insumos (tela, hilo, cierre…) y agregados (sublimación, etc.). */
+function sanBolsa(b) {
+  var calcs = ['tela', 'abertura', 'fija'];
+  return {
+    activa: b.activa !== false, ancho: Math.max(0, r3(b.ancho)), alto: Math.max(0, r3(b.alto)), costura: Math.max(0, r3(b.costura)), rollo: Math.max(0, r3(b.rollo)),
+    items: (Array.isArray(b.items) ? b.items : []).slice(0, 20).map(function (x) {
+      return {insumo: limpiar(x.insumo, 40), calc: calcs.indexOf(x.calc) >= 0 ? x.calc : 'fija', uso: x.uso === '' || x.uso == null ? null : r3(x.uso)};
+    }).filter(function (x) { return x.insumo; }),
+    confeccion: Math.max(0, num(b.confeccion)),
+    servicios: (Array.isArray(b.servicios) ? b.servicios : []).slice(0, 10).map(function (x) { return {concepto: limpiar(x.concepto, 60), monto: Math.max(0, num(x.monto))}; }).filter(function (x) { return x.concepto; })
+  };
 }
 function sanGasto(d) {
   var o = {id: idOk(d.id, 'GA'), concepto: limpiar(d.concepto, 80), total: Math.max(0, num(d.total)), activo: d.activo === false ? 'NO' : 'SI'};

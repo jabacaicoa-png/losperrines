@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "7/11 · 8";
+window.PANEL_VERSION = "8/11 · 1";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -54,17 +54,47 @@ function esAuto(r) { return !!r.auto && (r.uso === "" || r.uso == null); }
 function usoDe(f, r) { return esAuto(r) ? autoUso(f, r.auto) : nd(r.uso); }
 function precioU(i) { return i && i.contenido > 0 ? i.precio / i.contenido : 0; }
 function gastosTot(lista) { return (lista || T().gastos).filter(g => g.activo !== false).reduce((a, g) => a + nm(g.total), 0); }
+/* ---------- bolsa de guardado: una pieza doblada ----------
+   Terminada ancho × alto (el ancho es el lado de la abertura; el alto se duplica al doblar).
+   Corte = (2 × alto + 2 × costura) × (ancho + 2 × costura). */
+const BOLSA_CALC = {tela: "Tela: sale del corte", abertura: "Largo de la abertura", fija: "Cantidad fija"};
+function bolsaActiva(f) { return !!(f && f.bolsa && f.bolsa.activa !== false); }
+function bolsaCorte(b) { const c = nd(b.costura); return {largo: 2 * nd(b.alto) + 2 * c, ancho: nd(b.ancho) + 2 * c}; }
+function bolsaRollo(b) { return nd(b.rollo) || conf("rollo_ancho", 150); }
+function bolsaTela(b) { // metros de tela por bolsa, con la mejor ubicación en el ancho del rollo
+  const P = bolsaCorte(b), RW = bolsaRollo(b); if (!(P.largo > 0 && P.ancho > 0)) return {m: 0, porFila: 0, giro: false};
+  const k1 = Math.floor(RW / P.largo), k2 = Math.floor(RW / P.ancho);
+  const o1 = k1 ? P.ancho / k1 : Infinity, o2 = k2 ? P.largo / k2 : Infinity;
+  if (o1 === Infinity && o2 === Infinity) return {m: 0, porFila: 0, noEntra: true};
+  return o1 <= o2 ? {m: Math.ceil(o1 - 1e-9) / 100, porFila: k1, atravesado: "largo"} : {m: Math.ceil(o2 - 1e-9) / 100, porFila: k2, atravesado: "ancho"};
+}
+function bolsaUso(b, x) { if (x.calc === "tela") return bolsaTela(b).m; if (x.calc === "abertura") return nd(b.ancho) / 100; return nd(x.uso); }
+function bolsaCosto(f) {
+  if (!bolsaActiva(f)) return {mat: 0, conf: 0, serv: 0, total: 0};
+  const b = f.bolsa, mat = (b.items || []).reduce((a, x) => a + bolsaUso(b, x) * precioU(ins(x.insumo)), 0);
+  const cf = nm(b.confeccion), sv = (b.servicios || []).reduce((a, x) => a + nm(x.monto), 0);
+  return {mat: mat, conf: cf, serv: sv, total: mat + cf + sv};
+}
+function confU(f) { return nm(f.confeccion) + (bolsaActiva(f) ? nm(f.bolsa.confeccion) : 0); } // lo que se le paga a Susana por funda
+function bolsaDefault(p) {
+  const buscar = re => (activos(T().insumos).find(i => re.test(i.nombre)) || {}).id || "";
+  const tela = buscar(/tracker.*lis|lis.*tracker|tracker.*com[uú]n/i) || buscar(/forro|tracker/i);
+  const items = [{insumo: tela, calc: "tela", uso: null}, {insumo: buscar(/hilo/i), calc: "fija", uso: 15}, {insumo: buscar(/cierre/i), calc: "abertura", uso: null}];
+  const desl = buscar(/desliz/i); if (desl) items.push({insumo: desl, calc: "fija", uso: 1});
+  return {activa: true, ancho: p === "doble" ? 60 : 50, alto: p === "doble" ? 50 : 30, costura: 1, rollo: "", items: items.filter(x => x.insumo), confeccion: 0, servicios: [{concepto: "Sublimación", monto: 0}]};
+}
 function costo(f, gastos) {
   const mat = (f.receta || []).reduce((a, r) => a + usoDe(f, r) * precioU(ins(r.insumo)), 0);
   const rl = conf("rollo_largo", 60), gas = rl > 0 ? gastosTot(gastos) / rl * telaU(f) : 0;
   const otros = (f.otros || []).reduce((a, o) => a + nm(o.monto), 0);
-  const c = nm(f.confeccion), env = nm(f.envio);
-  return {mat: mat, conf: c, gastos: gas, otros: otros, envio: env, total: mat + c + gas + otros + env};
+  const c = nm(f.confeccion), env = nm(f.envio), bol = bolsaCosto(f).total;
+  return {mat: mat, conf: c, gastos: gas, otros: otros, envio: env, bolsa: bol, total: mat + c + gas + otros + env + bol};
 }
 /* insumos que consume una cantidad de fundas: {insumoId: cantidad} */
 function consumos(f, n, out) {
   out = out || {}; if (!(n > 0)) return out;
   (f.receta || []).forEach(r => { if (!r.insumo) return; const v = r.auto === "tela" && esAuto(r) ? largoPara(n, corteDe(f)) / 100 : usoDe(f, r) * n; out[r.insumo] = (out[r.insumo] || 0) + v; });
+  if (bolsaActiva(f)) (f.bolsa.items || []).forEach(x => { if (x.insumo) out[x.insumo] = (out[x.insumo] || 0) + bolsaUso(f.bolsa, x) * n; });
   return out;
 }
 function pendienteTanda(t) { const o = {}; (t.items || []).forEach(it => { o[it.producto] = Math.max(0, it.cantidad - ((t.recibido || {})[it.producto] || 0)); }); return o; }
@@ -213,7 +243,7 @@ function vPlanificar() {
   initRS();
   const u = PRODS.reduce((a, p) => a + cant(p), 0);
   let confT = 0, ingreso = 0, costoT = 0, gan = 0;
-  PRODS.forEach(p => { const n = cant(p); if (!n) return; const f = fichaGuardada(p), c = costo(f), r = rent(p); confT += n * c.conf; costoT += n * c.total; ingreso += n * (r.mix * r.recT + (1 - r.mix) * r.px); gan += n * r.gMix; });
+  PRODS.forEach(p => { const n = cant(p); if (!n) return; const f = fichaGuardada(p), c = costo(f), r = rent(p); confT += n * confU(f); costoT += n * c.total; ingreso += n * (r.mix * r.recT + (1 - r.mix) * r.px); gan += n * r.gMix; });
   const poner = compraTot + confT, rTanda = costoT > 0 ? gan / costoT : 0, obj = nd(RS.objetivo) / 100;
   h += '</div><aside style="min-width:0"><div class="block" style="margin-top:0;background:var(--olive);color:var(--on-olive);border:0;position:sticky;top:16px"><h3>Resumen de la tanda</h3>'
     + kv("Fundas", "<b style='font-size:1.4rem'>" + u + "</b>") + '<p class="small" style="margin:-2px 0 6px;opacity:.85">' + (PRODS.filter(p => cant(p)).map(p => cant(p) + " " + corto(p, cant(p))).join(" + ") || "Elegí cantidades") + "</p>"
@@ -248,7 +278,7 @@ let RCB = null; // recepción en curso
 function recibirDlg() {
   const t = T().tandas.find(x => x.id === RCB.id), pend = pendienteTanda(t), cons = {};
   let confTot = 0;
-  PRODS.forEach(p => { const n = Math.max(0, Math.floor(nd(RCB.q[p]))); if (n) { consumos(fichaGuardada(p), n, cons); confTot += n * nm(fichaGuardada(p).confeccion); } });
+  PRODS.forEach(p => { const n = Math.max(0, Math.floor(nd(RCB.q[p]))); if (n) { consumos(fichaGuardada(p), n, cons); confTot += n * confU(fichaGuardada(p)); } });
   if (RCB.conf == null) RCB.confAuto = true;
   const montoConf = RCB.confAuto ? confTot : nm(RCB.conf);
   const res = reservado();
@@ -289,7 +319,7 @@ function vProductos() {
   h += '<div class="block"><h3>Costo por funda</h3><div class="tw"><table><tbody>'
     + "<tr><td>Materiales</td><td class='n'>" + money(c.mat) + "</td></tr><tr><td>Confección</td><td class='n'>" + money(c.conf) + "</td></tr>"
     + "<tr><td>Gastos compartidos<br><span class='muted small'>" + money(gastosTot(gastosDraft())) + " ÷ " + esc(rd.rollo_largo) + " m × " + q(telaU(f)) + " m</span></td><td class='n'>" + money(c.gastos) + "</td></tr>"
-    + (c.otros ? "<tr><td>Otros</td><td class='n'>" + money(c.otros) + "</td></tr>" : "") + "<tr><td>Envío gratis (por venta)</td><td class='n'>" + money(c.envio) + "</td></tr>"
+    + (c.otros ? "<tr><td>Otros</td><td class='n'>" + money(c.otros) + "</td></tr>" : "") + (bolsaActiva(f) ? "<tr><td>Bolsa de guardado</td><td class='n'>" + money(c.bolsa) + "</td></tr>" : "") + "<tr><td>Envío gratis (por venta)</td><td class='n'>" + money(c.envio) + "</td></tr>"
     + "<tr class='tot'><td>Costo total</td><td class='n' style='font-size:1.2rem'>" + money(c.total) + "</td></tr></tbody></table></div>"
     + (r ? '<div class="g2" style="margin-top:10px"><div class="kpi"><small>Con tarjeta (' + money(r.pt) + ')</small><b>' + pct(r.rT) + '</b><span class="k2">recibís ' + money(r.recT) + "</span></div><div class='kpi'><small>Transferencia (" + money(r.px) + ")</small><b>" + pct(r.rX) + '</b><span class="k2">ganás ' + money(r.gX) + "</span></div></div>" : "")
     + '<p class="muted small" style="margin:8px 0 0">Rentabilidad = ganancia ÷ costo, con los precios de la web. Para probar precios andá a <button class="linkb" data-go="rentabilidad">Precios y rentabilidad</button>.</p></div></div>';
@@ -306,6 +336,7 @@ function vProductos() {
         + "<td class='n'>" + money(u * precioU(i)) + "</td><td><button class='x' data-a='pdRecDel' data-ix='" + ix + "' aria-label='Quitar'>×</button></td></tr>"; }).join("")
     + "<tr class='tot'><td colspan='3'>Materiales</td><td class='n'>" + money(c.mat) + "</td><td></td></tr></tbody></table></div>"
     + '<div class="acts" style="margin-top:8px"><button class="btn ghost sm" data-a="pdRecAdd">＋ Agregar insumo a la receta</button><button class="btn ghost sm" data-a="insNuevo">＋ Insumo nuevo en el catálogo</button></div></div>';
+  h += vBolsa(f, cat);
   // otros costos
   h += '<div class="cols2" style="margin-top:14px"><div class="block" style="margin-top:0"><h3>Otros costos por funda</h3><div class="g2">'
     + '<label class="f">Confección (se paga al recibir)<input id="pd-conf" data-in="pdNum" data-k="confeccion" inputmode="numeric" value="' + esc(f.confeccion) + '"></label>'
@@ -319,6 +350,35 @@ function vProductos() {
   h += '<div style="' + (PD.dirty ? "position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));" : "") + 'margin-top:16px;z-index:5"><div class="block acts" style="justify-content:space-between;margin:0;box-shadow:0 6px 24px rgba(0,0,0,.12);' + (PD.dirty ? "border-color:var(--warn)" : "") + '">'
     + "<span>" + (PD.dirty ? "<b>Tenés cambios sin guardar.</b>" : '<span class="muted">Sin cambios.' + (fichaGuardada(p).actualizado ? " Guardado " + esc(fichaGuardada(p).actualizado) : "") + "</span>") + "</span>"
     + '<span class="acts"><button class="btn ghost" data-a="pdDescartar"' + (PD.dirty ? "" : " disabled") + '>Descartar</button><button class="btn main" data-a="pdGuardar"' + (PD.dirty ? "" : " disabled") + ">Guardar</button></span></div></div>";
+  return h;
+}
+function vBolsa(f, cat) {
+  const sinBackend = !(T().version >= 3);
+  let h = '<div class="block"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0">Bolsa de guardado</h3>'
+    + (f.bolsa ? '<label class="check small"><input type="checkbox" id="bo-act" data-ch="pdBolsaAct"' + (f.bolsa.activa !== false ? " checked" : "") + "> Sumarla al costo de la funda</label>" : "") + "</div>";
+  if (sinBackend) h += '<div class="note warn">Para guardar la bolsa hace falta el <b>Codigo.gs nuevo</b> (versión 3). Pegalo en Apps Script y publicá una nueva versión.</div>';
+  if (!f.bolsa) return h + '<p class="muted" style="margin:8px 0 10px">La bolsa con cierre en la que va la funda. Se corta de una pieza doblada y su costo se suma al de la funda, a las compras de la tanda y a lo que se descuenta del stock.</p><button class="btn ghost" data-a="pdBolsaAdd">＋ Agregar bolsa</button></div>';
+  const b = f.bolsa, P = bolsaCorte(b), tl = bolsaTela(b), bc = bolsaCosto(f), off = b.activa === false;
+  h += '<p class="muted small" style="margin:6px 0 10px">Una pieza doblada. El <b>ancho</b> es el lado de la abertura (cierre); el <b>alto</b> se duplica al doblar. Medidas terminadas, en cm.</p>'
+    + '<div class="g3" style="grid-template-columns:repeat(4,minmax(0,1fr))">'
+    + '<label class="f">Ancho terminado<input id="bo-an" data-in="pdBolsa" data-k="ancho" inputmode="decimal" value="' + esc(b.ancho) + '"></label>'
+    + '<label class="f">Alto terminado<input id="bo-al" data-in="pdBolsa" data-k="alto" inputmode="decimal" value="' + esc(b.alto) + '"></label>'
+    + '<label class="f">Costura<input id="bo-co" data-in="pdBolsa" data-k="costura" inputmode="decimal" value="' + esc(b.costura) + '"></label>'
+    + '<label class="f">Ancho del rollo<input id="bo-ro" data-in="pdBolsa" data-k="rollo" inputmode="decimal" value="' + esc(nd(b.rollo) ? b.rollo : "") + '" placeholder="' + esc(conf("rollo_ancho", 150)) + '"></label></div>'
+    + '<div class="note" style="margin-top:0' + (off ? ";opacity:.6" : "") + '"><b>Corte: ' + q(P.largo) + " × " + q(P.ancho) + " cm</b> (una pieza; se dobla al medio y queda " + q(nd(b.ancho)) + " × " + q(nd(b.alto)) + ")"
+    + (tl.noEntra ? '<br><span class="neg">La pieza no entra en el ancho del rollo.</span>' : "<br><span class='small'>En un rollo de " + q(bolsaRollo(b)) + " cm entran " + tl.porFila + " por fila (con el lado de " + q(tl.atravesado === "largo" ? P.largo : P.ancho) + " cm a lo ancho del rollo): <b>" + q(tl.m) + " m de tela por bolsa</b>.</span>") + "</div>"
+    + '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Insumo</th><th>Cómo se calcula</th><th class="n">Por bolsa</th><th class="n">Costo</th><th></th></tr></thead><tbody>'
+    + (b.items || []).map((x, ix) => { const i = ins(x.insumo), u = bolsaUso(b, x);
+      return "<tr><td style='min-width:180px'><select class='inp' id='bi-i-" + ix + "' data-ch='pdBolsaIns' data-ix='" + ix + "' aria-label='Insumo'>" + opts(cat.concat(i && !i.activo ? [i] : []), x.insumo, "Elegí…") + "</select></td>"
+        + "<td><select class='inp' style='min-width:170px' id='bi-c-" + ix + "' data-ch='pdBolsaCalc' data-ix='" + ix + "' aria-label='Cómo se calcula'>" + Object.keys(BOLSA_CALC).map(k => "<option value='" + k + "'" + (x.calc === k ? " selected" : "") + ">" + BOLSA_CALC[k] + "</option>").join("") + "</select></td>"
+        + "<td class='n'>" + (x.calc === "fija" ? "<span class='unitw'><input class='inp xs' id='bi-u-" + ix + "' data-in='pdBolsaUso' data-ix='" + ix + "' inputmode='decimal' value='" + esc(x.uso == null ? "" : x.uso) + "' aria-label='Cantidad por bolsa'> " + esc(i ? i.unidad : "") + "</span>" : q(u) + " " + esc(i ? i.unidad : "")) + "</td>"
+        + "<td class='n'>" + money(u * precioU(i)) + "</td><td><button class='x' data-a='pdBolsaDel' data-ix='" + ix + "' aria-label='Quitar'>×</button></td></tr>"; }).join("")
+    + "<tr><td colspan='3'>Materiales de la bolsa</td><td class='n'><b>" + money(bc.mat) + "</b></td><td></td></tr></tbody></table></div>"
+    + '<div class="acts" style="margin-top:8px"><button class="btn ghost sm" data-a="pdBolsaItemAdd">＋ Agregar insumo a la bolsa</button></div>'
+    + '<div class="g2" style="margin-top:14px"><label class="f">Confección de la bolsa (Susana, por bolsa)<input id="bo-cf" data-in="pdBolsa" data-k="confeccion" inputmode="numeric" value="' + esc(b.confeccion) + '"></label><div></div></div>'
+    + (b.servicios || []).map((x, ix) => '<div class="g2" style="align-items:end"><label class="f">Agregado o servicio<input id="bs-c-' + ix + '" data-in="pdBolsaServ" data-ix="' + ix + '" data-k="concepto" value="' + esc(x.concepto) + '"></label><div class="acts" style="flex-wrap:nowrap;margin-bottom:12px"><input class="inp" id="bs-m-' + ix + '" data-in="pdBolsaServ" data-ix="' + ix + '" data-k="monto" inputmode="numeric" value="' + esc(x.monto) + '" aria-label="Costo por bolsa"><button class="x" data-a="pdBolsaServDel" data-ix="' + ix + '" aria-label="Quitar">×</button></div></div>').join("")
+    + '<div class="acts" style="justify-content:space-between"><button class="btn ghost sm" data-a="pdBolsaServAdd">＋ Agregado (sublimación, etiqueta…)</button><b>Total bolsa: ' + money(bc.total) + (off ? ' <span class="pill mute">no se suma</span>' : "") + "</b></div>"
+    + '<div class="acts" style="margin-top:10px"><button class="linkb small" data-a="pdBolsaQuitar">Quitar la bolsa de este producto</button></div></div>';
   return h;
 }
 function rentConFicha(p, f, C) {
@@ -597,7 +657,7 @@ I["rcbProv:change"] = t => { RCB.prov = t.value; };
 I["rcbCerrar:change"] = t => { RCB.cerrar = t.checked; };
 C.rcbConfAuto = () => { RCB.confAuto = true; RCB.conf = null; recibirDlg(); };
 C.rcbOk = b => { const rec = {}, cons = {}; let conf = 0;
-  PRODS.forEach(p => { const n = Math.max(0, Math.floor(nd(RCB.q[p]))); if (n) { rec[p] = n; consumos(fichaGuardada(p), n, cons); conf += n * nm(fichaGuardada(p).confeccion); } });
+  PRODS.forEach(p => { const n = Math.max(0, Math.floor(nd(RCB.q[p]))); if (n) { rec[p] = n; consumos(fichaGuardada(p), n, cons); conf += n * confU(fichaGuardada(p)); } });
   const monto = RCB.confAuto ? Math.round(conf) : Math.round(nm(RCB.conf));
   if (monto > 0 && !RCB.prov) { errEn("rcbErr", "Elegí quién hizo la confección."); return; }
   pedir("tandaRecibir", {id: RCB.id, recibido: rec, consumos: Object.keys(cons).map(k => ({insumo: k, cantidad: Math.round(cons[k] * 1000) / 1000})), confeccion: {proveedor: RCB.prov, total: monto}, cerrar: RCB.cerrar}, "Recibidas: ya están a la venta", b).then(r => { if (r) L.cerrarDlg(); }); };
@@ -619,13 +679,29 @@ I.pdGasto = t => { gastosDraft()[+t.dataset.ix][t.dataset.k] = t.value; gastosDr
 I["pdGastoAct:change"] = t => { const g = gastosDraft()[+t.dataset.ix]; g.activo = t.checked; g._cambio = true; sucio(); soloMain(); };
 C.pdGastoAdd = () => { gastosDraft().push({id: "", concepto: "", total: "", activo: true, _cambio: true}); sucio(); soloMain(); };
 C.pdGastoDel = t => { const g = gastosDraft()[+t.dataset.ix]; if (g.id) { PD.gastosBorrar = (PD.gastosBorrar || []).concat(g.id); } gastosDraft().splice(+t.dataset.ix, 1); sucio(); soloMain(); };
+C.pdBolsaAdd = () => { draft(PD.tab).bolsa = bolsaDefault(PD.tab); sucio(); soloMain(); };
+C.pdBolsaQuitar = () => { if (!confirm("¿Quitar la bolsa de este producto?")) return; draft(PD.tab).bolsa = null; sucio(); soloMain(); };
+I["pdBolsaAct:change"] = t => { draft(PD.tab).bolsa.activa = t.checked; sucio(); soloMain(); };
+I.pdBolsa = t => { draft(PD.tab).bolsa[t.dataset.k] = t.value; sucio(); soloMain(); };
+I["pdBolsaIns:change"] = t => { draft(PD.tab).bolsa.items[+t.dataset.ix].insumo = t.value; sucio(); soloMain(); };
+I["pdBolsaCalc:change"] = t => { const b = draft(PD.tab).bolsa, x = b.items[+t.dataset.ix]; if (t.value === "fija" && x.calc !== "fija") x.uso = L.qi(bolsaUso(b, x) || 1); x.calc = t.value; sucio(); soloMain(); };
+I.pdBolsaUso = t => { draft(PD.tab).bolsa.items[+t.dataset.ix].uso = t.value; sucio(); soloMain(); };
+C.pdBolsaDel = t => { draft(PD.tab).bolsa.items.splice(+t.dataset.ix, 1); sucio(); soloMain(); };
+C.pdBolsaItemAdd = () => { draft(PD.tab).bolsa.items.push({insumo: "", calc: "fija", uso: "1"}); sucio(); soloMain(); };
+I.pdBolsaServ = t => { draft(PD.tab).bolsa.servicios[+t.dataset.ix][t.dataset.k] = t.value; sucio(); soloMain(); };
+C.pdBolsaServAdd = () => { const b = draft(PD.tab).bolsa; b.servicios = b.servicios || []; b.servicios.push({concepto: "", monto: "0"}); sucio(); soloMain(); };
+C.pdBolsaServDel = t => { draft(PD.tab).bolsa.servicios.splice(+t.dataset.ix, 1); sucio(); soloMain(); };
 C.pdDescartar = () => { if (!confirm("¿Descartar los cambios?")) return; PD.draft = {}; PD.gastos = null; PD.rollo = null; PD.gastosBorrar = []; PD.dirty = false; soloMain(); };
 C.pdPlano = () => abrirPlano(draft(PD.tab));
 C.pdGuardar = async b => {
   const pend = [];
   PRODS.forEach(p => { const f = PD.draft[p]; if (!f) return; if (f.receta.some(r => !r.insumo)) { pend.push(null); L.toast("Hay un renglón de la receta de " + nombreP(p) + " sin insumo."); return; }
-    pend.push(["tallerGuardar", {tipo: "ficha", data: {producto: p, medidas: f.medidas, receta: f.receta.map(r => ({insumo: r.insumo, auto: r.auto || "", uso: r.uso === "" || r.uso == null ? "" : nd(r.uso)})), confeccion: nm(f.confeccion), envio: nm(f.envio), otros: (f.otros || []).map(o => ({concepto: o.concepto, monto: nm(o.monto)})), notas: f.notas || ""}}]); });
+    pend.push(["tallerGuardar", {tipo: "ficha", data: {producto: p, medidas: f.medidas, receta: f.receta.map(r => ({insumo: r.insumo, auto: r.auto || "", uso: r.uso === "" || r.uso == null ? "" : nd(r.uso)})), confeccion: nm(f.confeccion), envio: nm(f.envio), otros: (f.otros || []).map(o => ({concepto: o.concepto, monto: nm(o.monto)})), notas: f.notas || "",
+      bolsa: f.bolsa ? {activa: f.bolsa.activa !== false, ancho: nd(f.bolsa.ancho), alto: nd(f.bolsa.alto), costura: nd(f.bolsa.costura), rollo: nd(f.bolsa.rollo), confeccion: nm(f.bolsa.confeccion),
+        items: (f.bolsa.items || []).filter(x => x.insumo).map(x => ({insumo: x.insumo, calc: x.calc, uso: x.calc === "fija" ? nd(x.uso) : ""})), servicios: (f.bolsa.servicios || []).filter(x => String(x.concepto).trim()).map(x => ({concepto: x.concepto, monto: nm(x.monto)}))} : null}}]); });
   if (pend.some(x => x === null)) return;
+  if (PRODS.some(p => PD.draft[p] && PD.draft[p].bolsa) && !(T().version >= 3)) { L.toast("Para guardar la bolsa primero actualizá el Codigo.gs (versión 3) en Apps Script.", 7000); return; }
+  if (PRODS.some(p => PD.draft[p] && PD.draft[p].bolsa && (PD.draft[p].bolsa.items || []).some(x => !x.insumo))) { L.toast("Hay un insumo de la bolsa sin elegir."); return; }
   (PD.gastos || []).filter(g => g._cambio).forEach(g => { if (!String(g.concepto).trim()) return; pend.push(["tallerGuardar", {tipo: "gasto", data: {id: g.id, concepto: g.concepto, total: nm(g.total), activo: g.activo !== false}}]); });
   (PD.gastosBorrar || []).forEach(id => pend.push(["tallerBorrar", {tipo: "gasto", id: id}]));
   if (PD.rollo) pend.push(["guardarConfig", {valores: {rollo_ancho: String(nd(PD.rollo.rollo_ancho)), margen_costura: String(nd(PD.rollo.margen_costura)), rollo_largo: String(nd(PD.rollo.rollo_largo))}}]);
