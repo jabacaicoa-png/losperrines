@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "7/11 · 7";
+window.PANEL_VERSION = "7/11 · 8";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -421,6 +421,7 @@ function compraDlg() {
         + (otros.length ? '<label class="f" style="margin-top:10px">Agregar un insumo de otro proveedor<select id="cp-add" data-ch="cpAdd"><option value="">Elegí…</option>' + otros.map(i => '<option value="' + esc(i.id) + '">' + esc(i.nombre) + "</option>").join("") + "</select></label>" : "")
         + '<div class="g2"><label class="f">Envío o recargo<input id="cp-x" data-in="cpF" data-k="extra" inputmode="numeric" value="' + esc(CD.extra || "") + '" placeholder="0"></label><div class="f">Total<b style="font-size:1.4rem;color:var(--ink)">' + money(total) + "</b></div></div>"
         + '<label class="check small"><input type="checkbox" id="cp-ap" data-ch="cpAct"' + (CD.actualizar ? " checked" : "") + "> Actualizar los precios del catálogo con estos</label>"
+        + (nm(CD.extra) > 0 && total > nm(CD.extra) ? '<label class="check small" style="margin-top:6px"><input type="checkbox" id="cp-rp" data-ch="cpRep"' + (CD.repartir ? " checked" : "") + "> Sumar el envío al costo de los insumos (cada uno queda " + q(nm(CD.extra) / (total - nm(CD.extra)) * 100) + "% más caro, así la receta refleja lo que te costó de verdad)</label>" : "")
         : '<p class="muted">Elegí el proveedor para ver sus insumos.</p>'))
     + '<div class="g2" style="margin-top:12px"><label class="f">Ya pagué<input id="cp-pg" data-in="cpF" data-k="pagado" inputmode="numeric" value="' + esc(CD.pagado || "") + '" placeholder="0 = queda como deuda"></label><label class="f">Medio de pago<select id="cp-m" data-ch="cpMedio">' + ["Transferencia", "Efectivo", "Tarjeta", "Mercado Pago"].map(m => "<option" + (CD.medio === m ? " selected" : "") + ">" + m + "</option>").join("") + "</select></label></div>"
     + (esCargo ? "" : '<button class="linkb small" data-a="cpPagoTotal" style="margin:-6px 0 8px">Pagué el total (' + money(total) + ")</button>")
@@ -686,13 +687,14 @@ C.tExport = () => {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); L.toast("Archivo descargado");
 };
 // compras y pagos
-function nuevaCompra(pv) { return {modo: "compra", proveedor: pv || "", fecha: hoyISO(), items: {}, extras: [], extra: "", pagado: "", medio: "Transferencia", notas: "", actualizar: true}; }
+function nuevaCompra(pv) { return {modo: "compra", proveedor: pv || "", fecha: hoyISO(), items: {}, extras: [], extra: "", pagado: "", medio: "Transferencia", notas: "", actualizar: true, repartir: true}; }
 C.compraNueva = t => { CD = nuevaCompra(t.dataset.prov); compraDlg(); };
 C.cargoFalta = t => { CD = nuevaCompra(t.dataset.prov); CD.modo = "cargo"; CD.total = t.dataset.monto; CD.detalle = "Compra anterior (el stock ya está cargado)"; compraDlg(); };
 C.cargoNuevo = () => { CD = nuevaCompra(""); CD.modo = "cargo"; compraDlg(); };
 I["cpProv:change"] = t => { CD.proveedor = t.value; compraDlg(); };
 I["cpAdd:change"] = t => { if (t.value) CD.extras.push(t.value); compraDlg(); };
 I["cpAct:change"] = t => { CD.actualizar = t.checked; };
+I["cpRep:change"] = t => { CD.repartir = t.checked; };
 I["cpMedio:change"] = t => { CD.medio = t.value; };
 I.cpF = t => { CD[t.dataset.k] = t.value; if (t.dataset.k === "extra") compraDlg(); };
 I.cpItem = t => { const x = CD.items[t.dataset.id] = CD.items[t.dataset.id] || {}; x[t.dataset.k] = t.value; compraDlg(); };
@@ -702,7 +704,12 @@ C.cpOk = b => { if (!CD.proveedor) { errEn("cpErr", "Elegí el proveedor."); ret
   let datos;
   if (CD.modo === "cargo") { if (!(nm(CD.total) > 0)) { errEn("cpErr", "Poné el monto."); return; } datos = Object.assign(base, {total: nm(CD.total), detalle: CD.detalle, tipo: "otro"}); }
   else { const items = Object.keys(CD.items).map(id => ({insumo: id, envases: nd(CD.items[id].envases), precio: nm(CD.items[id].precio != null ? CD.items[id].precio : ins(id).precio)})).filter(x => x.envases > 0);
-    if (!items.length) { errEn("cpErr", "Poné la cantidad de al menos un insumo."); return; } datos = Object.assign(base, {items: items, extra: nm(CD.extra), actualizarPrecios: CD.actualizar}); }
+    if (!items.length) { errEn("cpErr", "Poné la cantidad de al menos un insumo."); return; }
+    let extra = nm(CD.extra); const sub = items.reduce((a, x) => a + x.envases * x.precio, 0);
+    if (CD.repartir && extra > 0 && sub > 0) { // el envío se reparte en el precio de cada insumo (proporcional a lo que costó)
+      const k = 1 + extra / sub; items.forEach(x => { x.precio = Math.round(x.precio * k * 100) / 100; });
+      base.notas = [base.notas, "Incluye envío de " + money(extra) + " repartido en los insumos"].filter(Boolean).join(" · "); extra = 0; }
+    datos = Object.assign(base, {items: items, extra: extra, actualizarPrecios: CD.actualizar}); }
   pedir("compraRegistrar", datos, CD.modo === "cargo" ? "Gasto guardado" : "Compra guardada: stock actualizado", b).then(r => { if (r) L.cerrarDlg(); }); };
 C.pagoNuevo = t => pagoDlg(t.dataset.prov);
 C.pgOk = b => { const m = nm($("#pg-m").value); if (!(m > 0)) { errEn("pgErr", "Poné el monto."); return; }
