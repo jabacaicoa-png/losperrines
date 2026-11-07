@@ -66,7 +66,7 @@ function render(){
   var nav='<div class="brand">'+LOGO+'<span>Los Perrines<small>Administración</small></span></div>'
     +grupos.map(function(g){ return (g.n?'<div class="ngroup">'+esc(g.n)+'</div>':'')+g.v.map(function(x){ var b=x.badge?x.badge():null;
       return '<button class="nlink" data-go="'+x.id+'"'+(x.id===S.view?' aria-current="page"':'')+'><span>'+esc(x.titulo)+'</span>'+(b&&b.n?'<span class="pill'+(b.bad?' bad':'')+'">'+b.n+'</span>':'')+'</button>'; }).join(""); }).join("")
-    +'<div class="foot"><button class="btn ghost sm" data-a="refrescar">↻ Actualizar</button><button class="btn ghost sm" data-a="salir">Salir</button></div>'
+    +'<div class="foot" style="flex-wrap:wrap"><button class="btn ghost sm" data-a="refrescar">↻ Actualizar</button><button class="btn ghost sm" data-a="salir">Salir</button>'+(window.TALLER&&S.taller?'<button class="btn ghost sm" data-a="tExport" style="width:100%">⬇ Descargar datos del taller</button>':'')+'</div>'
     +(window.PANEL_VERSION?'<div class="muted small" style="padding:8px 4px 0">Versión del panel: '+esc(window.PANEL_VERSION)+'</div>':'');
   var body; try{ body=V.fn(S.data); }catch(e){ console.error(e); body='<div class="note bad">No pude mostrar esta sección: '+esc(e.message)+'</div>'; }
   var a=document.activeElement, fid=a&&a.id, pos=null; try{ pos=a&&a.selectionStart; }catch(e){}
