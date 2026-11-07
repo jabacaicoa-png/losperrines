@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "7/11 · 6";
+window.PANEL_VERSION = "7/11 · 7";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -92,7 +92,7 @@ function initRS() {
   RS.precios = {doble: {t: c.precio_tarjeta || "", x: c.precio_transferencia || ""}, individual: {t: c.precio2_tarjeta || "", x: c.precio2_transferencia || ""}};
   RS.comision = String(conf("comision_mp", 20)); RS.objetivo = String(conf("rentabilidad_objetivo", 60));
   RS.mixReal = tot >= 5 ? Math.round(v.tarjeta / tot * 100) : null; RS.ventas = tot;
-  RS.mix = String(RS.mixReal != null ? RS.mixReal : conf("mix_tarjeta", 50)); RS.init = true;
+  RS.mix = String(conf("mix_tarjeta", 50)); RS.init = true;  // manda siempre el % que guardaste; el de las ventas es solo referencia
 }
 function rent(p, precios) {
   initRS(); precios = precios || RS.precios[p]; const f = fichaGuardada(p), C = costo(f).total;
@@ -463,7 +463,7 @@ function vRentabilidad() {
     + '<label class="f" style="margin:0">Comisión Mercado Pago<span class="unitw"><input class="inp xs" id="rs-c" data-in="rsP" data-k="comision" inputmode="decimal" value="' + esc(RS.comision) + '"> %</span></label>'
     + '<label class="f" style="margin:0">Rentabilidad objetivo<span class="unitw"><input class="inp xs" id="rs-o" data-in="rsP" data-k="objetivo" inputmode="decimal" value="' + esc(RS.objetivo) + '"> %</span></label>'
     + '<label class="f" style="margin:0;min-width:240px" for="rs-m">Ventas con tarjeta: <b id="rsMixTxt" style="color:var(--ink)">' + esc(RS.mix) + '%</b><input type="range" id="rs-m" data-in="rsMix" min="0" max="100" step="5" value="' + esc(RS.mix) + '" style="accent-color:var(--olive)"></label>'
-    + '<span class="muted small" style="max-width:260px">' + (RS.mixReal != null ? "Tus ventas reales: " + RS.mixReal + "% con tarjeta (" + RS.ventas + " fundas). " + (String(RS.mixReal) !== RS.mix ? '<button class="linkb" data-a="rsMixReal">Usar ese</button>' : "") : "Cuando tengas 5 ventas o más, uso tu mezcla real.") + "</span></div>"
+    + '<span class="muted small" style="max-width:260px">' + "Se usa el % que guardaste." + (RS.mixReal != null ? " Según tus ventas registradas sería " + RS.mixReal + "% (" + RS.ventas + " fundas, incluye pedidos de prueba). " + (String(RS.mixReal) !== RS.mix ? '<button class="linkb" data-a="rsMixReal">Usar ese</button>' : "") : "") + "</span></div>"
     + '<div class="acts" style="margin-top:12px"><button class="btn ghost sm" data-a="rsGuardarParams">Guardar comisión, objetivo y mezcla</button></div></div>';
   h += '<div class="cols2" style="margin-top:14px" id="rsCards">' + PRODS.map(p => rentCard(p, obj)).join("") + "</div>";
   const cambios = PRODS.some(p => { const k = p === "doble" ? ["precio_tarjeta", "precio_transferencia"] : ["precio2_tarjeta", "precio2_transferencia"]; return String(nm(RS.precios[p].t)) !== String(nm(c[k[0]])) || String(nm(RS.precios[p].x)) !== String(nm(c[k[1]])); });
