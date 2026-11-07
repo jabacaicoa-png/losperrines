@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "7/11 · 5";
+window.PANEL_VERSION = "7/11 · 6";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -217,8 +217,8 @@ function vPlanificar() {
   const poner = compraTot + confT, rTanda = costoT > 0 ? gan / costoT : 0, obj = nd(RS.objetivo) / 100;
   h += '</div><aside style="min-width:0"><div class="block" style="margin-top:0;background:var(--olive);color:var(--on-olive);border:0;position:sticky;top:16px"><h3>Resumen de la tanda</h3>'
     + kv("Fundas", "<b style='font-size:1.4rem'>" + u + "</b>") + '<p class="small" style="margin:-2px 0 6px;opacity:.85">' + (PRODS.filter(p => cant(p)).map(p => cant(p) + " " + corto(p, cant(p))).join(" + ") || "Elegí cantidades") + "</p>"
-    + kv("Tela", q(usado / 100) + " de " + q(telaTengo) + " m") + kv("Comprar ahora", money(compraTot)) + kv("Confección (al recibir)", money(confT))
-    + kv("<b>Plata que ponés</b>", "<b>" + money(poner) + "</b>", true) + kv("Recibís si vendés todo", money(ingreso)) + kv("Costo total de la tanda", money(costoT))
+    + kv("Tela", q(usado / 100) + " de " + q(telaTengo) + " m") + kv("Insumos que faltan comprar", compraTot ? money(compraTot) : "Nada: tenés todo ✓") + kv("Confección (al recibir)", money(confT))
+    + kv("<b>Plata que ponés</b><br><span class='small' style='opacity:.85'>insumos que faltan + confección</span>", "<b>" + money(poner) + "</b>", true) + kv("Recibís si vendés todo", money(ingreso)) + kv("Costo total de la tanda<br><span class='small' style='opacity:.85'>incluye lo que ya tenés pagado</span>", money(costoT))
     + kv("<b>Ganancia</b>", "<b style='font-size:1.3rem'>" + money(gan) + "</b>", true) + kv("Rentabilidad", u ? pct(rTanda) + (rTanda >= obj ? " ✓" : " · objetivo " + esc(RS.objetivo) + "%") : "—")
     + '<p class="small" style="margin:8px 0 0;opacity:.8">Con los precios de la web y ' + esc(RS.mix) + "% de ventas con tarjeta (comisión " + esc(RS.comision) + "%). El costo incluye materiales, confección, gastos compartidos y envío.</p>"
     + '<button class="btn ball big" style="width:100%;margin-top:12px" data-a="plCrear"' + (u ? "" : " disabled") + ">Crear tanda</button></div></aside></div>"
