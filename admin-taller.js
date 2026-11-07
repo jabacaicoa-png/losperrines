@@ -520,7 +520,7 @@ function armarMigracion(r) {
       f.receta.push({insumo: i.id, auto: auto, uso: auto ? "" : nd(it.uso)}); });
     (cp.items || []).filter(it => it.clase === "fijo" && it.incluir !== false).forEach(it => {
       if (it.base === "lote") { if (!gIdx[clave(it.concepto)]) { gIdx[clave(it.concepto)] = 1; gastos.push({id: "GA-" + slug(it.concepto), concepto: it.concepto, total: nm(it.monto), activo: true}); } return; }
-      if (it.cuando === "venta") { f.envio += nm(it.monto); return; }
+      if (it.cuando === "venta") { if (/env[ií]o/i.test(it.concepto)) f.envio += nm(it.monto); else f.otros.push({concepto: it.concepto + " (por venta)", monto: nm(it.monto)}); return; }
       if (/mano de obra|confecci|costura/i.test(it.concepto) && !f.confeccion) { f.confeccion = nm(it.monto); if (it.proveedor) pv(it.proveedor); return; }
       f.otros.push({concepto: it.concepto, monto: nm(it.monto)}); });
     fichas.push(f);
