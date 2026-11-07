@@ -173,8 +173,9 @@ function m2(cm){return (cm/100).toLocaleString("es-AR",{minimumFractionDigits:2,
 function up2(x){return Math.ceil(x*100-1e-9)/100;}
 
 /* ---------- cálculo ---------- */
+/* largo del cuerpo: tramos + 2 cm por cada pliegue (los extremos llevan bies) */
 function piezas(md,mg){
-  return {CW:md.an+2*mg, CL:md.t1+md.t2+md.t3+2*(2*mg), LA:md.la+2*mg, LB:md.lb+mg, nl:Math.max(0,Math.round(md.nl))};
+  return {CW:md.an+2*mg, CL:md.t1+md.t2+md.t3+2*2, LA:md.la+2*mg, LB:md.lb+mg, nl:Math.max(0,Math.round(md.nl))};
 }
 function fit(w,l,LA,LB){ // cuántos laterales entran en un área w × l (w a lo ancho)
   var a=Math.floor(w/LA)*Math.floor(l/LB), b=Math.floor(w/LB)*Math.floor(l/LA);
