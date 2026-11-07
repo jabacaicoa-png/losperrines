@@ -143,7 +143,7 @@ function inicio() {
   const enConf = T().tandas.filter(t => t.estado === "en_confeccion"), fundas = enConf.reduce((a, t) => { const p = pendienteTanda(t); return a + PRODS.reduce((b, x) => b + (p[x] || 0), 0); }, 0);
   const bajos = bajoMinimo(), sal = saldos(), deuda = Object.keys(sal).reduce((a, k) => a + Math.max(0, sal[k].saldo), 0);
   const prods = PRODS.filter(p => T().fichas.some(f => f.producto === p));
-  let h = '<h3 style="margin:22px 0 0">Taller y números</h3><div class="cards">'
+  let h = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:22px;flex-wrap:wrap"><h3 style="margin:0">Taller y números</h3><button class="btn ghost sm" data-a="tExport">Descargar datos del taller</button></div><div class="cards">'
     + '<div class="kpi' + (fundas ? " warn" : "") + '"><small>En confección</small><b>' + fundas + '</b><span class="k2">' + (enConf.length ? enConf.length + " tanda" + (enConf.length > 1 ? "s" : "") : "Ninguna tanda") + "</span></div>"
     + '<div class="kpi' + (bajos.length ? " bad" : " ok") + '"><small>Insumos bajo el mínimo</small><b>' + bajos.length + '</b><span class="k2">' + (bajos.length ? esc(bajos.slice(0, 2).map(i => i.nombre).join(", ")) : "Todo en orden") + "</span></div>"
     + '<div class="kpi' + (deuda ? " warn" : "") + '"><small>Debés a proveedores</small><b>' + money(deuda) + '</b><span class="k2">Compras y confección sin pagar</span></div>';
@@ -669,6 +669,18 @@ C.scOk = async b => {
       await L.api("stockAjuste", {insumo: c.i.id, cantidad: c.d, tipo: T().movimientos.some(m => m.insumo === c.i.id) ? "ajuste" : "inicial", detalle: SC.motivo || "Stock inicial"}); ok++; }
     L.cerrarDlg(); await L.cargar("Stock guardado: " + ok + " insumo" + (ok > 1 ? "s" : ""));
   } catch (e) { L.toast("Se guardaron " + ok + " de " + cambios.length + ". " + e.message, 6000); await L.cargar(); }
+};
+/* descarga solo los datos del taller (sin datos de clientes) para revisarlos o guardarlos */
+C.tExport = () => {
+  const c = cfgTienda(), t = T(), hoy = hoyISO();
+  const datos = {exportado: new Date().toISOString(), aviso: "Datos del taller de Los Perrines. No incluye pedidos ni datos de clientes.",
+    precios_web: {doble: {tarjeta: c.precio_tarjeta, transferencia: c.precio_transferencia}, individual: {tarjeta: c.precio2_tarjeta, transferencia: c.precio2_transferencia}},
+    config_taller: t.config, insumos: t.insumos, proveedores: t.proveedores, fichas: t.fichas, gastos_compartidos: t.gastos, tandas: t.tandas,
+    compras: t.compras, pagos: t.pagos, movimientos_insumos: t.movimientos, stock_fundas: t.stockTienda,
+    costos_calculados: PRODS.map(p => { const f = fichaGuardada(p); return {producto: p, nombre: nombreP(p), tela_por_funda_m: telaU(f), costo: costo(f), rentabilidad: f._nueva ? null : rent(p)}; })};
+  const blob = new Blob([JSON.stringify(datos, null, 2)], {type: "application/json"}), a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "los-perrines-taller-" + hoy + ".json"; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); L.toast("Archivo descargado");
 };
 // compras y pagos
 function nuevaCompra(pv) { return {modo: "compra", proveedor: pv || "", fecha: hoyISO(), items: {}, extras: [], extra: "", pagado: "", medio: "Transferencia", notas: "", actualizar: true}; }
