@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git -c user.email=jabacaicoa@gmail.com -c user.name=\"Los Perrines\" commit:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(node dev/*)",
+      "Bash(node -e:*)"
+    ]
+  }
+}
