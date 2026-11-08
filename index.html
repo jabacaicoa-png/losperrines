@@ -635,7 +635,7 @@ if(!/^https:\/\/script\.google\.com\//.test(API)){ show("pronto"); return; }
 api("config").then(function(c){
   C=c;
   if(!c.abierta){ show("pronto"); return; }   /* con la tienda cerrada solo se registra la visita */
-  show("tienda"); $("#previewBar").hidden=!c.vista;
+  show("tienda"); $("#previewBar").hidden=!c.vista||c.publica===true;
   pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
   if(c.whatsapp && c.whatsapp.length>6){ $$(".wa").forEach(function(a){a.href="https://wa.me/"+c.whatsapp;}); } else { $$(".wa").forEach(function(a){a.hidden=true;}); }
   if(qs.get("pedido")) volvioDeMP();

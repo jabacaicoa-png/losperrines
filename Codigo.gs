@@ -253,7 +253,8 @@ function publicoConfig(r) {
     return {id: p.id, nombre: p.nombre, precio_tarjeta: p.tarjeta, precio_transferencia: p.transferencia, disponible: Math.max(0, s[p.id].disponible), sub: p.sub, medidas: p.medidas};
   });
   return {
-    abierta: c.tienda_abierta === 'SI' || !!vista, vista: !!vista,
+    abierta: c.tienda_abierta === 'SI' || !!vista, publica: c.tienda_abierta === 'SI',
+    vista: !!vista && c.tienda_abierta !== 'SI',   // el cartel de vista previa solo con la tienda cerrada al público
     precio_tarjeta: num(c.precio_tarjeta), precio_transferencia: num(c.precio_transferencia),
     cuotas: num(c.cuotas_max), whatsapp: c.whatsapp, producto: c.producto, valor_envio: num(c.valor_envio),
     disponible: Math.max(0, s.doble.disponible), productos: prods, media: listaMedia()
