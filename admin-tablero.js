@@ -116,5 +116,5 @@ function vTablero() {
 }
 L.CLICK.tbDias = t => { TB.dias = +t.dataset.d; L.render(); };
 L.CLICK.tbRecargar = () => { delete TB.datos[TB.dias]; TB.forzar = true; L.render(); };
-L.vista("tablero", "Números", "Tablero", vTablero, null, "rentabilidad");
+L.vista("tablero", "Números", "Tablero", vTablero, null, "publicidad");
 })();

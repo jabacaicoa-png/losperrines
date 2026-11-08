@@ -98,5 +98,5 @@ function vPublicidad() {
 }
 L.CLICK.pubDias = t => { PUB.dias = +t.dataset.d; L.render(); };
 L.CLICK.pubRecargar = () => { delete PUB.datos[PUB.dias]; PUB.forzar = true; L.render(); };   // trae datos frescos de Meta, sin lo guardado
-L.vista("publicidad", "Números", "Publicidad", vPublicidad);
+L.vista("publicidad", "Números", "Publicidad", vPublicidad, null, "rentabilidad");
 })();
