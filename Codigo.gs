@@ -81,6 +81,7 @@ var CONFIG_DEF = [
   ['instagram','losperrines_','Tu usuario de Instagram, sin @ (se lo mostramos al cliente cuando recibe).'],
   ['meta_pixel_id','1067987206265090','ID del píxel de Meta (el mismo de la web), para avisar las compras confirmadas.'],
   ['meta_ad_account','1181977813835023','Número de la cuenta publicitaria de Meta (sin "act_"), para la pantalla Publicidad.'],
+  ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
@@ -166,6 +167,7 @@ function rutear(r) {
     case 'ceroPreview': return ceroPreview();
     case 'dejarEnCero': return conLock(function () { return dejarEnCero(r); });
     case 'publicidad': return publicidad(r);
+    case 'tablero': return tablero(r);
     case 'resumenAhora': return conLock(function () { return resumenDiario(false); });
     case 'nota': return guardarNota(r.id, r.nota);
     case 'costos': return {costos: leerCostos()};
@@ -1080,6 +1082,83 @@ function dejarEnCero(r) {
     hecho.ajustes.push({producto: id, cantidad: dif, queda: cuenta});
   });
   return hecho;
+}
+
+/* ================= TABLERO: lo que sirve para decidir ================= */
+/* Junta en una sola respuesta: ventas reales (planilla, con el período anterior para comparar), reservas por
+   transferencia que se pagan o no, cuántos días de stock quedan, anuncios (Meta) y tráfico (Google Analytics).
+   Google Analytics se lee con el servicio avanzado "Google Analytics Data API" de Apps Script (corre con tu
+   usuario de Google, no hace falta token) y el número de propiedad en Configuración (ga_property_id). */
+function periodoAtras(dias, atras) {
+  var fin = new Date(ahora().getTime() - atras * dias * DIA), ini = new Date(fin.getTime() - (dias - 1) * DIA);
+  return {since: Utilities.formatDate(ini, TZ, 'yyyy-MM-dd'), until: Utilities.formatDate(fin, TZ, 'yyyy-MM-dd')};
+}
+function ventasEntre(c, per, P) {
+  var com = num(c.comision_mp) / 100, o = {pedidos: 0, unidades: 0, facturado: 0, neto: 0, tarjeta: 0, transferencia: 0, porProducto: {doble: 0, individual: 0}};
+  P.forEach(function (p) {
+    if (VENDIDO.indexOf(p.estado) < 0) return;
+    var dia = Utilities.formatDate(new Date(tsDe(p.pagado_el) || tsDe(p.fecha)), TZ, 'yyyy-MM-dd');
+    if (dia < per.since || dia > per.until) return;
+    var t = num(p.total); o.pedidos++; o.facturado += t; o.neto += p.pago === 'tarjeta' ? t * (1 - com) : t; o[p.pago === 'tarjeta' ? 'tarjeta' : 'transferencia']++;
+    itemsDe(p).forEach(function (it) { var id = it.producto === 'individual' ? 'individual' : 'doble'; o.porProducto[id] += num(it.cantidad); o.unidades += num(it.cantidad); });
+  });
+  o.neto = Math.round(o.neto);
+  return o;
+}
+function reservasEntre(per, P) {   // pedidos por transferencia hechos en el período: ¿cuántos se pagaron?
+  var o = {total: 0, pagadas: 0, vencidas: 0, esperando: 0};
+  P.forEach(function (p) {
+    if (p.pago !== 'transferencia') return;
+    var dia = Utilities.formatDate(new Date(tsDe(p.fecha)), TZ, 'yyyy-MM-dd');
+    if (dia < per.since || dia > per.until) return;
+    o.total++;
+    if (VENDIDO.indexOf(p.estado) >= 0) o.pagadas++; else if (p.estado === 'reserva') o.esperando++; else o.vencidas++;
+  });
+  return o;
+}
+function leerGA(c, dias, forzar) {
+  var prop = String(c.ga_property_id || '').replace(/\D/g, '');
+  if (!prop) return {falta: 'propiedad'};
+  if (typeof AnalyticsData === 'undefined') return {falta: 'servicio'};
+  var cur = periodoAtras(dias, 0), prev = periodoAtras(dias, 1), clave = 'ga_' + prop + '_' + cur.since + '_' + cur.until, cache = CacheService.getScriptCache(), g = cache.get(clave);
+  if (g && !forzar) return JSON.parse(g);
+  var rango = [{startDate: cur.since, endDate: cur.until}], dos = [{startDate: cur.since, endDate: cur.until, name: 'actual'}, {startDate: prev.since, endDate: prev.until, name: 'anterior'}];
+  function dim(n, lim) { return {dateRanges: rango, dimensions: [{name: n}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: lim || 6}; }
+  var res;
+  try {
+    res = AnalyticsData.Properties.batchRunReports({requests: [
+      {dateRanges: dos, metrics: [{name: 'sessions'}, {name: 'totalUsers'}, {name: 'newUsers'}]},
+      dim('sessionDefaultChannelGroup'), dim('deviceCategory', 3), dim('region'),
+      {dateRanges: rango, dimensions: [{name: 'eventName'}], metrics: [{name: 'eventCount'}],
+        dimensionFilter: {filter: {fieldName: 'eventName', inListFilter: {values: ['view_item_list', 'add_to_cart', 'begin_checkout', 'add_payment_info', 'purchase']}}}}
+    ]}, 'properties/' + prop);
+  } catch (e) {
+    var m = String(e.message || e);
+    if (/permission|403|not have/i.test(m)) m = 'Tu usuario de Google no tiene acceso a esa propiedad de Analytics, o el número no es el correcto.';
+    return {error: m.slice(0, 220)};
+  }
+  var R = res.reports || [];
+  function filasDe(r) { return ((r && r.rows) || []).map(function (x) { return {d: x.dimensionValues ? x.dimensionValues.map(function (v) { return v.value; }) : [], m: x.metricValues.map(function (v) { return num(v.value); })}; }); }
+  var tot = {actual: {sesiones: 0, personas: 0, nuevas: 0}, anterior: {sesiones: 0, personas: 0, nuevas: 0}};
+  filasDe(R[0]).forEach(function (x) { var k = x.d[x.d.length - 1] === 'anterior' ? 'anterior' : 'actual'; tot[k] = {sesiones: x.m[0], personas: x.m[1], nuevas: x.m[2]}; });
+  var lista = function (r) { return filasDe(r).map(function (x) { return {nombre: x.d[0], sesiones: x.m[0]}; }); };
+  var ev = {}; filasDe(R[4]).forEach(function (x) { ev[x.d[0]] = x.m[0]; });
+  var out = {total: tot, canales: lista(R[1]), dispositivos: lista(R[2]), regiones: lista(R[3]), eventos: ev, periodo: cur};
+  cache.put(clave, JSON.stringify(out), 1800);
+  return out;
+}
+function tablero(r) {
+  var c = cfg(), dias = [1, 7, 30].indexOf(num(r.dias)) >= 0 ? num(r.dias) : 7, P = filas(H.pedidos), s = stock();
+  var cur = periodoAtras(dias, 0), prev = periodoAtras(dias, 1), ult30 = ventasEntre(c, periodoAtras(30, 0), P);
+  var stk = {};
+  productos(c).filter(function (p) { return p.activo || s[p.id].ingresado > 0; }).forEach(function (p) {
+    var porDia = ult30.porProducto[p.id] / 30;
+    stk[p.id] = {nombre: p.nombre, disponible: Math.max(0, s[p.id].disponible), porDia: Math.round(porDia * 100) / 100, dias: porDia > 0 ? Math.floor(Math.max(0, s[p.id].disponible) / porDia) : null};
+  });
+  var meta = leerMetaAds(c, dias, !!r.forzar);
+  return {dias: dias, periodo: cur, ventas: ventasEntre(c, cur, P), anterior: ventasEntre(c, prev, P), reservas: reservasEntre(cur, P), stock: stk,
+    meta: meta && meta.total ? {inversion: meta.total.inversion, compras: meta.total.compras, clics: meta.total.clics} : {falta: meta && (meta.falta || meta.error) ? (meta.falta || 'error') : ''},
+    ga: leerGA(c, dias, !!r.forzar)};
 }
 
 /* ================= MAILS ================= */

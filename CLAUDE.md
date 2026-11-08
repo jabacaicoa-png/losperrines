@@ -10,9 +10,10 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | Archivo | Qué es |
 |---|---|
 | `index.html` | La tienda pública (GitHub Pages, dominio `www.losperrines.com.ar`, ver `CNAME`). |
-| `admin.html` | Cascarón del panel: estilos + carga `admin-core.js`, `admin-hoy.js`, `admin-taller.js` y `admin-publicidad.js` con `?v=Date.now()` (para que el navegador nunca use una copia vieja). |
+| `admin.html` | Cascarón del panel: estilos + carga `admin-core.js`, `admin-hoy.js`, `admin-taller.js`, `admin-publicidad.js` y `admin-tablero.js` con `?v=Date.now()` (para que el navegador nunca use una copia vieja). |
 | `admin-core.js` | Núcleo del panel: sesión, navegación por áreas, vistas de Ventas y Tienda. Expone `window.LP`. |
 | `admin-hoy.js` | Pantalla **Hoy** (la "oficina"): pedidos por etapa, acciones en lote, hoja de preparación, WhatsApp prearmado y hora del resumen diario. |
+| `admin-tablero.js` | Pantalla **Tablero** (primera de Números): "Qué mirar" (conclusiones escritas), ventas/cobrado/ganancia con comparación al período anterior, días de stock, transferencias pagadas, visitas de Google Analytics (canales, aparato, provincias, embudo) y resumen de Meta. |
 | `admin-publicidad.js` | Pantalla **Publicidad** (grupo Números): inversión en Meta vs ventas reales de la planilla y ganancia después de anuncios (usa `TALLER.costoFunda`/`gananciaFunda`), embudo y campañas con veredicto. |
 | `admin-taller.js` | Taller: insumos, productos (medidas + receta + bolsa), tandas, proveedores y pagos, planificar, rentabilidad, importación. Define `window.PANEL_VERSION` (se muestra abajo del menú). |
 | `corte.html` | Plano de corte e impresión de la ficha para la costurera. Con `#panel` toma las medidas que le pasa el panel por `sessionStorage`. |
@@ -51,6 +52,7 @@ node dev/test-backend.js                      # prueba del backend (taller, comp
 node dev/test-oficina.js                      # pantalla Hoy: etapas, lotes, avisos y resumen diario (con reloj simulado)
 node dev/test-meta.js                         # aviso de compras a Meta (API de Conversiones), con Meta simulado
 node dev/test-cero.js                         # "Empezar de cero": borra solo lo de prueba, respaldo y conteo real
+node dev/test-tablero.js                      # Tablero: ventas con comparación, transferencias, días de stock, Google Analytics simulado
 node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # levanta el backend emulado en :8787 con una tienda de ejemplo
 ```
 
@@ -81,6 +83,13 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 - El resumen de las 20 h suma una línea "Publicidad hoy" cuando hay gasto o ventas.
 - Estado: token de lectura cargado (`META_ADS_TOKEN`, del "Conversions API System User" con la cuenta publicitaria en "Ver rendimiento" y la app "Panel Los Perrines" con el caso de uso de la API de marketing). Todavía no hay campañas: las arranca al abrir la tienda.
 - Ojo: "Revocar tokens" en ese usuario del sistema anula también `META_CAPI_TOKEN`.
+
+## Tablero (pantalla del panel)
+
+- Acción `tablero` `{dias, forzar}`: `ventasEntre` (actual y período anterior, por fecha de pago), `reservasEntre` (transferencias del período: pagadas/esperando/vencidas), días de stock (disponible ÷ ventas por día de los últimos 30), Meta (`leerMetaAds`) y Google Analytics (`leerGA`, caché 30 min).
+- Google Analytics usa el **servicio avanzado "Google Analytics Data API"** de Apps Script (`AnalyticsData.Properties.batchRunReports`, corre con el usuario del dueño, sin token) y el config `ga_property_id` (número de propiedad, no el G-). Sin servicio → `{falta:'servicio'}`; sin propiedad → `{falta:'propiedad'}`; la pantalla muestra los pasos.
+- En el emulador, los servicios avanzados se simulan con `makeEnv({extra: {AnalyticsData: ...}})`. Prueba: `node dev/test-tablero.js`.
+- Estado: falta que el dueño agregue el servicio y cargue el ID de propiedad.
 
 ## Siguientes pasos posibles
 

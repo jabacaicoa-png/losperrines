@@ -72,6 +72,7 @@ function makeEnv(opts) {
     },
     Logger: { log() {} }
   };
+  Object.assign(ctx, opts.extra || {});   // servicios avanzados simulados (ej. AnalyticsData)
   vm.createContext(ctx);
   const code = fs.readFileSync(opts.file, 'utf8');
   vm.runInContext(code, ctx, { filename: opts.file });
