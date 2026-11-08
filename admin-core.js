@@ -192,7 +192,22 @@ function vConfig(d){
     +(d.meta?'<div style="margin-top:8px"><b>Compras a Meta:</b> '+(d.meta.token?(d.meta.error?'<span class="neg">con error</span> · '+esc(d.meta.error):'<span class="pos">conectado</span>'+(d.meta.ok?' · último aviso: '+esc(d.meta.ok):'')):'<span class="neg">falta el token</span> (META_CAPI_TOKEN en Apps Script → Propiedades del script).')
       +(d.meta.token?' <button class="btn ghost sm" data-a="probarMeta" style="margin-left:6px">Probar conexión</button>':'')+'</div>':'')+'</div>'
     +'<form id="cfg">'+CFG_GRUPOS.map(function(g){ return '<div class="block"><h3>'+esc(g[0])+'</h3>'+g[1].map(function(k){return '<div class="cfg-row"><label class="f" style="margin:0">'+esc(CFG_LBL[k]||k)+(/^medidas/.test(k)?'<textarea name="'+k+'" rows="5">'+esc(c[k]||"")+'</textarea><small style="font-weight:500">Un renglón por cada punto. Se muestran en “Medidas y detalles”.</small>':'<input name="'+k+'" value="'+esc(c[k]||"")+'">')+'</label></div>';}).join("")+'</div>'; }).join("")
-    +'</form><button class="btn main big" data-a="guardarCfg" style="margin:14px 0 20px">Guardar cambios</button>';
+    +'</form><button class="btn main big" data-a="guardarCfg" style="margin:14px 0 20px">Guardar cambios</button>'
+    +'<div class="block" style="border-color:var(--bad)"><h3>Empezar de cero</h3><p class="muted small" style="margin:-4px 0 10px">Para antes de abrir: borra los pedidos y carritos de prueba. <b>No toca</b> el taller (insumos, recetas, tandas, compras, pagos, proveedores), la configuración ni las fotos. Antes de borrar se guarda una copia completa de la planilla en tu Drive.</p>'
+    +'<button class="btn danger" data-a="ceroAbrir">Empezar de cero…</button></div>';
+}
+function dlgCero(p){
+  dlg('<div class="row"><h3>Empezar de cero</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
+    +'<p style="margin:0 0 8px"><b>Se borra:</b></p><ul style="margin:0 0 12px;padding-left:18px"><li>'+p.pedidos+' pedidos de prueba (con sus ventas, que dejan de contar en los números del mes)</li><li>'+p.carritos+' carritos y '+p.bajas+' bajas de recordatorios</li></ul>'
+    +'<p style="margin:0 0 8px"><b>Queda igual:</b> insumos, recetas, tandas, compras, pagos, proveedores, configuración, fotos y los movimientos de stock de fundas.</p>'
+    +'<label class="check" style="margin:12px 0 4px"><input type="checkbox" id="ceroAvisos"> Borrar también '+p.avisos.length+' aviso'+(p.avisos.length===1?'':'s')+' de “avisame cuando vuelva”</label>'
+    +(p.avisos.length?'<p class="muted small" style="margin:0 0 8px 30px">'+p.avisos.map(esc).join(", ")+'. Si alguno es una persona real que dejó su mail en “Muy pronto”, no lo borres.</p>':'')
+    +'<label class="check" style="margin:8px 0 4px"><input type="checkbox" id="ceroCupones"> Borrar también '+p.cupones.length+' código'+(p.cupones.length===1?'':'s')+' de descuento</label>'
+    +(p.cupones.length?'<p class="muted small" style="margin:0 0 8px 30px">'+p.cupones.map(esc).join(", ")+'</p>':'')
+    +'<h3 style="margin:16px 0 6px">Stock real de fundas</h3><p class="muted small" style="margin:0 0 8px">Contá las fundas terminadas que tenés para vender. Sin las ventas de prueba, el sistema calcula lo que figura abajo; si el conteo da distinto, cambialo y queda ese número.</p>'
+    +'<div class="g2">'+p.productos.map(function(x){ return '<label class="f">'+esc(x.nombre)+'<input id="ceroSt-'+x.id+'" data-cero-stock="'+x.id+'" inputmode="numeric" value="'+(p.stockSinPruebas[x.id]||0)+'"></label>'; }).join("")+'</div>'
+    +'<label class="f" style="margin-top:6px"><span>Para confirmar, escribí <b>BORRAR</b></span><input id="ceroConf" autocomplete="off" autocapitalize="characters"></label>'
+    +'<div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn danger" data-a="ceroOk">Borrar datos de prueba</button></div>');
 }
 var MED_DEST="portada";
 function urlImg(id,w){ return "https://lh3.googleusercontent.com/d/"+id+"=w"+(w||400); }
@@ -331,6 +346,21 @@ document.addEventListener("click",function(e){
   else if(a==="cupToggle"){ var c0=(RC.cupones||[]).filter(function(x){return x.codigo===t.dataset.cod;})[0]; if(!c0) return;
     var vv=c0.vence?c0.vence.split("/").reverse().join("-"):""; api("guardarCupon",{codigo:c0.codigo,porcentaje:c0.porcentaje,vence:vv,unico:c0.unico,activo:!c0.activo}).then(function(){ cargarRecuperar(); }).catch(function(e){ toast(e.message); }); }
   else if(a==="cupDel"){ if(confirm("¿Borrar el código "+t.dataset.cod+"?")) api("borrarCupon",{codigo:t.dataset.cod}).then(function(){ cargarRecuperar(); }).catch(function(e){ toast(e.message); }); }
+  else if(a==="ceroAbrir"){ t.disabled=true; api("ceroPreview").then(function(p){ t.disabled=false; dlgCero(p); }).catch(function(e){ toast(/desconocida/i.test(e.message)?"Primero pegá el Codigo.gs nuevo en Apps Script.":e.message,6000); t.disabled=false; }); }
+  else if(a==="ceroOk"){
+    if(($("#ceroConf").value||"").trim()!=="BORRAR"){ toast("Escribí BORRAR en mayúsculas para confirmar."); return; }
+    var st={}; $$("[data-cero-stock]").forEach(function(i){ st[i.dataset.ceroStock]=i.value.trim(); });
+    t.disabled=true; t.innerHTML='<span class="spinner"></span>';
+    api("dejarEnCero",{confirmar:"BORRAR",avisos:!!($("#ceroAvisos")||{}).checked,cupones:!!($("#ceroCupones")||{}).checked,stock:st}).then(function(r){
+      dlg('<div class="row"><h3>Listo: arrancás de cero 🎉</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
+        +'<ul style="margin:0 0 12px;padding-left:18px"><li>'+r.pedidos+' pedidos y '+r.carritos+' carritos de prueba borrados.</li>'
+        +(r.avisos?'<li>'+r.avisos+' avisos de stock borrados.</li>':'')+(r.cupones?'<li>'+r.cupones+' códigos de descuento borrados.</li>':'')
+        +r.ajustes.map(function(x){ return '<li>Stock de '+esc(x.producto==="individual"?"la individual":"la doble")+': queda en '+x.queda+' ('+(x.cantidad>0?'+':'')+x.cantidad+' por el conteo).</li>'; }).join("")+'</ul>'
+        +(r.respaldo?'<p class="muted small" style="margin:0 0 12px">La copia de respaldo quedó en tu Drive: <a href="'+esc(r.respaldo)+'" target="_blank" rel="noopener">abrir respaldo</a>.</p>':'')
+        +'<div class="acts"><button class="btn main" data-a="cerrar">Cerrar</button></div>');
+      cargar();
+    }).catch(function(e){ toast(e.message,6000); t.disabled=false; t.textContent="Borrar datos de prueba"; });
+  }
   else if(a==="probarMeta"){ t.disabled=true; api("probarMeta").then(function(r){ toast("Listo: fijate en Probar eventos de Meta (código "+r.codigo+"). Tiene que aparecer una Compra de $1.",7000); cargar(); }).catch(function(e){ toast(e.message,8000); t.disabled=false; }); }
   else if(a==="guardarCfg"){ var vals={}; new FormData($("#cfg")).forEach(function(v,k){vals[k]=v;}); accion("guardarConfig",{valores:vals},"Configuración guardada",t); }
   else if(a==="exportar"){

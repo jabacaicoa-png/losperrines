@@ -50,6 +50,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 node dev/test-backend.js                      # prueba del backend (taller, compras, tandas, etc.)
 node dev/test-oficina.js                      # pantalla Hoy: etapas, lotes, avisos y resumen diario (con reloj simulado)
 node dev/test-meta.js                         # aviso de compras a Meta (API de Conversiones), con Meta simulado
+node dev/test-cero.js                         # "Empezar de cero": borra solo lo de prueba, respaldo y conteo real
 node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # levanta el backend emulado en :8787 con una tienda de ejemplo
 ```
 
@@ -59,7 +60,7 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 
 ## Estado actual
 
-- Tienda **cerrada** (en desarrollo). Hay **pedidos y stock de prueba**: antes de abrir hay que "dejar en cero" (borrar pedidos/ventas/carritos/avisos/cupones de prueba, conservar insumos, recetas, proveedores, compras y pagos, y ajustar el stock real de fundas).
+- Tienda **cerrada** (en desarrollo). Hay **pedidos y stock de prueba**: antes de abrir, el dueño usa **Configuración → Empezar de cero** (acciones `ceroPreview` / `dejarEnCero` con `confirmar:'BORRAR'`). Hace una copia completa de la planilla en Drive y recién después borra Pedidos, Carritos y Bajas (y Avisos/Cupones solo si los tilda). No toca el taller, la configuración, las fotos ni los Movimientos. Con el conteo real de fundas agrega un ajuste para que el stock quede en ese número. Prueba: `node dev/test-cero.js`.
 - Medición configurada: píxel de Meta + verificación de dominio (metaetiqueta en `index.html`) + Google Analytics 4 + API de Conversiones de Meta (token cargado por el dueño en Apps Script; probado con "Probar eventos"). El correo del negocio en Meta es un alias de Gmail con "+" (Meta no aceptaba el principal).
 - Panel y web: el dueño está conforme con cómo están.
 

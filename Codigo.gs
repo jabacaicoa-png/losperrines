@@ -163,6 +163,8 @@ function rutear(r) {
     case 'entregado': return conLock(function () { return enLote(r.ids, function (id) { marcarEntregado(String(id), r.valor !== false); }); });
     case 'problemaResuelto': return conLock(function () { return problemaResuelto(String(r.id)); });
     case 'probarMeta': return probarMeta();
+    case 'ceroPreview': return ceroPreview();
+    case 'dejarEnCero': return conLock(function () { return dejarEnCero(r); });
     case 'publicidad': return publicidad(r);
     case 'resumenAhora': return conLock(function () { return resumenDiario(false); });
     case 'nota': return guardarNota(r.id, r.nota);
@@ -1035,6 +1037,49 @@ function lineaPublicidadResumen(c) {   // para el mail de las 20 h
     return '<p style="margin:18px 0 0"><b>Publicidad hoy:</b> ' + plata(inv) + ' invertidos · ' + v.pedidos + ' venta' + (v.pedidos === 1 ? '' : 's') + ' en la planilla' +
       (inv && v.pedidos ? ' · costo por venta ' + plata(inv / v.pedidos) : '') + (m.total.compras ? ' · Meta se atribuye ' + m.total.compras : '') + '.</p>';
   } catch (e) { return ''; }
+}
+
+/* ================= EMPEZAR DE CERO (antes de abrir) ================= */
+/* Borra lo de prueba: pedidos, carritos y bajas (y, si lo elegís, los avisos de stock y los códigos de descuento).
+   NO toca el taller (insumos, recetas, tandas, compras, pagos, proveedores), ni la configuración, ni las fotos,
+   ni los movimientos de stock de fundas. Antes de borrar hace una copia completa de la planilla en tu Drive.
+   Si cargás el conteo real de fundas, deja el stock en ese número con un ajuste. */
+function vaciarHoja(n) {
+  var sh = hoja(n); if (!sh) return 0;
+  var last = sh.getLastRow(); if (last < 2) return 0;
+  sh.deleteRows(2, last - 1);
+  return last - 1;
+}
+function ceroPreview() {
+  [H.carritos, H.bajas, H.cupones, H.avisos].forEach(hojaOk);
+  var s = stock(), sin = {};
+  Object.keys(s).forEach(function (id) { sin[id] = s[id].ingresado + s[id].ajustes; });   // el stock si no hubiera ventas de prueba
+  return {
+    pedidos: filas(H.pedidos).length, carritos: filas(H.carritos).length, bajas: filas(H.bajas).length,
+    avisos: filas(H.avisos).filter(function (a) { return a.avisado !== 'SI'; }).map(function (a) { return String(a.email); }),
+    cupones: filas(H.cupones).map(function (x) { return String(x.codigo); }),
+    stockSinPruebas: sin, productos: productos().filter(function (p) { return p.activo || s[p.id].ingresado > 0; }).map(function (p) { return {id: p.id, nombre: p.nombre}; })
+  };
+}
+function dejarEnCero(r) {
+  if (r.confirmar !== 'BORRAR') throw new Error('Para confirmar escribí BORRAR en mayúsculas.');
+  var ss = SpreadsheetApp.getActive(), nombre = 'Los Perrines - respaldo antes de empezar de cero ' + Utilities.formatDate(ahora(), TZ, 'yyyy-MM-dd HHmm');
+  var copia = DriveApp.getFileById(ss.getId()).makeCopy(nombre);   // si esto falla, no se borra nada
+  var hecho = {respaldo: copia.getUrl ? copia.getUrl() : '', pedidos: vaciarHoja(H.pedidos), carritos: vaciarHoja(H.carritos), bajas: vaciarHoja(H.bajas), avisos: 0, cupones: 0, ajustes: []};
+  _bajas = null;
+  if (r.avisos) hecho.avisos = vaciarHoja(H.avisos);
+  if (r.cupones) hecho.cupones = vaciarHoja(H.cupones);
+  var props = PropertiesService.getScriptProperties();
+  ['resumen_ultimo', 'resumen_dia', 'meta_ok', 'meta_error', 'aviso_stock_doble', 'aviso_stock_individual'].forEach(function (k) { props.deleteProperty(k); });
+  var real = r.stock || {}, s = stock();
+  Object.keys(real).forEach(function (id) {
+    if (!s[id] || real[id] === '' || real[id] == null) return;
+    var cuenta = Math.max(0, Math.floor(num(real[id]))), dif = cuenta - s[id].disponible;
+    if (!dif) return;
+    agregar(H.mov, {fecha: ahora(), tipo: 'ajuste', cantidad: dif, motivo: 'Conteo real al empezar de cero', producto: id});
+    hecho.ajustes.push({producto: id, cantidad: dif, queda: cuenta});
+  });
+  return hecho;
 }
 
 /* ================= MAILS ================= */

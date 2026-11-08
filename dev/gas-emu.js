@@ -4,7 +4,7 @@ const fs = require('fs'), vm = require('vm'), crypto = require('crypto');
 function makeEnv(opts) {
   opts = opts || {};
   const sheets = new Map(); // name -> {name, rows: [][]}
-  const mails = [], props = {}, cache = {}, files = {}, triggers = [], fetches = [];
+  const mails = [], props = {}, cache = {}, files = {}, triggers = [], fetches = [], copias = [];
   function sheetObj(sh) {
     function lastCol() { return sh.rows.reduce((m, r) => Math.max(m, r.length), 0); }
     function range(r, c, nr, nc) {
@@ -29,11 +29,12 @@ function makeEnv(opts) {
         return range(a, b, c, d);
       },
       appendRow(v) { const n = this.getLastRow(); sh.rows.length = n; sh.rows.push(v.slice()); return this; },
-      deleteRow(i) { sh.rows.splice(i - 1, 1); },
+      deleteRow(i) { sh.rows.splice(i - 1, 1); }, deleteRows(i, n) { sh.rows.splice(i - 1, n); },
       setFrozenRows() {}, clear() { sh.rows = []; }
     };
   }
   const ss = {
+    getId: () => 'PLANILLA',
     getSheetByName(n) { const s = sheets.get(n); return s ? sheetObj(s) : null; },
     insertSheet(n) { const s = { name: n, rows: [] }; sheets.set(n, s); return sheetObj(s); },
     getSheets() { return [...sheets.values()].map(sheetObj); },
@@ -67,7 +68,7 @@ function makeEnv(opts) {
     },
     DriveApp: {
       getFoldersByName: () => ({ hasNext: () => false }), createFolder: () => ({ createFile: b => { const id = 'f' + Object.keys(files).length; files[id] = b; return { getId: () => id, setSharing() {}, getUrl: () => 'u' }; } }),
-      getFileById: id => ({ setTrashed() {}, makeCopy() { return { getId: () => 'c', setTrashed() {} }; } }), Access: {}, Permission: {}
+      getFileById: id => ({ setTrashed() {}, makeCopy(nombre) { copias.push({id, nombre}); return { getId: () => 'c', setTrashed() {}, getUrl: () => 'https://docs.google.com/spreadsheets/d/copia' }; } }), Access: {}, Permission: {}
     },
     Logger: { log() {} }
   };
@@ -75,7 +76,7 @@ function makeEnv(opts) {
   const code = fs.readFileSync(opts.file, 'utf8');
   vm.runInContext(code, ctx, { filename: opts.file });
   props.ADMIN_PASSWORD = opts.password || 'test';
-  return { ctx, sheets, mails, props, cache, ss, fetches,
+  return { ctx, sheets, mails, props, cache, ss, fetches, copias,
     post(body) { const r = ctx.doPost({ parameter: {}, postData: { contents: JSON.stringify(body) } }); return JSON.parse(r.text); },
     dump(n) { const s = sheets.get(n); return s ? s.rows : null; } };
 }
