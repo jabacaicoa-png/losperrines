@@ -1,6 +1,6 @@
 /* Los Perrines · Panel · Hoy (la "oficina")
  * Todos los pedidos que necesitan algo, ordenados por etapa:
- * Confirmar pago → Preparar → Etiquetar → Despachar → En camino.
+ * Confirmar pago → Preparar → Etiquetar → Despachar → En camino → Entregado.
  * Acciones en lote, hoja de preparación para imprimir, mensajes de WhatsApp listos
  * y la hora del resumen diario por mail. La etapa y los avisos los calcula el backend
  * (Codigo.gs, etapaDe/alertaDe), así el panel y el mail cuentan lo mismo.
@@ -13,12 +13,14 @@ const ETAPAS = [
   ["preparar", "Preparar", "Ya pagados. Imprimí la hoja de preparación, armá los paquetes y marcalos como preparados."],
   ["etiquetar", "Etiquetar", "Paquetes armados. Exportá la planilla, subila en andreani.com e imprimí las etiquetas."],
   ["despachar", "Despachar", "Ya están en Andreani. Cargá el número de seguimiento de cada uno (Enter pasa al siguiente) y guardá: a cada cliente le llega el mail con el link."],
-  ["camino", "En camino", "Despachados en los últimos 7 días."]
+  ["camino", "En camino", "Ya salieron. A los días que elijas abajo le preguntamos al cliente por mail si le llegó; cuando toca “Sí, llegó”, pasa solo a Entregado. Si te avisa por otro lado, marcalo vos."],
+  ["entregado", "Entregado", "Confirmados en los últimos 7 días. Al cliente le llegó un gracias con el pedido de foto de su mascota en el auto y tu Instagram."]
 ];
-const SEL = {confirmar: {}, preparar: {}};   // pedidos tildados en cada etapa
+const SEL = {confirmar: {}, preparar: {}, camino: {}};   // pedidos tildados en cada etapa
 const TR = {};                                // números de seguimiento que vas escribiendo
 
 function nuevo(d) { return !!(d && d.oficina); }
+function conEntrega(d) { return !!(d && d.oficina >= 2); }
 function etapa(p) { if (p._etapa !== undefined) return p._etapa; return {reserva: "confirmar", pagado: "preparar", exportado: "despachar"}[p.estado] || ""; }
 function grupos(d) {
   const g = {}; ETAPAS.forEach(e => { g[e[0]] = []; });
@@ -41,19 +43,30 @@ function mensaje(p, k, d) {
     return "Hola " + n + "! Te escribo de Los Perrines 🐾 Tenemos reservado tu pedido " + p.id + " (" + (p._items || "") + ") por " + money(p.total) + ". Para confirmarlo transferí "
       + (c.alias ? "al alias " + c.alias : "a la cuenta que te mandamos por mail") + (p.vence ? " antes del " + p.vence : "") + " y mandame el comprobante por acá. ¡Gracias!";
   }
+  if (k === "camino" && p.problema_el) return "Hola " + n + ", te escribo de Los Perrines 🐾 Vi que tuviste un problema con tu pedido " + p.id + ". Contame qué pasó así lo solucionamos.";
   if (k === "camino") return "Hola " + n + "! Tu pedido " + p.id + " de Los Perrines ya salió 🚚 Lo podés seguir acá: https://www.andreani.com/envio/" + p.tracking + " Cualquier cosa, escribime.";
+  if (k === "entregado") { const ig = String(c.instagram || "").replace(/^@/, "");
+    return "Hola " + n + "! Qué bueno que ya te llegó la funda 🐾 ¿Nos mandás una foto de tu mascota viajando en el auto con ella? Nos encanta verlas." + (ig ? " Y si no nos seguís, estamos en Instagram como @" + ig + " 💚" : ""); }
   return "Hola " + n + "! Ya recibimos el pago de tu pedido " + p.id + " 🐾 Lo estamos preparando y te aviso cuando salga, con el número de seguimiento.";
 }
 function wa(p, k, d) { const t = tel(p); return t ? '<a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/' + t + '?text=' + encodeURIComponent(mensaje(p, k, d)) + '">WhatsApp</a>' : ""; }
 
 /* ---------- vista ---------- */
+function c0(d) { return d.config || {}; }
 function tarjeta(p, k, d) {
-  const al = p._alerta, sel = SEL[k], ok = nuevo(d);
+  const al = p._alerta, sel = k === "camino" && !conEntrega(d) ? null : SEL[k], ok = nuevo(d);
   let extra = "", acts = wa(p, k, d);
   if (k === "confirmar" && !ok) acts += '<button class="btn main sm" data-a="pagado" data-id="' + esc(p.id) + '">Marcar como pagado</button>';
   if (k === "etiquetar" && ok) acts += '<button class="btn ghost sm" data-a="hoyVolver" data-id="' + esc(p.id) + '">Volver a Preparar</button>';
   if (k === "despachar") extra = '<input class="inp hoyTr" inputmode="numeric" autocomplete="off" placeholder="N° de seguimiento Andreani" id="ht-' + esc(p.id) + '" data-in="hoyTr" data-id="' + esc(p.id) + '" value="' + esc(TR[p.id] || "") + '" style="margin-top:8px">';
-  if (k === "camino" && p.tracking) extra = '<div class="small" style="margin-top:4px">Seguimiento: <a href="https://www.andreani.com/envio/' + esc(p.tracking) + '" target="_blank" rel="noopener">' + esc(p.tracking) + '</a></div>';
+  if ((k === "camino" || k === "entregado") && p.tracking) extra = '<div class="small" style="margin-top:4px">Seguimiento: <a href="https://www.andreani.com/envio/' + esc(p.tracking) + '" target="_blank" rel="noopener">' + esc(p.tracking) + '</a></div>';
+  if (k === "camino" && conEntrega(d)) {
+    if (p.estado === "entregado") extra += '<div class="small">Figuraba entregado el ' + esc(p.entregado_el) + '.</div>';
+    else if (p.consulta_el) extra += '<div class="small muted">Le preguntamos si le llegó el ' + esc(p.consulta_el) + '.</div>';
+    else if (p.despachado_el && String(c0(d).consulta_entrega_dias ?? "5").trim()) extra += '<div class="small muted">Le vamos a preguntar si le llegó a los ' + esc(String(c0(d).consulta_entrega_dias ?? "5")) + ' días de despachado.</div>';
+    if (p.problema_el) acts += '<button class="btn main sm" data-a="hoyResuelto" data-id="' + esc(p.id) + '">Problema resuelto</button>';
+  }
+  if (k === "entregado") { extra += '<div class="small">Llegó el ' + esc(p.entregado_el) + '.</div>'; if (ok) acts += '<button class="btn ghost sm" data-a="hoyNoEntregado" data-id="' + esc(p.id) + '">Volver a En camino</button>'; }
   return '<div class="hoyp' + (al ? " " + al.nivel : "") + '">'
     + (sel ? '<input type="checkbox" id="hc-' + k + '-' + esc(p.id) + '" data-ch="hoySel" data-k="' + k + '" data-id="' + esc(p.id) + '"' + (sel[p.id] ? " checked" : "") + ' aria-label="Elegir ' + esc(p.id) + '">' : "")
     + '<div class="hoyb"><div class="hoyh"><b>' + esc(p.nombre + " " + p.apellido) + '</b><b>' + money(p.total) + '</b></div>'
@@ -66,12 +79,13 @@ function tarjeta(p, k, d) {
 }
 function barra(k, lista, d) {
   const ok = nuevo(d), n = SEL[k] ? elegidos(k).length : 0, todos = SEL[k] && lista.length && lista.every(p => SEL[k][p.id]);
-  const chkAll = SEL[k] ? '<label class="check small"><input type="checkbox" id="hoyAll-' + k + '" data-ch="hoyAll" data-k="' + k + '"' + (todos ? " checked" : "") + '> Todos</label>' : "";
+  const chkAll = SEL[k] && (k !== "camino" || conEntrega(d)) ? '<label class="check small"><input type="checkbox" id="hoyAll-' + k + '" data-ch="hoyAll" data-k="' + k + '"' + (todos ? " checked" : "") + '> Todos</label>' : "";
   if (k === "confirmar") return ok ? '<div class="hoybar">' + chkAll + '<button class="btn main" data-a="hoyPagar"' + (n ? "" : " disabled") + '>Marcar como pagados (' + n + ')</button></div>' : "";
   if (k === "preparar") return '<div class="hoybar">' + chkAll + '<button class="btn ghost" data-a="hoyHoja">🖨 Hoja de preparación' + (n ? " (" + n + ")" : "") + '</button>'
     + (ok ? '<button class="btn main" data-a="hoyPreparado"' + (n ? "" : " disabled") + '>Marcar como preparados (' + n + ')</button>' : "") + '</div>';
   if (k === "etiquetar") return '<div class="hoybar"><button class="btn main" data-a="hoyExportar">Exportar planilla para Andreani (' + lista.length + ')</button></div>';
   if (k === "despachar") return '<div class="hoybar"><button class="btn main" data-a="hoyTrGuardar">Guardar los seguimientos cargados</button></div>';
+  if (k === "camino") return conEntrega(d) ? '<div class="hoybar">' + chkAll + '<button class="btn main" data-a="hoyEntregado"' + (n ? "" : " disabled") + '>Marcar como entregados (' + n + ')</button></div>' : "";
   return "";
 }
 function vHoy(d) {
@@ -87,7 +101,7 @@ function vHoy(d) {
   ETAPAS.forEach((e, i) => {
     const k = e[0], lista = g[k];
     h += '<div class="block" id="hoy-' + k + '"><h3>' + (i + 1) + '. ' + esc(e[1]) + ' (' + lista.length + ')</h3>';
-    if (!lista.length) { h += '<p class="muted small" style="margin:0">' + (k === "camino" ? "Nada despachado en los últimos 7 días." : "Nada pendiente acá.") + '</p></div>'; return; }
+    if (!lista.length) { h += '<p class="muted small" style="margin:0">' + (k === "camino" ? "No hay envíos en camino." : k === "entregado" ? "Ninguna entrega confirmada en los últimos 7 días." : "Nada pendiente acá.") + '</p></div>'; return; }
     h += '<p class="muted small" style="margin:-4px 0 8px">' + esc(e[2]) + '</p>' + barra(k, lista, d) + lista.map(p => tarjeta(p, k, d)).join("") + '</div>';
   });
   const hora = c.resumen_hora === undefined ? "20" : String(c.resumen_hora);
@@ -100,9 +114,17 @@ function vHoy(d) {
       + '<p class="muted small" style="margin:0 0 10px">Último resumen enviado: ' + esc(d.ultimoResumen || "todavía ninguno") + '.</p>'
       + '<button class="btn ghost" data-a="hoyResumen"' + (c.email_aviso ? "" : " disabled") + '>Mandarme el resumen ahora</button>'
       : '<p class="muted small" style="margin:0">Se activa cuando actualices el Codigo.gs.</p>') + '</div>';
+  const de = c.consulta_entrega_dias === undefined ? "5" : String(c.consulta_entrega_dias);
+  let o2 = '<option value=""' + (de === "" ? " selected" : "") + '>No preguntar</option>';
+  for (let x = 1; x <= 15; x++) o2 += '<option value="' + x + '"' + (de === String(x) ? " selected" : "") + '>' + x + ' día' + (x > 1 ? "s" : "") + ' después del despacho</option>';
+  h += '<div class="block"><h3>Mail de “¿Ya te llegó?”</h3>'
+    + '<p class="muted small" style="margin:-4px 0 10px">Al cliente le llega un mail con dos botones: <b>“Sí, ya llegó”</b> (pasa a Entregado y le pedimos una foto de su mascota en el auto y que te siga en Instagram) y <b>“Tuve un problema”</b> (te llega un aviso urgente y el pedido queda en rojo arriba de todo).</p>'
+    + (conEntrega(d) ? '<label class="f" style="max-width:320px">Cuándo preguntar<select id="hoyDiasEnt" data-ch="hoyDiasEnt">' + o2 + '</select></label>'
+      + '<p class="small" style="margin:0">Instagram que le mostramos: ' + (c.instagram ? '<b>@' + esc(String(c.instagram).replace(/^@/, "")) + '</b>' : '<span class="neg">sin cargar</span>') + ' · se cambia en <button class="linkb" data-go="config">Configuración</button>.</p>'
+      : '<p class="muted small" style="margin:0">Se activa cuando actualices el Codigo.gs.</p>') + '</div>';
   return h;
 }
-function cuantos() { if (!S.data) return null; const g = grupos(S.data), n = g.confirmar.length + g.preparar.length + g.etiquetar.length + g.despachar.length;
+function cuantos() { if (!S.data) return null; const g = grupos(S.data), n = g.confirmar.length + g.preparar.length + g.etiquetar.length + g.despachar.length + g.camino.filter(p => p._alerta && p._alerta.nivel === "bad").length;
   return {n: n, bad: S.data.pedidos.some(p => p._etapa && p._alerta && p._alerta.nivel === "bad")}; }
 
 /* ---------- hoja de preparación ---------- */
@@ -184,6 +206,14 @@ L.CLICK.hoyTrGuardar = t => {
   }
   L.accion("despacharLote", {items: items}, null, t).then(r => { if (r) { (r.hechos || []).forEach(id => { delete TR[id]; }); L.render(); informe(r, "despachado: le llegó el mail", "despachados: les llegó el mail"); } });
 };
+L.CLICK.hoyEntregado = t => {
+  const ids = elegidos("camino"); if (!ids.length) return;
+  if (!confirm("¿Marcar " + ids.length + " pedido" + (ids.length > 1 ? "s" : "") + " como entregado" + (ids.length > 1 ? "s" : "") + "? A cada cliente le llega el mail de gracias con el pedido de foto.")) return;
+  L.accion("entregado", {ids: ids, valor: true}, null, t).then(r => { if (r) { (r.hechos || []).forEach(id => { delete SEL.camino[id]; }); L.render(); informe(r, "marcado como entregado", "marcados como entregados"); } });
+};
+L.CLICK.hoyNoEntregado = t => { L.accion("entregado", {ids: [t.dataset.id], valor: false}, "Volvió a En camino", t); };
+L.CLICK.hoyResuelto = t => { if (confirm("¿Ya se solucionó el problema de este pedido? Deja de aparecer en rojo.")) L.accion("problemaResuelto", {id: t.dataset.id}, "Listo, problema resuelto", t); };
+L.INPUT["hoyDiasEnt:change"] = t => { const v = t.value; L.accion("guardarConfig", {valores: {consulta_entrega_dias: v}}, v === "" ? "Listo: no le preguntamos más al cliente" : "Listo: le preguntamos a los " + v + " días"); };
 L.CLICK.hoyResumen = t => {
   t.disabled = true;
   L.api("resumenAhora").then(r => { L.toast("Te mandé el resumen a " + r.email, 4500); t.disabled = false; }).catch(e => { L.toast(e.message, 5000); t.disabled = false; });

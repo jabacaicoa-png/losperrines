@@ -4,6 +4,7 @@ module.exports=function(env){
   require('./seed-store')(env);
   const T=env.token, A=(a,d)=>{const r=env.post(Object.assign({accion:a,token:T},d||{})); if(!r.ok) throw new Error(a+': '+r.error); return r;};
   A('guardarConfig',{valores:{email_aviso:'duenio@ejemplo.com',plantilla_andreani_id:'PLANTILLA'}});
+  A('movimiento',{tipo:'ingreso',cantidad:10,motivo:'Lote 2',producto:'doble'});
   env.ss.insertSheet('A domicilio'); env.ss.insertSheet('A sucursal');
   const real=env.ctx.ahora; let corr=0; env.ctx.ahora=()=>new Date(Date.now()+corr);
   const ped=(n,ap,x)=>{const r=env.post(Object.assign({accion:'pedido',nombre:n,apellido:ap,dni:'30111222',email:n.toLowerCase()+'@ej.com',cel_cod:'266',cel_num:'4123456',
@@ -15,5 +16,11 @@ module.exports=function(env){
   const e1=ped('Jorge','Sosa'); A('pagado',{id:e1}); A('preparado',{ids:[e1]});
   corr=-30*3600000; const d1=ped('Carla','Medina',{entrega:'sucursal',sucursal:'Villa Mercedes'}); const d2=ped('Pablo','Díaz'); A('pagadoLote',{ids:[d1,d2]}); A('preparado',{ids:[d1,d2]}); A('exportar',{ids:[d1,d2]});
   const c1=ped('Ana','Torres'); A('pagado',{id:c1}); A('preparado',{ids:[c1]}); A('exportar',{ids:[c1]}); A('despachar',{id:c1,tracking:'360002345678901'});
+  corr=-9*86400000; const tarde=ped('Rocío','Vega'); A('pagado',{id:tarde}); A('preparado',{ids:[tarde]}); A('exportar',{ids:[tarde]}); A('despachar',{id:tarde,tracking:'360002345670000'});
+  corr=-6*86400000; const ok1=ped('Martín','Ríos'); A('pagado',{id:ok1}); A('preparado',{ids:[ok1]}); A('exportar',{ids:[ok1]}); A('despachar',{id:ok1,tracking:'360002345671111'});
+  const mal=ped('Laura','Paz'); A('pagado',{id:mal}); A('preparado',{ids:[mal]}); A('exportar',{ids:[mal]}); A('despachar',{id:mal,tracking:'360002345672222'});
+  corr=-1*86400000; env.ctx.tareaHoraria();   // les pregunta "¿Ya te llegó?"
+  env.ctx.respuestaEntrega({entrega:ok1,r:'si',ok:'1',t:env.ctx.firmaEntrega(ok1)});
+  env.ctx.respuestaEntrega({entrega:mal,r:'problema',ok:'1',detalle:'Todavía no llegó y el seguimiento no se mueve',t:env.ctx.firmaEntrega(mal)});
   corr=0; env.ctx.ahora=real;
 };

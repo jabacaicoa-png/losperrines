@@ -15,7 +15,7 @@ function qi(v){ return String(Math.round((+v||0)*100)/100).replace(".",","); }
 function nm(v){var x=parseFloat(String(v==null?"":v).replace(/\./g,"").replace(",","."));return isFinite(x)?x:0;}
 function toast(t,ms){var e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(function(){e.classList.remove("show");},ms||2800);}
 var S={token:sessionStorage.getItem("lp_token")||"", view:(location.hash||"#inicio").slice(1), filtro:"activos", data:null, taller:null, tallerError:"", menu:false};
-var LABEL={reserva:"Reservado · espera transferencia",pendiente_mp:"Esperando pago con tarjeta",pagado:"Pagado · listo para exportar",exportado:"Exportado · falta el seguimiento",despachado:"Despachado",vencido:"Reserva vencida",cancelado:"Cancelado"};
+var LABEL={reserva:"Reservado · espera transferencia",pendiente_mp:"Esperando pago con tarjeta",pagado:"Pagado · listo para exportar",exportado:"Exportado · falta el seguimiento",despachado:"Despachado · en camino",entregado:"Entregado",vencido:"Reserva vencida",cancelado:"Cancelado"};
 
 function api(accion,data){
   var body=Object.assign({accion:accion,token:S.token},data||{});
@@ -130,7 +130,7 @@ function tarjetaPedido(p){
   if(p.estado==="pagado"||p.estado==="exportado"){
     acts+='<div class="inline" style="width:100%"><input class="inp" inputmode="numeric" placeholder="N° de seguimiento Andreani" id="tr-'+esc(p.id)+'"><button class="btn main" data-a="despachar" data-id="'+esc(p.id)+'">Despachar</button></div>';
   }
-  if(["reserva","pagado","exportado","despachado"].indexOf(p.estado)>=0) acts+='<button class="btn ghost" data-a="reenviar" data-id="'+esc(p.id)+'">Reenviar mail</button>';
+  if(["reserva","pagado","exportado","despachado","entregado"].indexOf(p.estado)>=0) acts+='<button class="btn ghost" data-a="reenviar" data-id="'+esc(p.id)+'">Reenviar mail</button>';
   var wa=String(p.cel_cod||"")+String(p.cel_num||""); if(wa) acts+='<a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/549'+esc(wa.replace(/\D/g,""))+'">WhatsApp</a>';
   return '<article class="order"><div class="head"><div class="who"><b>'+esc(p.nombre+" "+p.apellido)+'</b><small>'+esc(p.id)+' · '+esc(p.fecha)+'</small></div>'
     +'<div class="amt"><b>'+money(p.total)+'</b><small class="meta">'+(p.pago==="transferencia"?"Transferencia":"Tarjeta")+' · '+esc(p._items||(p.cantidad+' u.'))+'</small></div></div>'
@@ -142,7 +142,7 @@ function tarjetaPedido(p){
     +'<div class="acts" style="margin-top:12px">'+acts+'</div></article>';
 }
 function vPedidos(d){
-  var fs=[["activos","Para atender"],["reserva","Esperan pago"],["pagado","Pagados"],["exportado","Exportados"],["despachado","Despachados"],["vencido","Vencidos"],["todos","Todos"]];
+  var fs=[["activos","Para atender"],["reserva","Esperan pago"],["pagado","Pagados"],["exportado","Exportados"],["despachado","En camino"],["entregado","Entregados"],["vencido","Vencidos"],["todos","Todos"]];
   var act=["reserva","pendiente_mp","pagado","exportado"];
   var list=d.pedidos.filter(function(p){ return S.filtro==="todos"?true:S.filtro==="activos"?act.indexOf(p.estado)>=0:p.estado===S.filtro; });
   return '<div class="ph"><div><h2>Pedidos</h2></div></div><div class="filters">'+fs.map(function(f){return '<button class="chip" data-f="'+f[0]+'" aria-pressed="'+(S.filtro===f[0])+'">'+f[1]+'</button>';}).join("")+'</div>'
@@ -174,13 +174,13 @@ function vEnvios(d){
   h+='</div><div class="block"><h3>2. Cargar seguimiento ('+exp.length+')</h3>'+(exp.length?exp.map(tarjetaPedido).join(""):'<p class="muted" style="margin:0">Nada pendiente.</p>')+'</div>';
   return h;
 }
-var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",precio_tarjeta:"Precio con tarjeta",precio_transferencia:"Precio por transferencia",cuotas_max:"Cuotas (máximo)",producto2:"Nombre del producto (el que ve el cliente)",precio2_tarjeta:"Precio con tarjeta",precio2_transferencia:"Precio por transferencia",activo2:"Mostrarlo en la web (SI / NO)",valor_envio:"Valor del envío que se muestra tachado (0 = no mostrar)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto (el que ve el cliente)",sub1:"Descripción corta",medidas1:"Medidas y detalles",sub2:"Descripción corta",medidas2:"Medidas y detalles",clave_vista:"Clave de vista previa"};
+var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",instagram:"Instagram (sin @)",consulta_entrega_dias:"Días después del despacho para preguntar “¿Ya te llegó?” (vacío = no preguntar)",precio_tarjeta:"Precio con tarjeta",precio_transferencia:"Precio por transferencia",cuotas_max:"Cuotas (máximo)",producto2:"Nombre del producto (el que ve el cliente)",precio2_tarjeta:"Precio con tarjeta",precio2_transferencia:"Precio por transferencia",activo2:"Mostrarlo en la web (SI / NO)",valor_envio:"Valor del envío que se muestra tachado (0 = no mostrar)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto (el que ve el cliente)",sub1:"Descripción corta",medidas1:"Medidas y detalles",sub2:"Descripción corta",medidas2:"Medidas y detalles",clave_vista:"Clave de vista previa"};
 var CFG_GRUPOS=[
   ["Producto 1 (doble)",["producto","sub1","medidas1","precio_tarjeta","precio_transferencia"]],
   ["Producto 2 (individual)",["producto2","sub2","medidas2","precio2_tarjeta","precio2_transferencia","activo2"]],
   ["Cobros",["cuotas_max","alias","cbu","titular","banco"]],
-  ["Contacto",["whatsapp","email_aviso"]],
-  ["Envíos",["valor_envio","plantilla_andreani_id","peso_gr","alto_cm","ancho_cm","profundidad_cm","valor_declarado"]],
+  ["Contacto",["whatsapp","email_aviso","instagram"]],
+  ["Envíos",["consulta_entrega_dias","valor_envio","plantilla_andreani_id","peso_gr","alto_cm","ancho_cm","profundidad_cm","valor_declarado"]],
   ["Stock y reservas",["stock_minimo","reserva_transferencia_horas","reserva_tarjeta_horas"]],
   ["Web",["url_web","clave_vista"]]
 ];

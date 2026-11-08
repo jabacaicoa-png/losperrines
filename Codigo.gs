@@ -1,5 +1,5 @@
 /**
- * LOS PERRINES · Backend (Google Apps Script) · versión 4 (oficina: pantalla Hoy y resumen diario)
+ * LOS PERRINES · Backend (Google Apps Script) · versión 5 (oficina: pantalla Hoy, resumen diario y confirmación de entrega)
  * Pedidos, stock, cobro con Mercado Pago, mails, panel de administración,
  * exportación de envíos a Andreani y el taller: insumos, recetas, tandas de
  * producción, compras y pagos a proveedores.
@@ -17,7 +17,7 @@ var COLS = {
   Pedidos: ['id','fecha','estado','pago','cantidad','total','nombre','apellido','dni','email','cel_cod','cel_num',
             'entrega','calle','numero','piso','depto','prov_loc_cp','sucursal','observaciones','vence',
             'mp_preferencia','mp_pago','tracking','exportado','notas','items','cupon','descuento','recordatorio',
-            'pagado_el','preparado','despachado_el'],
+            'pagado_el','preparado','despachado_el','entregado_el','consulta_el','problema_el'],
   Movimientos: ['fecha','tipo','cantidad','motivo','producto'],
   Avisos: ['fecha','email','avisado'],
   Media: ['id','fecha','destino','tipo','nombre','orden','principal','drive_id'],
@@ -74,9 +74,11 @@ var CONFIG_DEF = [
   ['mix_tarjeta','50','% estimado de ventas con tarjeta (se usa hasta tener ventas reales).'],
   ['taller_migrado','','Fecha en que se importaron los datos de las herramientas viejas.'],
   ['resumen_hora','20','Hora del resumen diario por mail (0 a 23). Vacío = no mandarlo.'],
-  ['alerta_despacho_dias','2','Días desde el pago para avisar que un pedido se está atrasando.']
+  ['alerta_despacho_dias','2','Días desde el pago para avisar que un pedido se está atrasando.'],
+  ['consulta_entrega_dias','5','Días después del despacho para preguntarle al cliente si le llegó (vacío = no preguntar).'],
+  ['instagram','losperrines_','Tu usuario de Instagram, sin @ (se lo mostramos al cliente cuando recibe).']
 ];
-var VENDIDO = ['pagado','exportado','despachado'];
+var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
 
 /* ================= INSTALACIÓN ================= */
@@ -109,6 +111,7 @@ function instalar() {
 /* ================= ENTRADA ================= */
 function doGet(e) {
   if (e && e.parameter && e.parameter.baja) return darDeBaja(e.parameter.baja, e.parameter.t);
+  if (e && e.parameter && e.parameter.entrega) return respuestaEntrega(e.parameter);
   if (e && e.parameter && (e.parameter.mp || e.parameter['data.id'] || e.parameter.topic)) return webhookMP(e);
   return out({ok: true, servicio: 'Los Perrines'});
 }
@@ -151,6 +154,8 @@ function rutear(r) {
     case 'pagadoLote': return conLock(function () { return enLote(r.ids, function (id) { marcarPagado(String(id)); }); });
     case 'despacharLote': return conLock(function () { return enLote(r.items, function (x) { despachar(String(x.id), x.tracking); }); });
     case 'preparado': return conLock(function () { return enLote(r.ids, function (id) { marcarPreparado(String(id), r.valor !== false); }); });
+    case 'entregado': return conLock(function () { return enLote(r.ids, function (id) { marcarEntregado(String(id), r.valor !== false); }); });
+    case 'problemaResuelto': return conLock(function () { return problemaResuelto(String(r.id)); });
     case 'resumenAhora': return conLock(function () { return resumenDiario(false); });
     case 'nota': return guardarNota(r.id, r.nota);
     case 'costos': return {costos: leerCostos()};
@@ -521,7 +526,7 @@ function resumen() {
     urlVista: (c.url_web || '').replace(/\/$/, '') + '/?vista=' + c.clave_vista,
     tokenMP: !!props.getProperty('MP_ACCESS_TOKEN'),
     media: listaMedia(),
-    oficina: 1,
+    oficina: 2,   // 1 = pantalla Hoy; 2 = además, confirmación de entrega
     ultimoResumen: props.getProperty('resumen_ultimo') ? fmtFecha(new Date(num(props.getProperty('resumen_ultimo')))) : ''
   };
 }
@@ -538,7 +543,7 @@ function marcarPagado(id) {
 function despachar(id, tracking) {
   var p = pedido(id), c = cfg(), t = String(tracking || '').replace(/\s/g, '');
   if (!/^\d{6,}$/.test(t)) throw new Error('El número de seguimiento tiene que ser solo números.');
-  if (VENDIDO.indexOf(p.estado) < 0) throw new Error('Solo se despachan pedidos pagados.');
+  if (['pagado','exportado','despachado'].indexOf(p.estado) < 0) throw new Error(p.estado === 'entregado' ? 'El pedido ' + id + ' ya figura entregado.' : 'Solo se despachan pedidos pagados.');
   setear(H.pedidos, p._fila, {estado: 'despachado', tracking: t, despachado_el: ahora()});
   p.tracking = t;
   mailDespacho(p, c);
@@ -548,7 +553,7 @@ function cambiarEstado(id, estado) { setear(H.pedidos, pedido(id)._fila, {estado
 function guardarNota(id, nota) { setear(H.pedidos, pedido(id)._fila, {notas: limpiar(nota, 300)}); return {}; }
 function reenviar(id) {
   var p = pedido(id), c = cfg();
-  if (p.estado === 'despachado') mailDespacho(p, c);
+  if (p.estado === 'despachado' || p.estado === 'entregado') mailDespacho(p, c);
   else if (VENDIDO.indexOf(p.estado) >= 0) { if (p.pago === 'transferencia') mailPagoTransferencia(p, c); else mailPagoTarjeta(p, c); }
   else if (p.estado === 'reserva') mailCompraTransferencia(p, c);
   else throw new Error('No hay mail para reenviar en este estado.');
@@ -641,6 +646,7 @@ function vencerReservas() {
 function tareaHoraria() {
   try { enviarRecordatorios(); } catch (e) { console.error(e); }
   vencerReservas();
+  try { enviarConsultasEntrega(); } catch (e) { console.error(e); }
   try { resumenSiToca(); } catch (e) { console.error(e); }
   var c = cfg(), s = stock(), props = PropertiesService.getScriptProperties();
   var hoy = Utilities.formatDate(ahora(), TZ, 'yyyyMMdd');
@@ -672,7 +678,9 @@ function etapaDe(p, t) {
   if (e === 'vencido' && p.pago === 'transferencia' && t - tsDe(p.vence) < 3 * DIA) return 'confirmar';   // por si pagó tarde
   if (e === 'pagado') return p.preparado ? 'etiquetar' : 'preparar';
   if (e === 'exportado') return 'despachar';
-  if (e === 'despachado' && t - (tsDe(p.despachado_el) || tsDe(p.exportado) || tsDe(p.fecha)) < 7 * DIA) return 'camino';
+  if ((e === 'despachado' || e === 'entregado') && p.problema_el) return 'camino';   // queda a la vista hasta que lo resuelvas
+  if (e === 'despachado') return 'camino';
+  if (e === 'entregado' && t - (tsDe(p.entregado_el) || t) < 7 * DIA) return 'entregado';
   return '';
 }
 function horasTxt(h) { h = Math.max(1, Math.round(h)); return h < 48 ? h + ' h' : Math.round(h / 24) + ' días'; }
@@ -687,6 +695,11 @@ function alertaDe(p, etapa, t, c) {
     var dias = Math.floor((t - (tsDe(p.pagado_el) || tsDe(p.fecha))) / DIA), lim = num(c.alerta_despacho_dias) || 2;
     if (dias >= lim) return {nivel: 'bad', texto: 'Pagado hace ' + dias + ' días y todavía no salió.'};
     if (etapa === 'despachar' && tsDe(p.exportado) && t - tsDe(p.exportado) >= DIA) return {nivel: 'warn', texto: 'Exportado hace más de un día: falta cargar el seguimiento.'};
+  }
+  if (etapa === 'camino') {
+    if (p.problema_el) return {nivel: 'bad', texto: 'El cliente avisó que tuvo un problema con la entrega. Comunicate con él.'};
+    var sal = tsDe(p.despachado_el), espera = (num(c.consulta_entrega_dias) || 5) + 2;
+    if (sal && t - sal >= espera * DIA) return {nivel: 'warn', texto: 'Salió hace ' + Math.floor((t - sal) / DIA) + ' días y nadie confirmó la entrega: mirá el seguimiento.'};
   }
   return null;
 }
@@ -720,7 +733,7 @@ function resumenDiario(automatico) {
   if (!emailOk(c.email_aviso)) throw new Error('Falta cargar tu email para avisos en Configuración.');
   vencerReservas();
   var t = ahora().getTime(), desde = num(props.getProperty('resumen_ultimo')) || t - DIA;
-  var P = filas(H.pedidos), s = stock(), g = {confirmar: [], preparar: [], etiquetar: [], despachar: [], camino: []}, atrasos = [];
+  var P = filas(H.pedidos), s = stock(), g = {confirmar: [], preparar: [], etiquetar: [], despachar: [], camino: [], entregado: []}, atrasos = [];
   P.forEach(function (p) {
     var e = etapaDe(p, t); if (!e) return;
     var x = {p: p, a: alertaDe(p, e, t, c)}; g[e].push(x);
@@ -730,6 +743,7 @@ function resumenDiario(automatico) {
   var nuevos = P.filter(function (p) { return tsDe(p.fecha) > desde && !(p.estado === 'cancelado' && /^Error MP/.test(String(p.notas))); });
   var cobrados = P.filter(function (p) { return VENDIDO.indexOf(p.estado) >= 0 && tsDe(p.pagado_el) > desde; });
   var plataCobrada = cobrados.reduce(function (a, p) { return a + num(p.total); }, 0);
+  var entregados = P.filter(function (p) { return tsDe(p.entregado_el) > desde; }).length;
   function linea(x) {
     var p = x.p;
     return '<li style="margin:0 0 6px"><b>' + esc(p.nombre + ' ' + p.apellido) + '</b> · ' + esc(p.id) + ' · ' + esc(textoItems(p, c)) +
@@ -752,14 +766,15 @@ function resumenDiario(automatico) {
   if (g.despachar.length) partes.push(g.despachar.length + ' para despachar');
   var asunto = 'Resumen del día · ' + (partes.length ? partes.join(', ') : 'todo al día ✅') + (atrasos.length ? ' · ' + atrasos.length + ' atrasado' + (atrasos.length > 1 ? 's' : '') : '');
   var cuerpo = '<p style="margin:0 0 10px">Desde el resumen anterior (' + fmtFecha(new Date(desde)) + '): <b>' + nuevos.length + ' pedido' + (nuevos.length === 1 ? '' : 's') + ' nuevo' + (nuevos.length === 1 ? '' : 's') + '</b>' +
-    ' y <b>' + cobrados.length + ' pago' + (cobrados.length === 1 ? '' : 's') + ' confirmado' + (cobrados.length === 1 ? '' : 's') + '</b>' + (cobrados.length ? ' por ' + plata(plataCobrada) : '') + '.</p>';
+    ' y <b>' + cobrados.length + ' pago' + (cobrados.length === 1 ? '' : 's') + ' confirmado' + (cobrados.length === 1 ? '' : 's') + '</b>' + (cobrados.length ? ' por ' + plata(plataCobrada) : '') +
+    (entregados ? ', y <b>' + entregados + ' entrega' + (entregados === 1 ? '' : 's') + ' confirmada' + (entregados === 1 ? '' : 's') + '</b>' : '') + '.</p>';
   if (atrasos.length) cuerpo += '<div style="background:#F8E6E1;border-radius:12px;padding:12px 14px;margin:12px 0"><b style="color:#B4432F">Se están atrasando (' + atrasos.length + ')</b><ul style="margin:6px 0 0;padding-left:18px">' + atrasos.slice(0, 8).map(linea).join('') + '</ul></div>';
   if (!partes.length) cuerpo += '<p>No hay nada pendiente. 🐾</p>';
   cuerpo += seccion('Confirmar pago', g.confirmar, 'Transferencias esperando. Fijate en Mercado Pago si llegaron.') +
     seccion('Preparar', g.preparar, 'Para armar: ' + unidades(g.preparar) + '.') +
     seccion('Etiquetar', g.etiquetar, 'Ya preparados: falta exportarlos a Andreani.') +
     seccion('Despachar', g.despachar, 'Exportados: falta cargar el número de seguimiento.');
-  if (g.camino.length) cuerpo += '<p style="margin:18px 0 0;color:#5E6656">En camino (últimos 7 días): ' + g.camino.length + '.</p>';
+  if (g.camino.length) cuerpo += '<p style="margin:18px 0 0;color:#5E6656">En camino: ' + g.camino.length + '.</p>';
   cuerpo += '<p style="margin:18px 0 0"><b>Stock:</b> ' + productos(c).filter(function (pr) { return pr.activo || s[pr.id].ingresado > 0; }).map(function (pr) {
     var st = s[pr.id], bajo = st.ingresado > 0 && st.disponible <= num(c.stock_minimo);
     return esc(pr.nombre) + ' <b' + (bajo ? ' style="color:#B4432F"' : '') + '>' + Math.max(0, st.disponible) + '</b> disponibles' + (bajo ? ' (stock bajo)' : '');
@@ -770,6 +785,99 @@ function resumenDiario(automatico) {
     props.setProperty('resumen_dia', Utilities.formatDate(ahora(), TZ, 'yyyyMMdd'));
   }
   return {email: c.email_aviso, asunto: asunto};
+}
+
+/* ================= ENTREGA: "¿Ya te llegó?" ================= */
+/* A los N días del despacho (consulta_entrega_dias) le preguntamos al cliente si recibió el pedido.
+   "Sí, llegó" → Entregado + gracias con pedido de foto e Instagram. "Tuve un problema" → aviso urgente al dueño.
+   Los links abren una página con un botón para confirmar: así los antivirus de algunos correos, que abren
+   los links solos, no marcan nada por su cuenta. */
+function firmaEntrega(id) {
+  var props = PropertiesService.getScriptProperties(), k = props.getProperty('secreto_bajas');
+  if (!k) { k = Utilities.getUuid(); props.setProperty('secreto_bajas', k); }
+  return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature('entrega:' + id, k)).slice(0, 16);
+}
+function linkEntrega(id, r) { return ScriptApp.getService().getUrl() + '?entrega=' + encodeURIComponent(id) + '&r=' + r + '&t=' + firmaEntrega(id); }
+function linkWa(c, texto) { return c.whatsapp && c.whatsapp.length > 6 ? 'https://wa.me/' + c.whatsapp + '?text=' + encodeURIComponent(texto) : ''; }
+function linkInstagram(c) { var u = String(c.instagram || '').replace(/^@/, '').trim(); return u ? {url: 'https://www.instagram.com/' + encodeURIComponent(u) + '/', usuario: '@' + u} : null; }
+function botonClaro(url, txt) { return '<a href="' + url + '" style="border:2px solid #4E5B3A;color:#4E5B3A;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:10px;display:inline-block;margin:0 0 10px">' + txt + '</a>'; }
+function pedidoFoto(p, c) {   // lo que le pedimos al cliente cuando recibe: foto de la mascota en el auto + Instagram
+  var wa = linkWa(c, '¡Hola! Les mando la foto de mi mascota viajando con su funda 🐾 (pedido ' + p.id + ')'), ig = linkInstagram(c);
+  return '<p>¿Nos regalás una <b>foto de tu mascota viajando en el auto con su funda</b>? Nos encanta verlas y, si nos das permiso, la compartimos.</p>' +
+    (wa ? boton(wa, '📸 Mandar la foto por WhatsApp') : '<p>Mandala respondiendo este mail.</p>') +
+    (ig ? '<p>Y si todavía no nos seguís, estamos en Instagram como <a href="' + ig.url + '" style="color:#4E5B3A;font-weight:bold">' + esc(ig.usuario) + '</a>. ¡Etiquetanos en tus historias!</p>' : '');
+}
+function mailConsultaEntrega(p, c) {
+  var link = 'https://www.andreani.com/envio/' + p.tracking;
+  enviar(p.email, '¿Ya te llegó tu funda? 🐾 Pedido ' + p.id, plantilla('¿Ya te llegó?',
+    '<p>Hola ' + esc(p.nombre) + ', hace unos días despachamos tu pedido <b>' + p.id + '</b>. ¿Ya lo recibiste?</p>' +
+    '<p style="margin:22px 0 8px">' + boton(linkEntrega(p.id, 'si'), 'Sí, ya llegó').replace(/^<p[^>]*>|<\/p>$/g, '') + ' &nbsp; ' + botonClaro(linkEntrega(p.id, 'problema'), 'Tuve un problema') + '</p>' +
+    (p.tracking ? '<p style="color:#5E6656;font-size:14px">Si todavía no llegó, lo podés seguir acá: <a href="' + link + '" style="color:#4E5B3A">' + p.tracking + '</a>.</p>' : ''), c), c);
+}
+function mailGraciasEntrega(p, c) {
+  enviar(p.email, '¡Gracias por elegirnos! 🐾', plantilla('¡Qué bueno que llegó!',
+    '<p>Hola ' + esc(p.nombre) + ', gracias por confirmarnos que recibiste tu pedido <b>' + p.id + '</b>. Esperamos que tu compañero de viaje lo disfrute.</p>' + pedidoFoto(p, c), c), c);
+}
+function enviarConsultasEntrega() {
+  var c = cfg(), dias = String(c.consulta_entrega_dias === undefined ? '5' : c.consulta_entrega_dias).trim();
+  if (dias === '' || !(num(dias) > 0)) return 0;
+  var t = ahora().getTime(), n = 0;
+  filas(H.pedidos).forEach(function (p) {
+    if (p.estado !== 'despachado' || p.consulta_el || p.problema_el || !tsDe(p.despachado_el) || !emailOk(p.email)) return;
+    if (t - tsDe(p.despachado_el) < num(dias) * DIA || MailApp.getRemainingDailyQuota() < 10) return;
+    mailConsultaEntrega(p, c);
+    setear(H.pedidos, p._fila, {consulta_el: ahora()}); n++;
+  });
+  return n;
+}
+function marcarEntregado(id, si) {
+  var p = pedido(id), c = cfg();
+  if (si) {
+    if (p.estado !== 'despachado') throw new Error(p.estado === 'entregado' ? 'El pedido ' + id + ' ya figura entregado.' : 'El pedido ' + id + ' todavía no salió.');
+    setear(H.pedidos, p._fila, {estado: 'entregado', entregado_el: ahora()});
+    if (emailOk(p.email)) mailGraciasEntrega(p, c);
+  } else {
+    if (p.estado !== 'entregado') throw new Error('El pedido ' + id + ' no figura entregado.');
+    setear(H.pedidos, p._fila, {estado: 'despachado', entregado_el: ''});
+  }
+}
+function problemaResuelto(id) {
+  var p = pedido(id);
+  if (!p.problema_el) throw new Error('Ese pedido no tiene un problema pendiente.');
+  setear(H.pedidos, p._fila, {problema_el: '', notas: limpiar((p.notas ? p.notas + ' | ' : '') + 'Problema de entrega resuelto el ' + Utilities.formatDate(ahora(), TZ, 'dd/MM'), 300)});
+  return {};
+}
+function paginaCliente(titulo, cuerpo) {
+  var out = HtmlService.createHtmlOutput('<div style="font-family:Arial,Helvetica,sans-serif;background:#F2F3EC;min-height:100vh;padding:28px 14px;color:#1E2418;box-sizing:border-box">' +
+    '<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden"><div style="background:#4E5B3A;color:#F2F3EC;padding:16px 22px;font-size:19px;font-weight:bold">🐾 Los Perrines</div>' +
+    '<div style="padding:22px;font-size:16px;line-height:1.5"><h1 style="font-size:22px;margin:0 0 12px">' + titulo + '</h1>' + cuerpo.replace(/<a /g, '<a target="_blank" rel="noopener" ') + '</div></div></div>').setTitle('Los Perrines');
+  try { out.addMetaTag('viewport', 'width=device-width, initial-scale=1'); } catch (e) {}
+  return out;
+}
+function respuestaEntrega(q) {
+  var id = limpiar(q.entrega, 30), r = q.r === 'problema' ? 'problema' : 'si', c = cfg();
+  var p = q.t && q.t === firmaEntrega(id) ? filas(H.pedidos).filter(function (x) { return x.id === id; })[0] : null;
+  if (!p || ['despachado','entregado'].indexOf(p.estado) < 0) return paginaCliente('Link no válido', '<p>No encontramos ese pedido. Si necesitás ayuda, escribinos por WhatsApp.</p>');
+  var form = function (txt, extra) {
+    return '<form method="get" action="' + ScriptApp.getService().getUrl() + '" target="_top">' +
+      '<input type="hidden" name="entrega" value="' + esc(id) + '"><input type="hidden" name="r" value="' + r + '"><input type="hidden" name="t" value="' + esc(q.t) + '"><input type="hidden" name="ok" value="1">' + (extra || '') +
+      '<button style="background:#4E5B3A;color:#F2F3EC;border:0;font-size:17px;font-weight:bold;padding:14px 22px;border-radius:10px;width:100%;cursor:pointer;margin-top:8px">' + txt + '</button></form>';
+  };
+  if (r === 'si') {
+    if (!q.ok && p.estado !== 'entregado') return paginaCliente('¿Recibiste tu pedido?', '<p>Pedido <b>' + esc(p.id) + '</b>. Tocá el botón para confirmarnos que te llegó.</p>' + form('Sí, recibí mi pedido'));
+    conLock(function () { var x = pedido(id); if (x.estado === 'despachado') marcarEntregado(id, true); });
+    return paginaCliente('¡Gracias, ' + esc(p.nombre) + '! 🎉', '<p>Qué bueno que tu funda ya está en casa. Esperamos que tu compañero de viaje la disfrute.</p>' + pedidoFoto(p, c));
+  }
+  var wa = linkWa(c, 'Hola, tuve un problema con mi pedido ' + p.id + ': ');
+  if (!q.ok) return paginaCliente('Contanos qué pasó', '<p>Lamentamos que hayas tenido un problema con tu pedido <b>' + esc(p.id) + '</b>. Contanos brevemente qué pasó y te contactamos lo antes posible.</p>' +
+    form('Avisar a Los Perrines', '<textarea name="detalle" rows="4" maxlength="400" placeholder="Ej.: todavía no llegó, llegó dañado, falta algo…" style="width:100%;box-sizing:border-box;font:inherit;padding:10px;border:1.5px solid #D9DCCF;border-radius:10px"></textarea>'));
+  var detalle = limpiar(q.detalle, 400);
+  conLock(function () {
+    var x = pedido(id), nuevo = !x.problema_el;
+    setear(H.pedidos, x._fila, {problema_el: ahora(), notas: limpiar((x.notas ? x.notas + ' | ' : '') + 'Problema de entrega: ' + (detalle || 'sin detalle'), 300)});
+    if (nuevo || detalle) avisoDueño('URGENTE: problema con la entrega · ' + x.id + (detalle ? ' · ' + detalle.slice(0, 60) : ''), x, c);
+  });
+  return paginaCliente('Gracias por avisarnos', '<p>Ya nos llegó tu aviso y te vamos a contactar lo antes posible para solucionarlo.</p>' + (wa ? boton(wa, 'Escribirnos por WhatsApp ahora') : ''));
 }
 
 /* ================= MAILS ================= */
@@ -1176,7 +1284,7 @@ function tallerDatos() {
     pagos: tFilas(T.pagos).map(function (x) { return {id: String(x.id), fecha: iso(x.fecha), proveedor: String(x.proveedor), monto: num(x.monto), medio: String(x.medio), nota: String(x.nota), compra: String(x.compra)}; }).reverse(),
     movimientos: movs.slice(0, 500),
     config: conf, productos: productos(c), stockTienda: stock(), ventas: mix,
-    version: 4,
+    version: 5,
     viejos: {costos: !!leerDoc('Costos'), insumos: !!leerDoc('Insumos'), pagos: !!leerDoc('Pagos'), corte: !!leerDoc('Corte')}
   };
 }

@@ -57,7 +57,7 @@ function makeEnv(opts) {
       newBlob: (d, m, n) => ({ getName: () => n, setName() { return this; } })
     },
     ContentService: { createTextOutput: t => ({ text: t, setMimeType() { return this; } }), MimeType: { JSON: 'json' } },
-    HtmlService: { createHtmlOutput: h => ({ html: h, setTitle() { return this; } }) },
+    HtmlService: { createHtmlOutput: h => ({ html: h, setTitle() { return this; }, addMetaTag() { return this; } }) },
     MailApp: { sendEmail: o => mails.push(o), getRemainingDailyQuota: () => (opts.quota == null ? 100 : opts.quota) },
     UrlFetchApp: { fetch: () => ({ getResponseCode: () => 500, getContentText: () => '{}', getBlob: () => ({ setName() { return this; } }) }) },
     ScriptApp: {

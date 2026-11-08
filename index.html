@@ -912,7 +912,7 @@ function volvioDeMP(){
   history.replaceState(null,"",location.pathname);
   dTitle.textContent="Tu pago"; dBody.innerHTML='<p><span class="spinner"></span> Confirmando tu pago…</p>'; dFoot.innerHTML=""; drawer.showModal();
   api("estado",{id:id,payment_id:pay&&pay!=="null"?pay:"",email:u.id===id?u.email:""}).then(function(r){
-    if(["pagado","exportado","despachado"].indexOf(r.estado)>=0){
+    if(["pagado","exportado","despachado","entregado"].indexOf(r.estado)>=0){
       if(!store("lp_trk_"+r.id)){ store("lp_trk_"+r.id,1); trk("purchase",{items:store("lp_trk_items")||[],pago:"tarjeta",id:r.id,valor:r.total}); }
       dTitle.textContent="¡Gracias, "+r.nombre+"!";
       dBody.innerHTML='<p>Tu pago fue aprobado. Tu pedido es el <b>'+esc(r.id)+'</b>.</p><p>Te mandamos un mail con el detalle, y otro con el número de seguimiento cuando salga.</p>';
@@ -937,7 +937,7 @@ function abrirDlg(tipo){
     b.innerHTML='<p>Podés cancelar tu compra dentro de los 10 días corridos desde que recibiste el producto. Te contactamos para coordinar la devolución sin costo.</p><label class="f">Número de pedido<input id="dId" placeholder="LP-…" autocapitalize="characters"></label><label class="f">Email de la compra<input id="dEmail" type="email" autocomplete="email"></label><button class="btn btn-main" style="width:100%" data-send="arrep">Enviar solicitud</button><p class="err" id="dErr"></p><div id="dRes"></div>'; }
   dlg.showModal();
 }
-var ESTADOS={reserva:"Reservado, esperando tu transferencia",pendiente_mp:"Esperando el pago con tarjeta",pagado:"Pago confirmado, lo estamos preparando",exportado:"Preparando el envío",despachado:"Despachado",vencido:"La reserva venció",cancelado:"Cancelado"};
+var ESTADOS={reserva:"Reservado, esperando tu transferencia",pendiente_mp:"Esperando el pago con tarjeta",pagado:"Pago confirmado, lo estamos preparando",exportado:"Preparando el envío",despachado:"Despachado, en camino",entregado:"Entregado",vencido:"La reserva venció",cancelado:"Cancelado"};
 function enviarDlg(tipo,btn){
   var err=$("#dErr"), email=($("#dEmail")||{}).value||"", id=(($("#dId")||{}).value||"").trim().toUpperCase();
   err.textContent=""; btn.disabled=true;
