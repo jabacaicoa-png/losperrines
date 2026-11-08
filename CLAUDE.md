@@ -78,7 +78,8 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 - Compras de Meta: toma la primera de `omni_purchase` / `purchase` / `fb_pixel_purchase` (no las suma, son la misma compra).
 - Veredicto por campaña según costo por venta vs ganancia por funda (`rent(p).gMix`): ≥ ganancia "Pierde plata", ≥ 60% "Deja poco", si no "Anda bien"; avisos por frecuencia ≥ 3,5 y CTR < 1%.
 - El resumen de las 20 h suma una línea "Publicidad hoy" cuando hay gasto o ventas.
-- Estado: el dueño todavía no tiene campañas (las arranca al abrir la tienda) ni el token de lectura.
+- Estado: token de lectura cargado (`META_ADS_TOKEN`, del "Conversions API System User" con la cuenta publicitaria en "Ver rendimiento" y la app "Panel Los Perrines" con el caso de uso de la API de marketing). Todavía no hay campañas: las arranca al abrir la tienda.
+- Ojo: "Revocar tokens" en ese usuario del sistema anula también `META_CAPI_TOKEN`.
 
 ## Siguientes pasos posibles
 
