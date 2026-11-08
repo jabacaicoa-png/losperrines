@@ -594,19 +594,20 @@ function api(accion,data){
     .then(function(r){return r.json();}).then(function(j){ if(!j.ok) throw new Error(j.error||"Error"); return j; });
 }
 /* ---------- medición (Google Analytics 4 y Meta Pixel) ----------
-   No mide las visitas con el link de vista previa: son tuyas y ensuciarían los números. */
+   Mide siempre, también con el link de vista previa (modo de prueba): los eventos de la vista previa
+   llevan modo:"prueba" para poder separarlos después. ?no_medir=1 apaga la medición en ese aparato
+   (por ejemplo tu celular) y ?no_medir=0 la vuelve a prender. */
 var TRK={on:false};
 function trkInit(){
-  /* ?probar_medicion=1 activa la medición también con la vista previa, para comprobar que funciona */
-  var probar=false; try{ if(qs.get("probar_medicion")==="1") sessionStorage.setItem("lp_probar_medicion","1"); probar=sessionStorage.getItem("lp_probar_medicion")==="1"; }catch(e){}
-  if(TRK.on||(VISTA&&!probar)) return; TRK.on=true;
+  try{ if(qs.get("no_medir")==="1") localStorage.setItem("lp_no_medir","1"); if(qs.get("no_medir")==="0") localStorage.removeItem("lp_no_medir"); if(localStorage.getItem("lp_no_medir")==="1") return; }catch(e){}
+  if(TRK.on) return; TRK.on=true;
   if(/^G-[A-Z0-9]+$/.test(GA_ID)){
     var g=document.createElement("script"); g.async=true; g.src="https://www.googletagmanager.com/gtag/js?id="+GA_ID; document.head.appendChild(g);
     window.dataLayer=window.dataLayer||[]; window.gtag=function(){dataLayer.push(arguments);}; gtag("js",new Date()); gtag("config",GA_ID);
   }
   if(/^\d{6,}$/.test(META_PIXEL_ID)){
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version="2.0";n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,"script","https://connect.facebook.net/en_US/fbevents.js");
-    fbq("init",META_PIXEL_ID); fbq("track","PageView");
+    fbq("init",META_PIXEL_ID); fbq("track","PageView",VISTA?{modo:"prueba"}:{});
   }
 }
 function trkItems(lista){ return lista.map(function(x){ var p=PR(x.id)||{}; return {item_id:x.id,item_name:p.nombre||x.id,price:p.precio_tarjeta||0,quantity:x.q||1}; }); }
@@ -616,8 +617,10 @@ function trk(ev,datos){
   var items=trkItems(datos.items||[]), valor=datos.valor!=null?datos.valor:items.reduce(function(a,i){return a+i.price*i.quantity;},0);
   var ga={view:"view_item_list",add:"add_to_cart",checkout:"begin_checkout",order:"add_payment_info",purchase:"purchase"}[ev];
   var fb={view:"ViewContent",add:"AddToCart",checkout:"InitiateCheckout",order:"AddPaymentInfo",purchase:"Purchase"}[ev];
-  try{ if(window.gtag&&ga) gtag("event",ga,Object.assign({currency:"ARS",value:valor,items:items},datos.pago?{payment_type:datos.pago}:{},datos.id?{transaction_id:datos.id}:{})); }catch(e){}
-  try{ if(window.fbq&&fb) fbq("track",fb,{currency:"ARS",value:valor,content_type:"product",content_ids:items.map(function(i){return i.item_id;}),num_items:items.reduce(function(a,i){return a+i.quantity;},0)}); }catch(e){}
+  var modo=VISTA?{modo:"prueba"}:{};
+  try{ if(window.gtag&&ga) gtag("event",ga,Object.assign({currency:"ARS",value:valor,items:items},datos.pago?{payment_type:datos.pago}:{},datos.id?{transaction_id:datos.id}:{},modo)); }catch(e){}
+  try{ if(window.fbq&&fb) fbq("track",fb,Object.assign({currency:"ARS",value:valor,content_type:"product",content_ids:items.map(function(i){return i.item_id;}),num_items:items.reduce(function(a,i){return a+i.quantity;},0)},datos.id?{order_id:datos.id}:{},modo),
+    datos.id?{eventID:(ev==="purchase"?"compra-":ev+"-")+datos.id}:undefined); }catch(e){}   /* eventID: Meta no cuenta dos veces la misma compra */
 }
 function carritoItems(){ return PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){return {id:p.id,q:Q[p.id]};}); }
 
@@ -627,11 +630,12 @@ function show(id){ $("#loading").hidden=true; $("#pronto").hidden=id!=="pronto";
 var qs=new URLSearchParams(location.search);
 if(qs.get("vista")){ store("lp_vista",qs.get("vista")); }
 VISTA=store("lp_vista")||"";
+trkInit();   /* el píxel arranca enseguida, sin esperar a que responda la planilla */
 if(!/^https:\/\/script\.google\.com\//.test(API)){ show("pronto"); return; }
 api("config").then(function(c){
   C=c;
-  if(!c.abierta){ show("pronto"); trkInit(); return; }   /* con la tienda cerrada solo se registra la visita */
-  show("tienda"); $("#previewBar").hidden=!c.vista; trkInit();
+  if(!c.abierta){ show("pronto"); return; }   /* con la tienda cerrada solo se registra la visita */
+  show("tienda"); $("#previewBar").hidden=!c.vista;
   pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
   if(c.whatsapp && c.whatsapp.length>6){ $$(".wa").forEach(function(a){a.href="https://wa.me/"+c.whatsapp;}); } else { $$(".wa").forEach(function(a){a.hidden=true;}); }
   if(qs.get("pedido")) volvioDeMP();
