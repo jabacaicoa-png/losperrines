@@ -190,6 +190,21 @@ dialog::backdrop{background:rgba(20,24,14,.5)}
 .todo{margin:0;padding:0;list-style:none;display:grid;gap:8px}
 .todo li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--field);border-left:4px solid var(--warn)}
 .todo li.bad{border-left-color:var(--bad)} .todo li.info{border-left-color:var(--info)} .todo li.ok{border-left-color:var(--ok)}
+/* pantalla Hoy */
+.hoysteps{display:grid;gap:8px;margin:0 0 14px;grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:640px){.hoysteps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.hoystep{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;text-align:left;cursor:pointer;color:var(--ink);font:inherit;min-width:0}
+.hoystep small{display:block;color:var(--muted);font-size:.8rem;line-height:1.2}
+.hoystep b{display:block;font-size:1.5rem;font-weight:800;line-height:1.15}
+.hoystep span{display:block;font-size:.76rem;font-weight:700;color:var(--bad)}
+.hoystep.bad{border-color:var(--bad)}
+.hoybar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:0 0 4px}
+.hoyp{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;background:var(--field);margin-top:8px}
+.hoyp.bad{border-left-color:var(--bad)} .hoyp.warn{border-left-color:var(--warn)}
+.hoyp>input[type=checkbox]{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--olive)}
+.hoyb{flex:1;min-width:0;display:grid;gap:2px}
+.hoyh{display:flex;justify-content:space-between;gap:10px}
+.hoyal{font-weight:700} .hoyp.bad .hoyal{color:var(--bad)} .hoyp.warn .hoyal{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -203,7 +218,7 @@ var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDb
 <script>
 /* Carga el panel siempre en su última versión (sin copias viejas guardadas en el navegador) */
 (function(){
-  var v=Date.now(), archivos=["admin-core.js","admin-taller.js"], i=0;
+  var v=Date.now(), archivos=["admin-core.js","admin-hoy.js","admin-taller.js"], i=0;
   function siguiente(){
     if(i>=archivos.length){ LP.arrancar(); return; }
     var s=document.createElement("script"); s.src=archivos[i++]+"?v="+v; s.onload=siguiente;

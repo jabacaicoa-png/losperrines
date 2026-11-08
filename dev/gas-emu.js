@@ -59,14 +59,14 @@ function makeEnv(opts) {
     ContentService: { createTextOutput: t => ({ text: t, setMimeType() { return this; } }), MimeType: { JSON: 'json' } },
     HtmlService: { createHtmlOutput: h => ({ html: h, setTitle() { return this; } }) },
     MailApp: { sendEmail: o => mails.push(o), getRemainingDailyQuota: () => (opts.quota == null ? 100 : opts.quota) },
-    UrlFetchApp: { fetch: () => ({ getResponseCode: () => 500, getContentText: () => '{}' }) },
+    UrlFetchApp: { fetch: () => ({ getResponseCode: () => 500, getContentText: () => '{}', getBlob: () => ({ setName() { return this; } }) }) },
     ScriptApp: {
       getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/TEST/exec' }), getOAuthToken: () => 'x',
       getProjectTriggers: () => triggers, deleteTrigger() {}, newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create() {} }) }) })
     },
     DriveApp: {
       getFoldersByName: () => ({ hasNext: () => false }), createFolder: () => ({ createFile: b => { const id = 'f' + Object.keys(files).length; files[id] = b; return { getId: () => id, setSharing() {}, getUrl: () => 'u' }; } }),
-      getFileById: id => ({ setTrashed() {}, makeCopy() { return { getId: () => 'c' }; } }), Access: {}, Permission: {}
+      getFileById: id => ({ setTrashed() {}, makeCopy() { return { getId: () => 'c', setTrashed() {} }; } }), Access: {}, Permission: {}
     },
     Logger: { log() {} }
   };

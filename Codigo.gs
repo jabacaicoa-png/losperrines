@@ -1,5 +1,5 @@
 /**
- * LOS PERRINES · Backend (Google Apps Script) · versión 3 (taller conectado + bolsa de guardado)
+ * LOS PERRINES · Backend (Google Apps Script) · versión 4 (oficina: pantalla Hoy y resumen diario)
  * Pedidos, stock, cobro con Mercado Pago, mails, panel de administración,
  * exportación de envíos a Andreani y el taller: insumos, recetas, tandas de
  * producción, compras y pagos a proveedores.
@@ -16,7 +16,8 @@ var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Conf
 var COLS = {
   Pedidos: ['id','fecha','estado','pago','cantidad','total','nombre','apellido','dni','email','cel_cod','cel_num',
             'entrega','calle','numero','piso','depto','prov_loc_cp','sucursal','observaciones','vence',
-            'mp_preferencia','mp_pago','tracking','exportado','notas','items','cupon','descuento','recordatorio'],
+            'mp_preferencia','mp_pago','tracking','exportado','notas','items','cupon','descuento','recordatorio',
+            'pagado_el','preparado','despachado_el'],
   Movimientos: ['fecha','tipo','cantidad','motivo','producto'],
   Avisos: ['fecha','email','avisado'],
   Media: ['id','fecha','destino','tipo','nombre','orden','principal','drive_id'],
@@ -71,7 +72,9 @@ var CONFIG_DEF = [
   ['comision_mp','20','Rentabilidad: % que te descuenta Mercado Pago en las ventas con tarjeta.'],
   ['rentabilidad_objetivo','60','Rentabilidad mínima que buscás, sobre el costo (%).'],
   ['mix_tarjeta','50','% estimado de ventas con tarjeta (se usa hasta tener ventas reales).'],
-  ['taller_migrado','','Fecha en que se importaron los datos de las herramientas viejas.']
+  ['taller_migrado','','Fecha en que se importaron los datos de las herramientas viejas.'],
+  ['resumen_hora','20','Hora del resumen diario por mail (0 a 23). Vacío = no mandarlo.'],
+  ['alerta_despacho_dias','2','Días desde el pago para avisar que un pedido se está atrasando.']
 ];
 var VENDIDO = ['pagado','exportado','despachado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -144,7 +147,11 @@ function rutear(r) {
     case 'movimiento': return movimiento(r);
     case 'avisar': return avisarStock();
     case 'guardarConfig': return guardarConfig(r.valores || {});
-    case 'exportar': return conLock(exportarAndreani);
+    case 'exportar': return conLock(function () { return exportarAndreani(r.ids); });
+    case 'pagadoLote': return conLock(function () { return enLote(r.ids, function (id) { marcarPagado(String(id)); }); });
+    case 'despacharLote': return conLock(function () { return enLote(r.items, function (x) { despachar(String(x.id), x.tracking); }); });
+    case 'preparado': return conLock(function () { return enLote(r.ids, function (id) { marcarPreparado(String(id), r.valor !== false); }); });
+    case 'resumenAhora': return conLock(function () { return resumenDiario(false); });
     case 'nota': return guardarNota(r.id, r.nota);
     case 'costos': return {costos: leerCostos()};
     case 'guardarCostos': return guardarCostos(r.data);
@@ -460,7 +467,7 @@ function procesarPago(pago) {
   if (!p) return;
   if (pago.status === 'approved' && ['pendiente_mp','vencido','cancelado'].indexOf(p.estado) >= 0) {
     var c = cfg(), sinStock = p.estado !== 'pendiente_mp' && !hayStock(p);
-    setear(H.pedidos, p._fila, {estado: 'pagado', mp_pago: String(pago.id), total: num(pago.transaction_amount) || p.total,
+    setear(H.pedidos, p._fila, {estado: 'pagado', pagado_el: ahora(), mp_pago: String(pago.id), total: num(pago.transaction_amount) || p.total,
       notas: sinStock ? (p.notas ? p.notas + ' | ' : '') + 'PAGÓ DESPUÉS DE VENCER Y NO HABÍA STOCK: coordinar con el cliente' : p.notas});
     if (sinStock && c.email_aviso) enviar(c.email_aviso, 'URGENTE: pago aprobado sin stock · ' + p.id, plantilla('Pago aprobado sin stock',
       '<p>El pedido <b>' + p.id + '</b> se pagó con tarjeta después de que venció la reserva y ya no hay stock para cubrirlo. Contactá al cliente para coordinar la entrega o la devolución.</p>', c), c);
@@ -495,9 +502,11 @@ function auth(r) {
 function resumen() {
   conLock(vencerReservas);
   var c = cfg(), s = stock(), mes = Utilities.formatDate(ahora(), TZ, 'yyyyMM');
+  var t = ahora().getTime(), props = PropertiesService.getScriptProperties();
   var ped = filas(H.pedidos).map(function (p) {
     var o = {}; COLS.Pedidos.forEach(function (k) { o[k] = (p[k] instanceof Date) ? fmtFecha(p[k]) : p[k]; });
-    o._ts = new Date(p.fecha).getTime(); o._vence_ts = p.vence ? new Date(p.vence).getTime() : 0; o._items = textoItems(p, c); return o;
+    o._ts = new Date(p.fecha).getTime(); o._vence_ts = p.vence ? new Date(p.vence).getTime() : 0; o._items = textoItems(p, c);
+    o._etapa = etapaDe(p, t); o._alerta = o._etapa ? alertaDe(p, o._etapa, t, c) : null; return o;
   }).sort(function (a, b) { return b._ts - a._ts; });
   var v = {unidades: 0, total: 0, transferencia: 0, tarjeta: 0};
   filas(H.pedidos).forEach(function (p) {
@@ -510,15 +519,17 @@ function resumen() {
     productos: productos(c),
     avisos: filas(H.avisos).filter(function (a) { return a.avisado !== 'SI'; }).map(function (a) { return a.email; }),
     urlVista: (c.url_web || '').replace(/\/$/, '') + '/?vista=' + c.clave_vista,
-    tokenMP: !!PropertiesService.getScriptProperties().getProperty('MP_ACCESS_TOKEN'),
-    media: listaMedia()
+    tokenMP: !!props.getProperty('MP_ACCESS_TOKEN'),
+    media: listaMedia(),
+    oficina: 1,
+    ultimoResumen: props.getProperty('resumen_ultimo') ? fmtFecha(new Date(num(props.getProperty('resumen_ultimo')))) : ''
   };
 }
 function marcarPagado(id) {
   var p = pedido(id), c = cfg();
   if (['reserva','vencido','pendiente_mp'].indexOf(p.estado) < 0) throw new Error('El pedido ya no está pendiente de pago.');
   if (p.estado === 'vencido' && !hayStock(p)) throw new Error('No hay stock para este pedido vencido.');
-  setear(H.pedidos, p._fila, {estado: 'pagado'});
+  setear(H.pedidos, p._fila, {estado: 'pagado', pagado_el: ahora()});
   p.estado = 'pagado';
   marcarCarritoPorPedido(p.id, 'compro');
   if (p.pago === 'transferencia') mailPagoTransferencia(p, c); else mailPagoTarjeta(p, c);
@@ -528,7 +539,7 @@ function despachar(id, tracking) {
   var p = pedido(id), c = cfg(), t = String(tracking || '').replace(/\s/g, '');
   if (!/^\d{6,}$/.test(t)) throw new Error('El número de seguimiento tiene que ser solo números.');
   if (VENDIDO.indexOf(p.estado) < 0) throw new Error('Solo se despachan pedidos pagados.');
-  setear(H.pedidos, p._fila, {estado: 'despachado', tracking: t});
+  setear(H.pedidos, p._fila, {estado: 'despachado', tracking: t, despachado_el: ahora()});
   p.tracking = t;
   mailDespacho(p, c);
   return {};
@@ -581,10 +592,11 @@ function guardarConfig(vals) {
 }
 
 /* ================= ANDREANI ================= */
-function exportarAndreani() {
+function exportarAndreani(ids) {
   var c = cfg();
   if (!c.plantilla_andreani_id) throw new Error('Falta cargar plantilla_andreani_id en Configuración.');
-  var pend = filas(H.pedidos).filter(function (p) { return p.estado === 'pagado'; });
+  var elegidos = Array.isArray(ids) && ids.length ? ids.map(String) : null;   // sin lista: todos los pagados (pantalla Envíos)
+  var pend = filas(H.pedidos).filter(function (p) { return p.estado === 'pagado' && (!elegidos || elegidos.indexOf(String(p.id)) >= 0); });
   if (!pend.length) throw new Error('No hay pedidos pagados para exportar.');
   var nombre = 'Andreani ' + Utilities.formatDate(ahora(), TZ, 'yyyy-MM-dd HHmm');
   var copia = DriveApp.getFileById(c.plantilla_andreani_id).makeCopy(nombre + ' (temp)');
@@ -629,6 +641,7 @@ function vencerReservas() {
 function tareaHoraria() {
   try { enviarRecordatorios(); } catch (e) { console.error(e); }
   vencerReservas();
+  try { resumenSiToca(); } catch (e) { console.error(e); }
   var c = cfg(), s = stock(), props = PropertiesService.getScriptProperties();
   var hoy = Utilities.formatDate(ahora(), TZ, 'yyyyMMdd');
   productos(c).forEach(function (pr) {
@@ -639,6 +652,124 @@ function tareaHoraria() {
       props.setProperty(clave, hoy);
     }
   });
+}
+
+/* ================= OFICINA: pantalla Hoy y resumen diario ================= */
+/* Cada pedido está en una etapa: confirmar (transferencia sin pagar) → preparar → etiquetar
+   (listo para exportar a Andreani) → despachar (falta el seguimiento) → camino (salió hace poco).
+   La pantalla Hoy del panel y el resumen por mail usan exactamente esta misma cuenta. */
+var DIA = 86400000;
+function tsDe(v) {
+  if (!v) return 0;
+  if (v instanceof Date) return v.getTime();
+  var m = String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);   // "dd/MM/yyyy HH:mm" en hora argentina (UTC-3)
+  if (m) return Date.UTC(+m[3], +m[2] - 1, +m[1], (+m[4] || 0) + 3, +m[5] || 0);
+  var d = new Date(v); return isNaN(d.getTime()) ? 0 : d.getTime();
+}
+function etapaDe(p, t) {
+  var e = p.estado;
+  if (e === 'reserva') return 'confirmar';
+  if (e === 'vencido' && p.pago === 'transferencia' && t - tsDe(p.vence) < 3 * DIA) return 'confirmar';   // por si pagó tarde
+  if (e === 'pagado') return p.preparado ? 'etiquetar' : 'preparar';
+  if (e === 'exportado') return 'despachar';
+  if (e === 'despachado' && t - (tsDe(p.despachado_el) || tsDe(p.exportado) || tsDe(p.fecha)) < 7 * DIA) return 'camino';
+  return '';
+}
+function horasTxt(h) { h = Math.max(1, Math.round(h)); return h < 48 ? h + ' h' : Math.round(h / 24) + ' días'; }
+function alertaDe(p, etapa, t, c) {
+  if (etapa === 'confirmar') {
+    var h = (tsDe(p.vence) - t) / 3600000;
+    if (h <= 0) return {nivel: 'bad', texto: 'La reserva venció hace ' + horasTxt(-h) + '. Si te pagó igual, marcalo como pagado.'};
+    if (h <= 12) return {nivel: 'warn', texto: 'La reserva vence en ' + horasTxt(h) + '.'};
+    return null;
+  }
+  if (etapa === 'preparar' || etapa === 'etiquetar' || etapa === 'despachar') {
+    var dias = Math.floor((t - (tsDe(p.pagado_el) || tsDe(p.fecha))) / DIA), lim = num(c.alerta_despacho_dias) || 2;
+    if (dias >= lim) return {nivel: 'bad', texto: 'Pagado hace ' + dias + ' días y todavía no salió.'};
+    if (etapa === 'despachar' && tsDe(p.exportado) && t - tsDe(p.exportado) >= DIA) return {nivel: 'warn', texto: 'Exportado hace más de un día: falta cargar el seguimiento.'};
+  }
+  return null;
+}
+/* Acciones en lote: hace cada una por separado y devuelve cuáles salieron y cuáles no (con el motivo). */
+function enLote(lista, fn) {
+  lista = Array.isArray(lista) ? lista.slice(0, 100) : [];
+  if (!lista.length) throw new Error('No elegiste ningún pedido.');
+  var hechos = [], errores = [];
+  lista.forEach(function (x) {
+    var id = String(x && x.id !== undefined ? x.id : x);
+    try { fn(x); hechos.push(id); } catch (e) { errores.push({id: id, error: String(e && e.message || e)}); }
+  });
+  return {hechos: hechos, errores: errores};
+}
+function marcarPreparado(id, si) {
+  var p = pedido(id);
+  if (p.estado !== 'pagado') throw new Error('El pedido ' + id + ' no está pagado o ya se exportó.');
+  setear(H.pedidos, p._fila, {preparado: si ? ahora() : ''});
+}
+function resumenSiToca() {
+  var c = cfg(), hora = c.resumen_hora === undefined ? '20' : String(c.resumen_hora).trim();
+  if (hora === '' || !emailOk(c.email_aviso)) return;
+  var props = PropertiesService.getScriptProperties(), d = ahora();
+  if (Number(Utilities.formatDate(d, TZ, 'HH')) < num(hora)) return;
+  if (props.getProperty('resumen_dia') === Utilities.formatDate(d, TZ, 'yyyyMMdd')) return;   // ya salió hoy
+  resumenDiario(true);
+}
+/* Foto de todo lo pendiente ahora + lo nuevo desde el resumen automático anterior. */
+function resumenDiario(automatico) {
+  var c = cfg(), props = PropertiesService.getScriptProperties();
+  if (!emailOk(c.email_aviso)) throw new Error('Falta cargar tu email para avisos en Configuración.');
+  vencerReservas();
+  var t = ahora().getTime(), desde = num(props.getProperty('resumen_ultimo')) || t - DIA;
+  var P = filas(H.pedidos), s = stock(), g = {confirmar: [], preparar: [], etiquetar: [], despachar: [], camino: []}, atrasos = [];
+  P.forEach(function (p) {
+    var e = etapaDe(p, t); if (!e) return;
+    var x = {p: p, a: alertaDe(p, e, t, c)}; g[e].push(x);
+    if (x.a && x.a.nivel === 'bad') atrasos.push(x);
+  });
+  Object.keys(g).forEach(function (k) { g[k].sort(function (a, b) { return tsDe(a.p.fecha) - tsDe(b.p.fecha); }); });
+  var nuevos = P.filter(function (p) { return tsDe(p.fecha) > desde && !(p.estado === 'cancelado' && /^Error MP/.test(String(p.notas))); });
+  var cobrados = P.filter(function (p) { return VENDIDO.indexOf(p.estado) >= 0 && tsDe(p.pagado_el) > desde; });
+  var plataCobrada = cobrados.reduce(function (a, p) { return a + num(p.total); }, 0);
+  function linea(x) {
+    var p = x.p;
+    return '<li style="margin:0 0 6px"><b>' + esc(p.nombre + ' ' + p.apellido) + '</b> · ' + esc(p.id) + ' · ' + esc(textoItems(p, c)) +
+      (x.a ? '<br><span style="color:' + (x.a.nivel === 'bad' ? '#B4432F' : '#A86A12') + '">' + esc(x.a.texto) + '</span>' : '') + '</li>';
+  }
+  function seccion(titulo, lista, extra) {
+    if (!lista.length) return '';
+    return '<h2 style="font-size:17px;margin:22px 0 6px">' + titulo + ' (' + lista.length + ')</h2>' + (extra ? '<p style="margin:0 0 6px;color:#5E6656">' + extra + '</p>' : '') +
+      '<ul style="margin:0;padding-left:18px">' + lista.slice(0, 8).map(linea).join('') + (lista.length > 8 ? '<li>y ' + (lista.length - 8) + ' más</li>' : '') + '</ul>';
+  }
+  function unidades(lista) {
+    var u = {};
+    lista.forEach(function (x) { itemsDe(x.p).forEach(function (it) { var id = it.producto === 'individual' ? 'individual' : 'doble'; u[id] = (u[id] || 0) + num(it.cantidad); }); });
+    return productos(c).filter(function (pr) { return u[pr.id]; }).map(function (pr) { return u[pr.id] + ' × ' + esc(pr.nombre); }).join(' · ');
+  }
+  var partes = [];
+  if (g.confirmar.length) partes.push(g.confirmar.length + ' por confirmar');
+  if (g.preparar.length) partes.push(g.preparar.length + ' para preparar');
+  if (g.etiquetar.length) partes.push(g.etiquetar.length + ' para etiquetar');
+  if (g.despachar.length) partes.push(g.despachar.length + ' para despachar');
+  var asunto = 'Resumen del día · ' + (partes.length ? partes.join(', ') : 'todo al día ✅') + (atrasos.length ? ' · ' + atrasos.length + ' atrasado' + (atrasos.length > 1 ? 's' : '') : '');
+  var cuerpo = '<p style="margin:0 0 10px">Desde el resumen anterior (' + fmtFecha(new Date(desde)) + '): <b>' + nuevos.length + ' pedido' + (nuevos.length === 1 ? '' : 's') + ' nuevo' + (nuevos.length === 1 ? '' : 's') + '</b>' +
+    ' y <b>' + cobrados.length + ' pago' + (cobrados.length === 1 ? '' : 's') + ' confirmado' + (cobrados.length === 1 ? '' : 's') + '</b>' + (cobrados.length ? ' por ' + plata(plataCobrada) : '') + '.</p>';
+  if (atrasos.length) cuerpo += '<div style="background:#F8E6E1;border-radius:12px;padding:12px 14px;margin:12px 0"><b style="color:#B4432F">Se están atrasando (' + atrasos.length + ')</b><ul style="margin:6px 0 0;padding-left:18px">' + atrasos.slice(0, 8).map(linea).join('') + '</ul></div>';
+  if (!partes.length) cuerpo += '<p>No hay nada pendiente. 🐾</p>';
+  cuerpo += seccion('Confirmar pago', g.confirmar, 'Transferencias esperando. Fijate en Mercado Pago si llegaron.') +
+    seccion('Preparar', g.preparar, 'Para armar: ' + unidades(g.preparar) + '.') +
+    seccion('Etiquetar', g.etiquetar, 'Ya preparados: falta exportarlos a Andreani.') +
+    seccion('Despachar', g.despachar, 'Exportados: falta cargar el número de seguimiento.');
+  if (g.camino.length) cuerpo += '<p style="margin:18px 0 0;color:#5E6656">En camino (últimos 7 días): ' + g.camino.length + '.</p>';
+  cuerpo += '<p style="margin:18px 0 0"><b>Stock:</b> ' + productos(c).filter(function (pr) { return pr.activo || s[pr.id].ingresado > 0; }).map(function (pr) {
+    var st = s[pr.id], bajo = st.ingresado > 0 && st.disponible <= num(c.stock_minimo);
+    return esc(pr.nombre) + ' <b' + (bajo ? ' style="color:#B4432F"' : '') + '>' + Math.max(0, st.disponible) + '</b> disponibles' + (bajo ? ' (stock bajo)' : '');
+  }).join(' · ') + '.</p>' + boton(String(c.url_web || '').replace(/\/$/, '') + '/admin.html#hoy', 'Abrir la pantalla Hoy');
+  enviar(c.email_aviso, asunto, plantilla('Resumen del ' + Utilities.formatDate(ahora(), TZ, 'dd/MM'), cuerpo, c), c);
+  if (automatico) {
+    props.setProperty('resumen_ultimo', String(t));
+    props.setProperty('resumen_dia', Utilities.formatDate(ahora(), TZ, 'yyyyMMdd'));
+  }
+  return {email: c.email_aviso, asunto: asunto};
 }
 
 /* ================= MAILS ================= */
@@ -1045,7 +1176,7 @@ function tallerDatos() {
     pagos: tFilas(T.pagos).map(function (x) { return {id: String(x.id), fecha: iso(x.fecha), proveedor: String(x.proveedor), monto: num(x.monto), medio: String(x.medio), nota: String(x.nota), compra: String(x.compra)}; }).reverse(),
     movimientos: movs.slice(0, 500),
     config: conf, productos: productos(c), stockTienda: stock(), ventas: mix,
-    version: 3,
+    version: 4,
     viejos: {costos: !!leerDoc('Costos'), insumos: !!leerDoc('Insumos'), pagos: !!leerDoc('Pagos'), corte: !!leerDoc('Corte')}
   };
 }

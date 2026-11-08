@@ -47,7 +47,7 @@ function cerrarDlg(){ var d=$("#dlg"); if(d.open) d.close(); }
 
 /* ---------- navegación ---------- */
 var VIEWS={}, ORDEN=[];
-function vista(id,grupo,titulo,fn,badge){ VIEWS[id]={id:id,grupo:grupo,titulo:titulo,fn:fn,badge:badge}; ORDEN.push(id); }
+function vista(id,grupo,titulo,fn,badge,antes){ VIEWS[id]={id:id,grupo:grupo,titulo:titulo,fn:fn,badge:badge}; var i=antes?ORDEN.indexOf(antes):-1; if(i>=0) ORDEN.splice(i,0,id); else ORDEN.push(id); }
 function ir(v){ if(!VIEWS[v]) v="inicio"; S.view=v; S.menu=false; if(location.hash!=="#"+v) history.replaceState(null,"","#"+v); render(); window.scrollTo(0,0); }
 
 function render(){
@@ -111,9 +111,9 @@ function vInicio(d){
   var todo=[];
   var falta=[]; if(!c.alias&&!c.cbu) falta.push("alias o CBU"); if(!c.email_aviso) falta.push("tu email"); if(!c.whatsapp||c.whatsapp.length<8) falta.push("WhatsApp"); if(!d.tokenMP) falta.push("token de Mercado Pago"); if(!c.plantilla_andreani_id) falta.push("plantilla de Andreani");
   if(falta.length) todo.push(['bad','Falta configurar: '+falta.join(", ")+'.','config','Configurar']);
-  if(res) todo.push(['warn',res+' transferencia'+(res>1?'s':'')+' esperando pago.','pedidos','Ver',"reserva"]);
-  if(pag) todo.push(['warn',pag+' pedido'+(pag>1?'s':'')+' pagado'+(pag>1?'s':'')+' para exportar a Andreani.','envios','Exportar']);
-  if(exp) todo.push(['info',exp+' envío'+(exp>1?'s':'')+' exportado'+(exp>1?'s':'')+' sin número de seguimiento.','envios','Cargar']);
+  if(res) todo.push(['warn',res+' transferencia'+(res>1?'s':'')+' esperando pago.','hoy','Ver']);
+  if(pag) todo.push(['warn',pag+' pedido'+(pag>1?'s':'')+' pagado'+(pag>1?'s':'')+' para preparar y exportar a Andreani.','hoy','Ver']);
+  if(exp) todo.push(['info',exp+' envío'+(exp>1?'s':'')+' exportado'+(exp>1?'s':'')+' sin número de seguimiento.','hoy','Cargar']);
   if(d.avisos.length && (d.stock.doble.disponible>0||d.stock.individual.disponible>0)) todo.push(['info',d.avisos.length+' persona'+(d.avisos.length>1?'s':'')+' esperan aviso de stock.','stock','Ver']);
   if(window.TALLER) todo=todo.concat(TALLER.pendientes());
   h+='<div class="block"><h3>Para hacer</h3>'+(todo.length?'<ul class="todo">'+todo.map(function(t){ return '<li class="'+t[0]+'"><span>'+esc(t[1])+'</span><button class="btn ghost sm" data-go="'+t[2]+'"'+(t[4]?' data-f="'+t[4]+'"':'')+'>'+esc(t[3])+'</button></li>'; }).join("")+'</ul>':'<p class="muted" style="margin:0">Todo al día.</p>')+'</div>';

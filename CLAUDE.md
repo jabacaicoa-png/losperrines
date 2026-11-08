@@ -10,8 +10,9 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | Archivo | Qué es |
 |---|---|
 | `index.html` | La tienda pública (GitHub Pages, dominio `www.losperrines.com.ar`, ver `CNAME`). |
-| `admin.html` | Cascarón del panel: estilos + carga `admin-core.js` y `admin-taller.js` con `?v=Date.now()` (para que el navegador nunca use una copia vieja). |
+| `admin.html` | Cascarón del panel: estilos + carga `admin-core.js`, `admin-hoy.js` y `admin-taller.js` con `?v=Date.now()` (para que el navegador nunca use una copia vieja). |
 | `admin-core.js` | Núcleo del panel: sesión, navegación por áreas, vistas de Ventas y Tienda. Expone `window.LP`. |
+| `admin-hoy.js` | Pantalla **Hoy** (la "oficina"): pedidos por etapa, acciones en lote, hoja de preparación, WhatsApp prearmado y hora del resumen diario. |
 | `admin-taller.js` | Taller: insumos, productos (medidas + receta + bolsa), tandas, proveedores y pagos, planificar, rentabilidad, importación. Define `window.PANEL_VERSION` (se muestra abajo del menú). |
 | `corte.html` | Plano de corte e impresión de la ficha para la costurera. Con `#panel` toma las medidas que le pasa el panel por `sessionStorage`. |
 | `Codigo.gs` | Backend en Google Apps Script sobre una planilla de Google. **No se publica solo**: el dueño lo pega en Apps Script, ejecuta `instalar()` y hace *Implementar → Administrar implementaciones → Editar → Nueva versión*. |
@@ -20,7 +21,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 
 - La API es el `exec` de Apps Script que figura en `index.html` y `admin.html` (variable `API`).
 - Desde el entorno en la nube **no se puede llegar a `script.google.com` ni a la web publicada**: se prueba con el emulador.
-- El backend es retrocompatible: versión actual **3** (`tallerDatos().version === 3`). Si cambiás columnas, agregalas **al final** de `COLS` y avisá que hay que volver a pegar el `Codigo.gs` (el panel detecta versión vieja y muestra un cartel).
+- El backend es retrocompatible: versión actual **4** (`tallerDatos().version === 4`; `resumen().oficina === 1`). Si cambiás columnas, agregalas **al final** de `COLS` y avisá que hay que volver a pegar el `Codigo.gs` (el panel detecta versión vieja y muestra un cartel).
 
 ## Reglas del negocio (las definió el dueño)
 
@@ -46,11 +47,12 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 
 ```bash
 node dev/test-backend.js                      # prueba del backend (taller, compras, tandas, etc.)
+node dev/test-oficina.js                      # pantalla Hoy: etapas, lotes, avisos y resumen diario (con reloj simulado)
 node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # levanta el backend emulado en :8787 con una tienda de ejemplo
 ```
 
 `dev/pw-lib.js` abre páginas del repo con Playwright y redirige las llamadas a Apps Script al emulador
-(`open(browser, url, viewport)`). Contraseña del panel en el emulador: `test`.
+(`open(browser, url, viewport)`). `dev/seed-oficina.js` siembra pedidos en todas las etapas de Hoy. Contraseña del panel en el emulador: `test`.
 El dueño puede exportar sus datos del taller (sin datos de clientes) con el botón **"Descargar datos del taller"** del panel; con ese JSON se puede sembrar el emulador para probar con datos reales.
 
 ## Estado actual
@@ -59,11 +61,17 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 - Medición configurada: píxel de Meta + verificación de dominio (metaetiqueta en `index.html`) + Google Analytics 4.
 - Panel y web: el dueño está conforme con cómo están.
 
-## Próximo paso acordado: "oficina" de operaciones
+## Oficina de operaciones (hecho en v4, falta que el dueño pegue el Codigo.gs)
 
-1. **Pantalla "Hoy" en el panel** con tablero por etapa: *Confirmar pago* (transferencias) → *Preparar* → *Etiquetar* (export Andreani) → *Despachar* (tracking) → *En camino*. Acciones en lote (marcar varias transferencias como pagadas, cargar varios tracking seguidos), **hoja de preparación** imprimible (qué lleva cada paquete + totales), avisos de atrasos (pagado hace X días sin despachar, transferencia por vencer), mensajes de WhatsApp prearmados por pedido.
-2. **Resumen diario por mail** a las **20 h** (horario configurable desde el panel): es una foto de todo lo pendiente en ese momento + lo nuevo desde el resumen anterior (cada venta ya genera un mail al dueño en el momento).
-3. Después: confirmar transferencias automáticamente consultando Mercado Pago; que el cliente suba el comprobante en la web; etiquetas de Andreani por API (requiere credenciales de Andreani); atención por WhatsApp con IA (requiere WhatsApp Business API).
+- **Etapas** (las calcula `etapaDe`/`alertaDe` en `Codigo.gs`; panel y mail usan lo mismo): *Confirmar pago* (reserva, o transferencia vencida hace < 3 días) → *Preparar* (pagado sin `preparado`) → *Etiquetar* (pagado y preparado) → *Despachar* (exportado) → *En camino* (despachado hace < 7 días).
+- Columnas nuevas al final de Pedidos: `pagado_el`, `preparado`, `despachado_el`. Config nueva: `resumen_hora` (20; vacío = no manda), `alerta_despacho_dias` (2).
+- Avisos: reserva que vence en ≤ 12 h (amarillo) o ya vencida (rojo); pagado hace ≥ `alerta_despacho_dias` sin salir (rojo); exportado hace > 1 día sin seguimiento (amarillo).
+- Acciones: `pagadoLote`, `preparado` (con `valor:false` vuelve atrás), `despacharLote`, `exportar` con `ids` (sin ids exporta todos los pagados, como Envíos), `resumenAhora`. Los lotes devuelven `{hechos, errores}`.
+- Resumen diario: lo manda `tareaHoraria` (una vez por día, la primera corrida desde `resumen_hora`, o sea entre las 20 y las 21). "Nuevo" = desde el último resumen automático (propiedad `resumen_ultimo`).
+
+## Siguientes pasos posibles
+
+- Confirmar transferencias automáticamente consultando Mercado Pago; que el cliente suba el comprobante en la web; etiquetas de Andreani por API (requiere credenciales de Andreani); atención por WhatsApp con IA (requiere WhatsApp Business API).
 
 ## Otros pendientes
 
