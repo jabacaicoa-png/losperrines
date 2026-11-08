@@ -9,6 +9,7 @@
  * Propiedades del script (Configuración del proyecto → Propiedades del script):
  *   ADMIN_PASSWORD   contraseña del panel
  *   MP_ACCESS_TOKEN  Access Token de producción de Mercado Pago
+ *   META_CAPI_TOKEN  Token de la API de Conversiones de Meta (opcional: avisa las compras a Meta)
  */
 
 var TZ = 'America/Argentina/Buenos_Aires';
@@ -76,7 +77,9 @@ var CONFIG_DEF = [
   ['resumen_hora','20','Hora del resumen diario por mail (0 a 23). Vacío = no mandarlo.'],
   ['alerta_despacho_dias','2','Días desde el pago para avisar que un pedido se está atrasando.'],
   ['consulta_entrega_dias','5','Días después del despacho para preguntarle al cliente si le llegó (vacío = no preguntar).'],
-  ['instagram','losperrines_','Tu usuario de Instagram, sin @ (se lo mostramos al cliente cuando recibe).']
+  ['instagram','losperrines_','Tu usuario de Instagram, sin @ (se lo mostramos al cliente cuando recibe).'],
+  ['meta_pixel_id','1067987206265090','ID del píxel de Meta (el mismo de la web), para avisar las compras confirmadas.'],
+  ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -156,6 +159,7 @@ function rutear(r) {
     case 'preparado': return conLock(function () { return enLote(r.ids, function (id) { marcarPreparado(String(id), r.valor !== false); }); });
     case 'entregado': return conLock(function () { return enLote(r.ids, function (id) { marcarEntregado(String(id), r.valor !== false); }); });
     case 'problemaResuelto': return conLock(function () { return problemaResuelto(String(r.id)); });
+    case 'probarMeta': return probarMeta();
     case 'resumenAhora': return conLock(function () { return resumenDiario(false); });
     case 'nota': return guardarNota(r.id, r.nota);
     case 'costos': return {costos: leerCostos()};
@@ -479,6 +483,7 @@ function procesarPago(pago) {
       '<p>El pedido <b>' + p.id + '</b> se pagó con tarjeta después de que venció la reserva y ya no hay stock para cubrirlo. Contactá al cliente para coordinar la entrega o la devolución.</p>', c), c);
     p.estado = 'pagado'; p.total = num(pago.transaction_amount) || p.total;
     mailPagoTarjeta(p, c);
+    compraMeta(p, c);
     avisoDueño('Pago con tarjeta aprobado ' + p.id, p, c);
     marcarCarritoPorPedido(p.id, 'compro');
   } else if (!p.mp_pago) {
@@ -526,6 +531,7 @@ function resumen() {
     avisos: filas(H.avisos).filter(function (a) { return a.avisado !== 'SI'; }).map(function (a) { return a.email; }),
     urlVista: (c.url_web || '').replace(/\/$/, '') + '/?vista=' + c.clave_vista,
     tokenMP: !!props.getProperty('MP_ACCESS_TOKEN'),
+    meta: {token: !!props.getProperty('META_CAPI_TOKEN'), ok: props.getProperty('meta_ok') || '', error: props.getProperty('meta_error') || ''},
     media: listaMedia(),
     oficina: 2,   // 1 = pantalla Hoy; 2 = además, confirmación de entrega
     ultimoResumen: props.getProperty('resumen_ultimo') ? fmtFecha(new Date(num(props.getProperty('resumen_ultimo')))) : ''
@@ -539,6 +545,7 @@ function marcarPagado(id) {
   p.estado = 'pagado';
   marcarCarritoPorPedido(p.id, 'compro');
   if (p.pago === 'transferencia') mailPagoTransferencia(p, c); else mailPagoTarjeta(p, c);
+  compraMeta(p, c);
   return {};
 }
 function despachar(id, tracking) {
@@ -879,6 +886,66 @@ function respuestaEntrega(q) {
     if (nuevo || detalle) avisoDueño('URGENTE: problema con la entrega · ' + x.id + (detalle ? ' · ' + detalle.slice(0, 60) : ''), x, c);
   });
   return paginaCliente('Gracias por avisarnos', '<p>Ya nos llegó tu aviso y te vamos a contactar lo antes posible para solucionarlo.</p>' + (wa ? boton(wa, 'Escribirnos por WhatsApp ahora') : ''));
+}
+
+/* ================= META: API DE CONVERSIONES ================= */
+/* Cuando un pedido queda pagado (transferencia que marcás vos o tarjeta aprobada por Mercado Pago),
+   la planilla le avisa a Meta "Compra", aunque el cliente ya no esté en la web.
+   El token va en Propiedades del script → META_CAPI_TOKEN (nunca en este archivo: el repositorio es público).
+   Lleva el mismo identificador que manda la web (compra-<pedido>), así Meta no cuenta dos veces la compra con tarjeta.
+   Los datos del cliente viajan cifrados (SHA-256), como pide Meta. */
+var META_API = 'https://graph.facebook.com/v21.0/';
+function sha256(v) {
+  v = String(v == null ? '' : v).trim().toLowerCase();
+  if (!v) return '';
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, v, Utilities.Charset.UTF_8)
+    .map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
+}
+function telMeta(p) { var t = (String(p.cel_cod || '') + String(p.cel_num || '')).replace(/\D/g, ''); if (t.length < 8) return ''; return /^54/.test(t) ? t : '549' + t; }
+function eventoMeta(c, evento) {
+  var token = PropertiesService.getScriptProperties().getProperty('META_CAPI_TOKEN'), pixel = String(c.meta_pixel_id || '').replace(/\D/g, '');
+  if (!token || !pixel) return null;
+  var body = {data: [evento]};
+  if (String(c.meta_test_code || '').trim()) body.test_event_code = String(c.meta_test_code).trim();
+  var res = UrlFetchApp.fetch(META_API + pixel + '/events?access_token=' + encodeURIComponent(token), {
+    method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true
+  });
+  var cod = res.getResponseCode(), txt = res.getContentText(), props = PropertiesService.getScriptProperties();
+  if (cod !== 200) {
+    var msg = txt; try { msg = JSON.parse(txt).error.message || txt; } catch (e) {}
+    props.setProperty('meta_error', fmtFecha(ahora()) + ': ' + String(msg).slice(0, 200));
+    throw new Error('Meta respondió: ' + String(msg).slice(0, 200));
+  }
+  props.deleteProperty('meta_error');
+  props.setProperty('meta_ok', fmtFecha(ahora()));
+  return JSON.parse(txt || '{}');
+}
+function compraMeta(p, c) {
+  try {
+    var items = itemsDe(p), ud = {country: [sha256('ar')], external_id: [sha256(p.email)]};
+    if (emailOk(p.email)) ud.em = [sha256(p.email)];
+    if (telMeta(p)) ud.ph = [sha256(telMeta(p))];
+    if (p.nombre) ud.fn = [sha256(String(p.nombre).split(' ')[0])];
+    if (p.apellido) ud.ln = [sha256(p.apellido)];
+    var cp = String(p.prov_loc_cp || '').match(/\b\d{4}\b/); if (cp) ud.zp = [sha256(cp[0])];
+    eventoMeta(c, {
+      event_name: 'Purchase', event_time: Math.floor(ahora().getTime() / 1000), event_id: 'compra-' + p.id,
+      action_source: 'website', event_source_url: String(c.url_web || '').replace(/\/$/, '') + '/', user_data: ud,
+      custom_data: {currency: 'ARS', value: num(p.total), order_id: String(p.id), content_type: 'product',
+        content_ids: items.map(function (it) { return it.producto === 'individual' ? 'individual' : 'doble'; }),
+        num_items: items.reduce(function (a, it) { return a + num(it.cantidad); }, 0), payment_type: p.pago === 'tarjeta' ? 'tarjeta' : 'transferencia'}
+    });
+  } catch (e) { console.error(e); }   // si Meta falla, el pago se registra igual
+}
+function probarMeta() {
+  var c = cfg();
+  if (!PropertiesService.getScriptProperties().getProperty('META_CAPI_TOKEN')) throw new Error('Falta cargar META_CAPI_TOKEN en Apps Script → Configuración del proyecto → Propiedades del script.');
+  if (!String(c.meta_pixel_id || '').trim()) throw new Error('Falta el ID del píxel en Configuración.');
+  if (!String(c.meta_test_code || '').trim()) throw new Error('Para probar sin ensuciar tus números, cargá primero el código de "Probar eventos" de Meta (ej. TEST12345) en Configuración.');
+  eventoMeta(c, {event_name: 'Purchase', event_time: Math.floor(ahora().getTime() / 1000), event_id: 'prueba-' + ahora().getTime(), action_source: 'website',
+    event_source_url: String(c.url_web || '').replace(/\/$/, '') + '/', user_data: {country: [sha256('ar')], external_id: [sha256('prueba')]},
+    custom_data: {currency: 'ARS', value: 1, order_id: 'PRUEBA'}});
+  return {codigo: String(c.meta_test_code).trim()};
 }
 
 /* ================= MAILS ================= */

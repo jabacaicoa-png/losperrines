@@ -174,7 +174,7 @@ function vEnvios(d){
   h+='</div><div class="block"><h3>2. Cargar seguimiento ('+exp.length+')</h3>'+(exp.length?exp.map(tarjetaPedido).join(""):'<p class="muted" style="margin:0">Nada pendiente.</p>')+'</div>';
   return h;
 }
-var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",instagram:"Instagram (sin @)",consulta_entrega_dias:"Días después del despacho para preguntar “¿Ya te llegó?” (vacío = no preguntar)",precio_tarjeta:"Precio con tarjeta",precio_transferencia:"Precio por transferencia",cuotas_max:"Cuotas (máximo)",producto2:"Nombre del producto (el que ve el cliente)",precio2_tarjeta:"Precio con tarjeta",precio2_transferencia:"Precio por transferencia",activo2:"Mostrarlo en la web (SI / NO)",valor_envio:"Valor del envío que se muestra tachado (0 = no mostrar)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto (el que ve el cliente)",sub1:"Descripción corta",medidas1:"Medidas y detalles",sub2:"Descripción corta",medidas2:"Medidas y detalles",clave_vista:"Clave de vista previa"};
+var CFG_LBL={alias:"Alias",cbu:"CBU / CVU",titular:"Titular de la cuenta",banco:"Banco o billetera",whatsapp:"WhatsApp (ej. 5492664123456)",email_aviso:"Tu email para avisos",instagram:"Instagram (sin @)",meta_pixel_id:"ID del píxel de Meta",meta_test_code:"Código de “Probar eventos” (solo mientras probás; después dejalo vacío)",consulta_entrega_dias:"Días después del despacho para preguntar “¿Ya te llegó?” (vacío = no preguntar)",precio_tarjeta:"Precio con tarjeta",precio_transferencia:"Precio por transferencia",cuotas_max:"Cuotas (máximo)",producto2:"Nombre del producto (el que ve el cliente)",precio2_tarjeta:"Precio con tarjeta",precio2_transferencia:"Precio por transferencia",activo2:"Mostrarlo en la web (SI / NO)",valor_envio:"Valor del envío que se muestra tachado (0 = no mostrar)",stock_minimo:"Stock mínimo para avisar",reserva_transferencia_horas:"Reserva por transferencia (horas)",reserva_tarjeta_horas:"Reserva por tarjeta (horas)",plantilla_andreani_id:"ID de la plantilla de Andreani",peso_gr:"Peso (g)",alto_cm:"Alto (cm)",ancho_cm:"Ancho (cm)",profundidad_cm:"Profundidad (cm)",valor_declarado:"Valor declarado",url_web:"Dirección de la web",producto:"Nombre del producto (el que ve el cliente)",sub1:"Descripción corta",medidas1:"Medidas y detalles",sub2:"Descripción corta",medidas2:"Medidas y detalles",clave_vista:"Clave de vista previa"};
 var CFG_GRUPOS=[
   ["Producto 1 (doble)",["producto","sub1","medidas1","precio_tarjeta","precio_transferencia"]],
   ["Producto 2 (individual)",["producto2","sub2","medidas2","precio2_tarjeta","precio2_transferencia","activo2"]],
@@ -182,12 +182,15 @@ var CFG_GRUPOS=[
   ["Contacto",["whatsapp","email_aviso","instagram"]],
   ["Envíos",["consulta_entrega_dias","valor_envio","plantilla_andreani_id","peso_gr","alto_cm","ancho_cm","profundidad_cm","valor_declarado"]],
   ["Stock y reservas",["stock_minimo","reserva_transferencia_horas","reserva_tarjeta_horas"]],
-  ["Web",["url_web","clave_vista"]]
+  ["Web",["url_web","clave_vista"]],
+  ["Medición (Meta)",["meta_pixel_id","meta_test_code"]]
 ];
 function vConfig(d){
   var c=d.config;
   return '<div class="ph"><div><h2>Configuración</h2><p class="sub">Los precios también los podés probar y aplicar desde Precios y rentabilidad.</p></div></div>'
-    +'<div class="block" style="margin-top:0"><b>Mercado Pago:</b> '+(d.tokenMP?'<span class="pos">conectado</span>':'<span class="neg">falta el Access Token</span> (se carga en Apps Script → Propiedades del script).')+'</div>'
+    +'<div class="block" style="margin-top:0"><b>Mercado Pago:</b> '+(d.tokenMP?'<span class="pos">conectado</span>':'<span class="neg">falta el Access Token</span> (se carga en Apps Script → Propiedades del script).')
+    +(d.meta?'<div style="margin-top:8px"><b>Compras a Meta:</b> '+(d.meta.token?(d.meta.error?'<span class="neg">con error</span> · '+esc(d.meta.error):'<span class="pos">conectado</span>'+(d.meta.ok?' · último aviso: '+esc(d.meta.ok):'')):'<span class="neg">falta el token</span> (META_CAPI_TOKEN en Apps Script → Propiedades del script).')
+      +(d.meta.token?' <button class="btn ghost sm" data-a="probarMeta" style="margin-left:6px">Probar conexión</button>':'')+'</div>':'')+'</div>'
     +'<form id="cfg">'+CFG_GRUPOS.map(function(g){ return '<div class="block"><h3>'+esc(g[0])+'</h3>'+g[1].map(function(k){return '<div class="cfg-row"><label class="f" style="margin:0">'+esc(CFG_LBL[k]||k)+(/^medidas/.test(k)?'<textarea name="'+k+'" rows="5">'+esc(c[k]||"")+'</textarea><small style="font-weight:500">Un renglón por cada punto. Se muestran en “Medidas y detalles”.</small>':'<input name="'+k+'" value="'+esc(c[k]||"")+'">')+'</label></div>';}).join("")+'</div>'; }).join("")
     +'</form><button class="btn main big" data-a="guardarCfg" style="margin:14px 0 20px">Guardar cambios</button>';
 }
@@ -328,6 +331,7 @@ document.addEventListener("click",function(e){
   else if(a==="cupToggle"){ var c0=(RC.cupones||[]).filter(function(x){return x.codigo===t.dataset.cod;})[0]; if(!c0) return;
     var vv=c0.vence?c0.vence.split("/").reverse().join("-"):""; api("guardarCupon",{codigo:c0.codigo,porcentaje:c0.porcentaje,vence:vv,unico:c0.unico,activo:!c0.activo}).then(function(){ cargarRecuperar(); }).catch(function(e){ toast(e.message); }); }
   else if(a==="cupDel"){ if(confirm("¿Borrar el código "+t.dataset.cod+"?")) api("borrarCupon",{codigo:t.dataset.cod}).then(function(){ cargarRecuperar(); }).catch(function(e){ toast(e.message); }); }
+  else if(a==="probarMeta"){ t.disabled=true; api("probarMeta").then(function(r){ toast("Listo: fijate en Probar eventos de Meta (código "+r.codigo+"). Tiene que aparecer una Compra de $1.",7000); cargar(); }).catch(function(e){ toast(e.message,8000); t.disabled=false; }); }
   else if(a==="guardarCfg"){ var vals={}; new FormData($("#cfg")).forEach(function(v,k){vals[k]=v;}); accion("guardarConfig",{valores:vals},"Configuración guardada",t); }
   else if(a==="exportar"){
     accion("exportar",{},null,t).then(function(r){ if(!r) return;

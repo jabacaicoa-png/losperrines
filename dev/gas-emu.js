@@ -4,7 +4,7 @@ const fs = require('fs'), vm = require('vm'), crypto = require('crypto');
 function makeEnv(opts) {
   opts = opts || {};
   const sheets = new Map(); // name -> {name, rows: [][]}
-  const mails = [], props = {}, cache = {}, files = {}, triggers = [];
+  const mails = [], props = {}, cache = {}, files = {}, triggers = [], fetches = [];
   function sheetObj(sh) {
     function lastCol() { return sh.rows.reduce((m, r) => Math.max(m, r.length), 0); }
     function range(r, c, nr, nc) {
@@ -52,6 +52,7 @@ function makeEnv(opts) {
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {}, tryLock: () => true }) },
     Utilities: {
       formatDate: TZFMT, getUuid: () => crypto.randomUUID(), sleep() {},
+      computeDigest: (alg, v) => [...crypto.createHash('sha256').update(String(v), 'utf8').digest()].map(b => b > 127 ? b - 256 : b), DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
       base64Decode: s => [...Buffer.from(s, 'base64')], base64EncodeWebSafe: b => Buffer.from(b).toString('base64url'),
       computeHmacSha256Signature: (v, k) => [...crypto.createHmac('sha256', k).update(v).digest()],
       newBlob: (d, m, n) => ({ getName: () => n, setName() { return this; } })
@@ -59,7 +60,7 @@ function makeEnv(opts) {
     ContentService: { createTextOutput: t => ({ text: t, setMimeType() { return this; } }), MimeType: { JSON: 'json' } },
     HtmlService: { createHtmlOutput: h => ({ html: h, setTitle() { return this; }, addMetaTag() { return this; } }) },
     MailApp: { sendEmail: o => mails.push(o), getRemainingDailyQuota: () => (opts.quota == null ? 100 : opts.quota) },
-    UrlFetchApp: { fetch: () => ({ getResponseCode: () => 500, getContentText: () => '{}', getBlob: () => ({ setName() { return this; } }) }) },
+    UrlFetchApp: { fetch: (url, o) => { fetches.push({url, o}); return (opts.fetch && opts.fetch(url, o)) || { getResponseCode: () => 500, getContentText: () => '{}', getBlob: () => ({ setName() { return this; } }) }; } },
     ScriptApp: {
       getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/TEST/exec' }), getOAuthToken: () => 'x',
       getProjectTriggers: () => triggers, deleteTrigger() {}, newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create() {} }) }) })
@@ -74,7 +75,7 @@ function makeEnv(opts) {
   const code = fs.readFileSync(opts.file, 'utf8');
   vm.runInContext(code, ctx, { filename: opts.file });
   props.ADMIN_PASSWORD = opts.password || 'test';
-  return { ctx, sheets, mails, props, cache, ss,
+  return { ctx, sheets, mails, props, cache, ss, fetches,
     post(body) { const r = ctx.doPost({ parameter: {}, postData: { contents: JSON.stringify(body) } }); return JSON.parse(r.text); },
     dump(n) { const s = sheets.get(n); return s ? s.rows : null; } };
 }
