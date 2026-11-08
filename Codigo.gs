@@ -98,6 +98,7 @@ function instalar() {
   });
   var cfg = ss.getSheetByName(H.config), have = {};
   if (cfg.getLastRow() > 1) cfg.getRange(2, 1, cfg.getLastRow() - 1, 1).getValues().forEach(function (r) { have[r[0]] = 1; });
+  cfg.getRange('B:B').setNumberFormat('@');   // texto ANTES de cargar: así los números largos (ID del píxel, CBU) no se convierten a 1,06E+15
   CONFIG_DEF.forEach(function (d) {
     if (have[d[0]]) return;
     var v = d[0] === 'clave_vista' ? Utilities.getUuid().slice(0, 8) : d[1];
@@ -903,7 +904,8 @@ function sha256(v) {
 }
 function telMeta(p) { var t = (String(p.cel_cod || '') + String(p.cel_num || '')).replace(/\D/g, ''); if (t.length < 8) return ''; return /^54/.test(t) ? t : '549' + t; }
 function eventoMeta(c, evento) {
-  var token = PropertiesService.getScriptProperties().getProperty('META_CAPI_TOKEN'), pixel = String(c.meta_pixel_id || '').replace(/\D/g, '');
+  var token = PropertiesService.getScriptProperties().getProperty('META_CAPI_TOKEN'), pixel = String(c.meta_pixel_id || '').trim();
+  if (!/^\d{10,20}$/.test(pixel)) pixel = CONFIG_DEF.filter(function (d) { return d[0] === 'meta_pixel_id'; })[0][1];   // si la planilla lo deformó (1,06799E+15), usa el de la web
   if (!token || !pixel) return null;
   var body = {data: [evento]};
   if (String(c.meta_test_code || '').trim()) body.test_event_code = String(c.meta_test_code).trim();

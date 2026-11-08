@@ -38,3 +38,7 @@ const id4=ped(); A('pagado',{id:id4}); const r=A('resumen');
 assert.equal(r.pedidos.find(p=>p.id===id4).estado,'pagado'); assert(/Invalid OAuth/.test(r.meta.error));
 respuesta={code:200,body:'{}'}; const id5=ped(); A('pagado',{id:id5}); assert.equal(A('resumen').meta.error,'');
 console.log('META OK');
+// si la planilla deformó el ID del píxel (notación científica), se usa el de la web
+A('guardarConfig',{valores:{meta_pixel_id:'1,06799E+15'}}); const id6=ped(); A('pagado',{id:id6});
+assert(meta().at(-1).url.includes('/1067987206265090/events'));
+console.log('ID DEFORMADO OK');
