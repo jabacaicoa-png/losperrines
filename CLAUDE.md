@@ -59,7 +59,7 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 ## Estado actual
 
 - Tienda **cerrada** (en desarrollo). Hay **pedidos y stock de prueba**: antes de abrir hay que "dejar en cero" (borrar pedidos/ventas/carritos/avisos/cupones de prueba, conservar insumos, recetas, proveedores, compras y pagos, y ajustar el stock real de fundas).
-- Medición configurada: píxel de Meta + verificación de dominio (metaetiqueta en `index.html`) + Google Analytics 4.
+- Medición configurada: píxel de Meta + verificación de dominio (metaetiqueta en `index.html`) + Google Analytics 4 + API de Conversiones de Meta (token cargado por el dueño en Apps Script; probado con "Probar eventos"). El correo del negocio en Meta es un alias de Gmail con "+" (Meta no aceptaba el principal).
 - Panel y web: el dueño está conforme con cómo están.
 
 ## Oficina de operaciones (v4: Hoy y resumen; v5: confirmación de entrega)
