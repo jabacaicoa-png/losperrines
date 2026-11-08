@@ -10,6 +10,7 @@
  *   ADMIN_PASSWORD   contraseña del panel
  *   MP_ACCESS_TOKEN  Access Token de producción de Mercado Pago
  *   META_CAPI_TOKEN  Token de la API de Conversiones de Meta (opcional: avisa las compras a Meta)
+ *   META_ADS_TOKEN   Token con permiso ads_read (opcional: pantalla Publicidad del panel)
  */
 
 var TZ = 'America/Argentina/Buenos_Aires';
@@ -79,6 +80,7 @@ var CONFIG_DEF = [
   ['consulta_entrega_dias','5','Días después del despacho para preguntarle al cliente si le llegó (vacío = no preguntar).'],
   ['instagram','losperrines_','Tu usuario de Instagram, sin @ (se lo mostramos al cliente cuando recibe).'],
   ['meta_pixel_id','1067987206265090','ID del píxel de Meta (el mismo de la web), para avisar las compras confirmadas.'],
+  ['meta_ad_account','1181977813835023','Número de la cuenta publicitaria de Meta (sin "act_"), para la pantalla Publicidad.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
@@ -161,6 +163,7 @@ function rutear(r) {
     case 'entregado': return conLock(function () { return enLote(r.ids, function (id) { marcarEntregado(String(id), r.valor !== false); }); });
     case 'problemaResuelto': return conLock(function () { return problemaResuelto(String(r.id)); });
     case 'probarMeta': return probarMeta();
+    case 'publicidad': return publicidad(r);
     case 'resumenAhora': return conLock(function () { return resumenDiario(false); });
     case 'nota': return guardarNota(r.id, r.nota);
     case 'costos': return {costos: leerCostos()};
@@ -784,6 +787,7 @@ function resumenDiario(automatico) {
     seccion('Etiquetar', g.etiquetar, 'Ya preparados: falta exportarlos a Andreani.') +
     seccion('Despachar', g.despachar, 'Exportados: falta cargar el número de seguimiento.');
   if (g.camino.length) cuerpo += '<p style="margin:18px 0 0;color:#5E6656">En camino: ' + g.camino.length + '.</p>';
+  cuerpo += lineaPublicidadResumen(c);
   cuerpo += '<p style="margin:18px 0 0"><b>Stock:</b> ' + productos(c).filter(function (pr) { return pr.activo || s[pr.id].ingresado > 0; }).map(function (pr) {
     var st = s[pr.id], bajo = st.ingresado > 0 && st.disponible <= num(c.stock_minimo);
     return esc(pr.nombre) + ' <b' + (bajo ? ' style="color:#B4432F"' : '') + '>' + Math.max(0, st.disponible) + '</b> disponibles' + (bajo ? ' (stock bajo)' : '');
@@ -948,6 +952,89 @@ function probarMeta() {
     event_source_url: String(c.url_web || '').replace(/\/$/, '') + '/', user_data: {country: [sha256('ar')], external_id: [sha256('prueba')]},
     custom_data: {currency: 'ARS', value: 1, order_id: 'PRUEBA'}});
   return {codigo: String(c.meta_test_code).trim()};
+}
+
+/* ================= META: RESULTADOS DE LOS ANUNCIOS ================= */
+/* Lee de Meta cuánto se invirtió y qué trajo cada campaña, y lo cruza con las ventas reales de la planilla.
+   Token con permiso de lectura de anuncios (ads_read) en Propiedades del script → META_ADS_TOKEN.
+   Cuenta publicitaria en Configuración (meta_ad_account). Se guarda 10 minutos para no consultar a Meta en cada clic. */
+function accionMeta(lista, tipos) {
+  lista = lista || [];
+  for (var i = 0; i < tipos.length; i++) { var x = lista.filter(function (a) { return a.action_type === tipos[i]; })[0]; if (x) return num(x.value); }
+  return 0;
+}
+var TIPOS_META = {
+  compras: ['omni_purchase', 'purchase', 'offsite_conversion.fb_pixel_purchase'],
+  carrito: ['omni_add_to_cart', 'add_to_cart', 'offsite_conversion.fb_pixel_add_to_cart'],
+  pago: ['omni_initiated_checkout', 'initiate_checkout', 'offsite_conversion.fb_pixel_initiate_checkout'],
+  visitas: ['landing_page_view']
+};
+function filaMeta(x) {
+  var o = {inversion: num(x.spend), impresiones: num(x.impressions), alcance: num(x.reach), frecuencia: Math.round(num(x.frequency) * 100) / 100,
+    clics: num(x.inline_link_clicks), ctr: Math.round(num(x.inline_link_click_ctr) * 100) / 100,
+    facturado: accionMeta(x.action_values, TIPOS_META.compras)};
+  Object.keys(TIPOS_META).forEach(function (k) { o[k] = accionMeta(x.actions, TIPOS_META[k]); });
+  if (x.campaign_id) { o.id = String(x.campaign_id); o.nombre = String(x.campaign_name || ''); }
+  return o;
+}
+function periodoMeta(dias) {
+  var hasta = ahora(), desde = new Date(hasta.getTime() - (Math.max(1, dias) - 1) * DIA);
+  return {since: Utilities.formatDate(desde, TZ, 'yyyy-MM-dd'), until: Utilities.formatDate(hasta, TZ, 'yyyy-MM-dd')};
+}
+function leerMetaAds(c, dias, forzar) {
+  var props = PropertiesService.getScriptProperties(), token = props.getProperty('META_ADS_TOKEN') || props.getProperty('META_CAPI_TOKEN');
+  var cuenta = String(c.meta_ad_account || '').replace(/\D/g, '');
+  if (!token) return {falta: 'token'};
+  if (!cuenta) return {falta: 'cuenta'};
+  var per = periodoMeta(dias), clave = 'ads_' + cuenta + '_' + per.since + '_' + per.until, cache = CacheService.getScriptCache(), guardado = cache.get(clave);
+  if (guardado && !forzar) return JSON.parse(guardado);
+  var campos = 'spend,impressions,reach,frequency,inline_link_clicks,inline_link_click_ctr,actions,action_values';
+  function pedir(nivel) {
+    var url = META_API + 'act_' + cuenta + '/insights?level=' + nivel + '&limit=100&fields=' + (nivel === 'campaign' ? 'campaign_id,campaign_name,' : '') + campos +
+      '&time_range=' + encodeURIComponent(JSON.stringify(per)) + '&access_token=' + encodeURIComponent(token);
+    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}), txt = res.getContentText(), j = {};
+    try { j = JSON.parse(txt || '{}'); } catch (e) {}
+    if (res.getResponseCode() !== 200) {
+      var m = (j.error && j.error.message) || txt;
+      if (/permission|ads_read|ads_management|\(#200\)|\(#10\)/i.test(m)) m = 'El token no tiene permiso para leer los anuncios. Hace falta un token con permiso ads_read (ver los pasos en esta pantalla).';
+      throw new Error(String(m).slice(0, 220));
+    }
+    return j.data || [];
+  }
+  var out;
+  try {
+    var tot = pedir('account');
+    out = {periodo: per, total: tot.length ? filaMeta(tot[0]) : filaMeta({}), campanas: pedir('campaign').map(filaMeta).sort(function (a, b) { return b.inversion - a.inversion; })};
+  } catch (e) { return {error: String(e.message || e), periodo: per}; }
+  cache.put(clave, JSON.stringify(out), 600);
+  return out;
+}
+/* Ventas reales de la planilla en el mismo período (por fecha de pago). */
+function ventasPeriodo(c, dias) {
+  var per = periodoMeta(dias), com = num(c.comision_mp) / 100, o = {pedidos: 0, facturado: 0, neto: 0, unidades: {doble: 0, individual: 0}, tarjeta: 0, transferencia: 0};
+  filas(H.pedidos).forEach(function (p) {
+    if (VENDIDO.indexOf(p.estado) < 0) return;
+    var dia = Utilities.formatDate(new Date(tsDe(p.pagado_el) || tsDe(p.fecha)), TZ, 'yyyy-MM-dd');
+    if (dia < per.since || dia > per.until) return;
+    var t = num(p.total); o.pedidos++; o.facturado += t; o.neto += p.pago === 'tarjeta' ? t * (1 - com) : t; o[p.pago === 'tarjeta' ? 'tarjeta' : 'transferencia']++;
+    itemsDe(p).forEach(function (it) { o.unidades[it.producto === 'individual' ? 'individual' : 'doble'] += num(it.cantidad); });
+  });
+  o.neto = Math.round(o.neto);
+  return o;
+}
+function publicidad(r) {
+  var c = cfg(), dias = [1, 7, 30].indexOf(num(r.dias)) >= 0 ? num(r.dias) : 7;
+  return {dias: dias, cuenta: String(c.meta_ad_account || ''), meta: leerMetaAds(c, dias, !!r.forzar), ventas: ventasPeriodo(c, dias),
+    tokenLectura: !!PropertiesService.getScriptProperties().getProperty('META_ADS_TOKEN')};
+}
+function lineaPublicidadResumen(c) {   // para el mail de las 20 h
+  try {
+    var m = leerMetaAds(c, 1); if (!m || m.falta || m.error || !m.total) return '';
+    var v = ventasPeriodo(c, 1), inv = m.total.inversion;
+    if (!inv && !v.pedidos) return '';
+    return '<p style="margin:18px 0 0"><b>Publicidad hoy:</b> ' + plata(inv) + ' invertidos · ' + v.pedidos + ' venta' + (v.pedidos === 1 ? '' : 's') + ' en la planilla' +
+      (inv && v.pedidos ? ' · costo por venta ' + plata(inv / v.pedidos) : '') + (m.total.compras ? ' · Meta se atribuye ' + m.total.compras : '') + '.</p>';
+  } catch (e) { return ''; }
 }
 
 /* ================= MAILS ================= */

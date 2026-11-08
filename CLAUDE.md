@@ -10,9 +10,10 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | Archivo | Qué es |
 |---|---|
 | `index.html` | La tienda pública (GitHub Pages, dominio `www.losperrines.com.ar`, ver `CNAME`). |
-| `admin.html` | Cascarón del panel: estilos + carga `admin-core.js`, `admin-hoy.js` y `admin-taller.js` con `?v=Date.now()` (para que el navegador nunca use una copia vieja). |
+| `admin.html` | Cascarón del panel: estilos + carga `admin-core.js`, `admin-hoy.js`, `admin-taller.js` y `admin-publicidad.js` con `?v=Date.now()` (para que el navegador nunca use una copia vieja). |
 | `admin-core.js` | Núcleo del panel: sesión, navegación por áreas, vistas de Ventas y Tienda. Expone `window.LP`. |
 | `admin-hoy.js` | Pantalla **Hoy** (la "oficina"): pedidos por etapa, acciones en lote, hoja de preparación, WhatsApp prearmado y hora del resumen diario. |
+| `admin-publicidad.js` | Pantalla **Publicidad** (grupo Números): inversión en Meta vs ventas reales de la planilla y ganancia después de anuncios (usa `TALLER.costoFunda`/`gananciaFunda`), embudo y campañas con veredicto. |
 | `admin-taller.js` | Taller: insumos, productos (medidas + receta + bolsa), tandas, proveedores y pagos, planificar, rentabilidad, importación. Define `window.PANEL_VERSION` (se muestra abajo del menú). |
 | `corte.html` | Plano de corte e impresión de la ficha para la costurera. Con `#panel` toma las medidas que le pasa el panel por `sessionStorage`. |
 | `Codigo.gs` | Backend en Google Apps Script sobre una planilla de Google. **No se publica solo**: el dueño lo pega en Apps Script, ejecuta `instalar()` y hace *Implementar → Administrar implementaciones → Editar → Nueva versión*. |
@@ -70,6 +71,14 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 - Avisos: reserva que vence en ≤ 12 h (amarillo) o ya vencida (rojo); pagado hace ≥ `alerta_despacho_dias` sin salir (rojo); exportado hace > 1 día sin seguimiento (amarillo); problema de entrega (rojo); despachado hace ≥ `consulta_entrega_dias` + 2 días sin confirmar (amarillo).
 - Acciones: `pagadoLote`, `preparado` (con `valor:false` vuelve atrás), `despacharLote`, `exportar` con `ids` (sin ids exporta todos los pagados, como Envíos), `entregado` (lote; `valor:false` vuelve a En camino), `problemaResuelto`, `resumenAhora`. Los lotes devuelven `{hechos, errores}`.
 - Resumen diario: lo manda `tareaHoraria` (una vez por día, la primera corrida desde `resumen_hora`, o sea entre las 20 y las 21). "Nuevo" = desde el último resumen automático (propiedad `resumen_ultimo`).
+
+## Publicidad (pantalla del panel)
+
+- Acción `publicidad` `{dias: 1|7|30, forzar}` → `leerMetaAds` (Insights de Meta a nivel cuenta y campaña, guardado 10 min en caché) + `ventasPeriodo` (ventas reales por fecha de pago). Token de lectura en `META_ADS_TOKEN` (usuario del sistema con `ads_read`); si no está, prueba con `META_CAPI_TOKEN` y explica que falta el permiso. Cuenta en config `meta_ad_account`.
+- Compras de Meta: toma la primera de `omni_purchase` / `purchase` / `fb_pixel_purchase` (no las suma, son la misma compra).
+- Veredicto por campaña según costo por venta vs ganancia por funda (`rent(p).gMix`): ≥ ganancia "Pierde plata", ≥ 60% "Deja poco", si no "Anda bien"; avisos por frecuencia ≥ 3,5 y CTR < 1%.
+- El resumen de las 20 h suma una línea "Publicidad hoy" cuando hay gasto o ventas.
+- Estado: el dueño todavía no tiene campañas (las arranca al abrir la tienda) ni el token de lectura.
 
 ## Siguientes pasos posibles
 

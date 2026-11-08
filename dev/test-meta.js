@@ -42,3 +42,29 @@ console.log('META OK');
 A('guardarConfig',{valores:{meta_pixel_id:'1,06799E+15'}}); const id6=ped(); A('pagado',{id:id6});
 assert(meta().at(-1).url.includes('/1067987206265090/events'));
 console.log('ID DEFORMADO OK');
+// ---------- pantalla Publicidad: lectura de resultados ----------
+let insights=null; // null = Meta rechaza por permisos
+const env2=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs'),fetch:(url)=>{
+  if(!/graph\.facebook\.com/.test(url)) return null;
+  if(/\/insights/.test(url)){ if(!insights) return {getResponseCode:()=>400,getContentText:()=>'{"error":{"message":"(#200) Missing ads_read permission"}}'};
+    const camp=/level=campaign/.test(url); return {getResponseCode:()=>200,getContentText:()=>JSON.stringify({data:camp?insights.campanas:[insights.total]})}; }
+  return {getResponseCode:()=>200,getContentText:()=>'{}'}; }});
+env2.ctx.instalar(); require('./seed-store')(env2);
+const A2=(a,d)=>{const r=env2.post(Object.assign({accion:a,token:env2.token},d||{})); if(!r.ok) throw new Error(a+': '+r.error); return r;};
+let pub=A2('publicidad',{dias:7}); assert.equal(pub.meta.falta,'token');
+env2.props.META_CAPI_TOKEN='solo-envio'; pub=A2('publicidad',{dias:7,forzar:1}); assert(/permiso ads_read/.test(pub.meta.error),'token sin permiso: explica qué falta');
+env2.props.META_ADS_TOKEN='lectura'; insights={total:{spend:'0'},campanas:[]}; pub=A2('publicidad',{dias:7,forzar:1});
+assert.equal(pub.meta.total.inversion,0); assert.equal(pub.meta.campanas.length,0); assert.equal(pub.ventas.pedidos,0);
+insights={total:{spend:'60000.5',impressions:'12000',inline_link_clicks:'300',inline_link_click_ctr:'2.5',frequency:'1.8',
+  actions:[{action_type:'landing_page_view',value:'220'},{action_type:'add_to_cart',value:'30'},{action_type:'offsite_conversion.fb_pixel_add_to_cart',value:'30'},{action_type:'initiate_checkout',value:'12'},{action_type:'omni_purchase',value:'4'},{action_type:'purchase',value:'4'}],
+  action_values:[{action_type:'omni_purchase',value:'342000'}]},
+  campanas:[{campaign_id:'1',campaign_name:'Chica',spend:'10000',frequency:'4.2',inline_link_click_ctr:'0.6',impressions:'5000'},{campaign_id:'2',campaign_name:'Grande',spend:'50000.5',actions:[{action_type:'purchase',value:'4'}]}]};
+assert.equal(A2('publicidad',{dias:7}).meta.total.inversion,0,'usa lo guardado 10 minutos');
+pub=A2('publicidad',{dias:7,forzar:1}); const tt=pub.meta.total;
+assert.equal(tt.inversion,60000.5); assert.equal(tt.compras,4,'no suma dos veces omni + purchase'); assert.equal(tt.carrito,30); assert.equal(tt.visitas,220); assert.equal(tt.facturado,342000);
+assert.deepEqual(pub.meta.campanas.map(c=>c.nombre),['Grande','Chica'],'ordenadas por inversión');
+assert.match(env2.fetches.filter(f=>/insights/.test(f.url)).at(-1).url,/act_1181977813835023\/insights.*time_range=/);
+// ventas reales del período (por fecha de pago)
+const pv=env2.post({accion:'pedido',nombre:'Ana',apellido:'Test',dni:'30111222',email:'a@ej.com',cel_cod:'266',cel_num:'4123456',entrega:'domicilio',calle:'X',numero:'1',prov_loc_cp:'San Luis 5700',pago:'transferencia',items:[{producto:'doble',cantidad:2}]}).id;
+A2('pagado',{id:pv}); pub=A2('publicidad',{dias:1}); assert.equal(pub.ventas.pedidos,1); assert.equal(pub.ventas.unidades.doble,2); assert.equal(pub.ventas.neto,85500*2);
+console.log('PUBLICIDAD OK');

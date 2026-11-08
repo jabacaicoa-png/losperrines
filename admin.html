@@ -190,6 +190,13 @@ dialog::backdrop{background:rgba(20,24,14,.5)}
 .todo{margin:0;padding:0;list-style:none;display:grid;gap:8px}
 .todo li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--field);border-left:4px solid var(--warn)}
 .todo li.bad{border-left-color:var(--bad)} .todo li.info{border-left-color:var(--info)} .todo li.ok{border-left-color:var(--ok)}
+/* pantalla Publicidad */
+.embudo{display:grid;gap:8px}
+.embudo .paso{display:grid;grid-template-columns:minmax(120px,190px) 1fr auto;gap:10px;align-items:center;font-size:.92rem}
+.embudo .barra{height:14px;border-radius:7px;background:var(--field);overflow:hidden;border:1px solid var(--line)}
+.embudo .barra i{display:block;height:100%;background:var(--olive)}
+.embudo .paso.peor .barra i{background:var(--warn)}
+@media(max-width:520px){.embudo .paso{grid-template-columns:1fr auto}.embudo .barra{grid-column:1/-1;order:3}}
 /* pantalla Hoy */
 .hoysteps{display:grid;gap:8px;margin:0 0 14px;grid-template-columns:repeat(6,minmax(0,1fr))}
 @media(max-width:640px){.hoysteps{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -218,7 +225,7 @@ var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDb
 <script>
 /* Carga el panel siempre en su última versión (sin copias viejas guardadas en el navegador) */
 (function(){
-  var v=Date.now(), archivos=["admin-core.js","admin-hoy.js","admin-taller.js"], i=0;
+  var v=Date.now(), archivos=["admin-core.js","admin-hoy.js","admin-taller.js","admin-publicidad.js"], i=0;
   function siguiente(){
     if(i>=archivos.length){ LP.arrancar(); return; }
     var s=document.createElement("script"); s.src=archivos[i++]+"?v="+v; s.onload=siguiente;
