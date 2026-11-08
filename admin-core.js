@@ -194,7 +194,7 @@ function vConfig(d){
       +(d.meta.token?' <button class="btn ghost sm" data-a="probarMeta" style="margin-left:6px">Probar conexión</button>':'')+'</div>':'')+'</div>'
     +'<form id="cfg">'+CFG_GRUPOS.map(function(g){ return '<div class="block"><h3>'+esc(g[0])+'</h3>'+g[1].map(function(k){return '<div class="cfg-row"><label class="f" style="margin:0">'+esc(CFG_LBL[k]||k)+(/^medidas/.test(k)?'<textarea name="'+k+'" rows="5">'+esc(c[k]||"")+'</textarea><small style="font-weight:500">Un renglón por cada punto. Se muestran en “Medidas y detalles”.</small>':'<input name="'+k+'" value="'+esc(c[k]||"")+'">')+'</label></div>';}).join("")+'</div>'; }).join("")
     +'</form><button class="btn main big" data-a="guardarCfg" style="margin:14px 0 20px">Guardar cambios</button>'
-    +'<div class="block" style="border-color:var(--bad)"><h3>Empezar de cero</h3><p class="muted small" style="margin:-4px 0 10px">Para antes de abrir: borra los pedidos y carritos de prueba. <b>No toca</b> el taller (insumos, recetas, tandas, compras, pagos, proveedores), la configuración ni las fotos. Antes de borrar se guarda una copia completa de la planilla en tu Drive.</p>'
+    +'<div class="block" style="border-color:var(--bad)"><h3>Empezar de cero</h3><p class="muted small" style="margin:-4px 0 10px">Para antes de abrir: borra los pedidos y carritos de prueba. <b>No toca</b> el taller (insumos, recetas, tandas, compras, pagos, proveedores), la configuración ni las fotos. Antes de borrar se guarda la planilla completa como Excel en tu Drive (carpeta “Los Perrines - Respaldos”).</p>'
     +'<button class="btn danger" data-a="ceroAbrir">Empezar de cero…</button></div>';
 }
 function dlgCero(p){

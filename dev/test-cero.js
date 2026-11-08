@@ -1,6 +1,7 @@
 // Prueba de "Empezar de cero": borra solo lo de prueba y deja el stock en el conteo real.
 const {makeEnv}=require('./gas-emu'); const assert=require('assert');
-const env=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs')}); env.ctx.instalar(); require('./seed-store')(env);
+let respaldoOk=true;
+const env=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs'),fetch:u=>/export\?format=xlsx/.test(u)?{getResponseCode:()=>respaldoOk?200:500,getBlob:()=>({setName(n){this.n=n;return this;}})}:null}); env.ctx.instalar(); require('./seed-store')(env);
 const P=b=>{const r=env.post(b); if(!r.ok) throw new Error(b.accion+': '+r.error); return r;};
 const A=(a,d)=>P(Object.assign({accion:a,token:env.token},d||{}));
 // datos reales del taller
@@ -17,11 +18,13 @@ assert.equal(stockAntes.doble.disponible,9-4,'2 vendidas + 2 reservadas');
 // vista previa
 const pv=A('ceroPreview'); assert.equal(pv.pedidos,2); assert(pv.carritos>=1); assert.deepEqual(pv.avisos,['interesado@ej.com']); assert.deepEqual(pv.cupones,['PRUEBA10']);
 assert.equal(pv.stockSinPruebas.doble,9); assert.equal(pv.stockSinPruebas.individual,3);
+// si el respaldo falla, no borra nada
+respaldoOk=false; assert(/no borré nada/.test(env.post({accion:'dejarEnCero',token:env.token,confirmar:'BORRAR'}).error)); assert.equal(A('ceroPreview').pedidos,2); respaldoOk=true;
 // sin confirmar no borra
 assert(/BORRAR/.test(env.post({accion:'dejarEnCero',token:env.token,confirmar:'borrar'}).error)); assert.equal(A('ceroPreview').pedidos,2);
 // borrar, conservando avisos y cupones, con conteo real
 const r=A('dejarEnCero',{confirmar:'BORRAR',stock:{doble:'8',individual:''}});
-assert.equal(env.copias.length,1,'hace el respaldo antes'); assert(/respaldo antes de empezar de cero/.test(env.copias[0].nombre)); assert(r.respaldo);
+assert.equal(env.copias.length,0,'no copia la planilla (duplicaría el Apps Script)'); assert(r.respaldo);
 assert.equal(r.pedidos,2); assert.equal(r.avisos,0); assert.equal(r.cupones,0);
 const d=A('resumen'); assert.equal(d.pedidos.length,0); assert.equal(d.ventasMes.unidades,0);
 assert.equal(d.stock.doble.disponible,8,'queda el conteo real'); assert.equal(d.stock.individual.disponible,3,'sin conteo, no se toca');

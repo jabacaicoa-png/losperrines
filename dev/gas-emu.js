@@ -67,7 +67,7 @@ function makeEnv(opts) {
       getProjectTriggers: () => triggers, deleteTrigger() {}, newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create() {} }) }) })
     },
     DriveApp: {
-      getFoldersByName: () => ({ hasNext: () => false }), createFolder: () => ({ createFile: b => { const id = 'f' + Object.keys(files).length; files[id] = b; return { getId: () => id, setSharing() {}, getUrl: () => 'u' }; } }),
+      getFoldersByName: () => ({ hasNext: () => false }), createFolder: () => ({ createFile: b => { const id = 'f' + Object.keys(files).length; files[id] = b; return { getId: () => id, setSharing() {}, getUrl: () => 'https://drive.google.com/file/d/' + id }; } }),
       getFileById: id => ({ setTrashed() {}, makeCopy(nombre) { copias.push({id, nombre}); return { getId: () => 'c', setTrashed() {}, getUrl: () => 'https://docs.google.com/spreadsheets/d/copia' }; } }), Access: {}, Permission: {}
     },
     Logger: { log() {} }

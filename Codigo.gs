@@ -1044,7 +1044,8 @@ function lineaPublicidadResumen(c) {   // para el mail de las 20 h
 /* ================= EMPEZAR DE CERO (antes de abrir) ================= */
 /* Borra lo de prueba: pedidos, carritos y bajas (y, si lo elegís, los avisos de stock y los códigos de descuento).
    NO toca el taller (insumos, recetas, tandas, compras, pagos, proveedores), ni la configuración, ni las fotos,
-   ni los movimientos de stock de fundas. Antes de borrar hace una copia completa de la planilla en tu Drive.
+   ni los movimientos de stock de fundas. Antes de borrar guarda la planilla completa como Excel en la carpeta
+   "Los Perrines - Respaldos" de tu Drive (un Excel y no una copia de la planilla: así no se duplica el Apps Script).
    Si cargás el conteo real de fundas, deja el stock en ese número con un ajuste. */
 function vaciarHoja(n) {
   var sh = hoja(n); if (!sh) return 0;
@@ -1066,7 +1067,10 @@ function ceroPreview() {
 function dejarEnCero(r) {
   if (r.confirmar !== 'BORRAR') throw new Error('Para confirmar escribí BORRAR en mayúsculas.');
   var ss = SpreadsheetApp.getActive(), nombre = 'Los Perrines - respaldo antes de empezar de cero ' + Utilities.formatDate(ahora(), TZ, 'yyyy-MM-dd HHmm');
-  var copia = DriveApp.getFileById(ss.getId()).makeCopy(nombre);   // si esto falla, no se borra nada
+  var res = UrlFetchApp.fetch('https://docs.google.com/spreadsheets/d/' + ss.getId() + '/export?format=xlsx', {headers: {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()}, muteHttpExceptions: true});
+  if (res.getResponseCode() !== 200) throw new Error('No pude guardar el respaldo, así que no borré nada. Probá de nuevo en un rato.');
+  var it = DriveApp.getFoldersByName('Los Perrines - Respaldos'), carpeta = it.hasNext() ? it.next() : DriveApp.createFolder('Los Perrines - Respaldos');
+  var copia = carpeta.createFile(res.getBlob().setName(nombre + '.xlsx'));   // si esto falla, no se borra nada
   var hecho = {respaldo: copia.getUrl ? copia.getUrl() : '', pedidos: vaciarHoja(H.pedidos), carritos: vaciarHoja(H.carritos), bajas: vaciarHoja(H.bajas), avisos: 0, cupones: 0, ajustes: []};
   _bajas = null;
   if (r.avisos) hecho.avisos = vaciarHoja(H.avisos);
