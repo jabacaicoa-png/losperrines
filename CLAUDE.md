@@ -62,7 +62,8 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 
 ## Estado actual
 
-- Tienda **cerrada** (en desarrollo). Hay **pedidos y stock de prueba**: antes de abrir, el dueño usa **Configuración → Empezar de cero** (acciones `ceroPreview` / `dejarEnCero` con `confirmar:'BORRAR'`). Guarda la planilla completa como .xlsx en la carpeta de Drive "Los Perrines - Respaldos" (no `makeCopy`, que duplica el Apps Script vinculado) y recién después borra Pedidos, Carritos y Bajas (y Avisos/Cupones solo si los tilda). No toca el taller, la configuración, las fotos ni los Movimientos. Con el conteo real de fundas agrega un ajuste para que el stock quede en ese número. Prueba: `node dev/test-cero.js`.
+- **Listo para lanzar** (8/11/2026): el dueño ya hizo "Empezar de cero" (stock de fundas en 0), revisó la configuración (código de prueba de Meta vacío, mail, alias, WhatsApp, Andreani) y conectó Google Analytics al Tablero. La tienda abre cuando reciba la primera tanda de fundas (la semana siguiente); ahí arranca la primera campaña de Meta.
+- Herramienta para borrar datos de prueba: **Configuración → Empezar de cero** (acciones `ceroPreview` / `dejarEnCero` con `confirmar:'BORRAR'`). Guarda la planilla completa como .xlsx en la carpeta de Drive "Los Perrines - Respaldos" (no `makeCopy`, que duplica el Apps Script vinculado) y recién después borra Pedidos, Carritos y Bajas (y Avisos/Cupones solo si los tilda). No toca el taller, la configuración, las fotos ni los Movimientos. Con el conteo real de fundas agrega un ajuste para que el stock quede en ese número. Prueba: `node dev/test-cero.js`.
 - Medición configurada: píxel de Meta + verificación de dominio (metaetiqueta en `index.html`) + Google Analytics 4 + API de Conversiones de Meta (token cargado por el dueño en Apps Script; probado con "Probar eventos"). El correo del negocio en Meta es un alias de Gmail con "+" (Meta no aceptaba el principal).
 - Panel y web: el dueño está conforme con cómo están.
 
@@ -89,7 +90,7 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 - Acción `tablero` `{dias, forzar}`: `ventasEntre` (actual y período anterior, por fecha de pago), `reservasEntre` (transferencias del período: pagadas/esperando/vencidas), días de stock (disponible ÷ ventas por día de los últimos 30), Meta (`leerMetaAds`) y Google Analytics (`leerGA`, caché 30 min).
 - Google Analytics usa el **servicio avanzado "Google Analytics Data API"** de Apps Script (`AnalyticsData.Properties.batchRunReports`, corre con el usuario del dueño, sin token) y el config `ga_property_id` (número de propiedad, no el G-). Sin servicio → `{falta:'servicio'}`; sin propiedad → `{falta:'propiedad'}`; la pantalla muestra los pasos.
 - En el emulador, los servicios avanzados se simulan con `makeEnv({extra: {AnalyticsData: ...}})`. Prueba: `node dev/test-tablero.js`.
-- Estado: falta que el dueño agregue el servicio y cargue el ID de propiedad.
+- Estado: conectado (servicio agregado e ID de propiedad cargado en Configuración).
 
 ## Siguientes pasos posibles
 
@@ -98,6 +99,7 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 ## Otros pendientes
 
 - Web: fotos reales del producto (si no hay fotos subidas muestra una ilustración); que las medidas publicadas salgan de la ficha del producto (hoy están desparejas); arreglos en celular (barra fija que tapa contenido, botón de WhatsApp encima del texto, "Ver productos" repetido, página muy larga).
-- Antes de abrir: compra de prueba de punta a punta (transferencia y tarjeta), completar configuración (email de avisos, token de Mercado Pago, plantilla de Andreani), "dejar en cero".
+- Al abrir: recibir la tanda (Taller → Tandas → Recibir), abrir la tienda, avisar a los de "avisame cuando vuelva", hacer una compra real con tarjeta y devolverla, lanzar la primera campaña y mirar Tablero/Publicidad a los 2-3 días.
+- Permisos: `.claude/settings.json` (lo creó el dueño) permite git add/commit/push a main, pull/fetch/status/log/diff y `node dev/*` sin preguntar.
 - Datos del taller que el dueño tenía que revisar: forro de la individual (usaba un insumo archivado), tela tracker lisa cargada en "u" en vez de "m", medidas incompletas de la individual, cinta de la individual (2 m cargados vs 4 m según medidas), hebillas/deslizadores ("mínimo 100" pero envase de 150).
 - Ideas ofrecidas: aviso cuando una receta usa un insumo archivado; catálogo de productos para Instagram/Facebook.
