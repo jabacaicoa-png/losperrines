@@ -55,6 +55,7 @@ node dev/test-oficina.js                      # pantalla Hoy: etapas, lotes, avi
 node dev/test-meta.js                         # aviso de compras a Meta (API de Conversiones), con Meta simulado
 node dev/test-cero.js                         # "Empezar de cero": borra solo lo de prueba, respaldo y conteo real
 node dev/test-tablero.js                      # Tablero: ventas con comparación, transferencias, días de stock, Google Analytics simulado
+node dev/test-avisos.js                       # "Avisame cuando vuelva" automático (tienda abierta + stock, límite de mails)
 node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # levanta el backend emulado en :8787 con una tienda de ejemplo
 ```
 
@@ -103,6 +104,10 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 - **Lanzamiento:** cuando reciba la tanda (la semana del 9/11): recibirla, abrir la tienda, avisar a los de "avisame cuando vuelva" (ahora están en Recuperar ventas), compra real con tarjeta y devolverla.
 - **Ofrecido y pendiente de armar:** guía paso a paso de la primera campaña de Meta (objetivo, público, presupuesto chico de prueba, parámetros de URL que están en Publicidad → "Para pegar en cada anuncio"); sección "Perrines viajando" con fotos de clientes; catálogo de productos para Instagram/Meta (feed con precio y stock); combo "dos autos"; precio mayorista para veterinarias.
 - **Criterios que acordamos:** la publicidad NO va en el costo de la funda (se ve aparte en Tablero y Publicidad); crear campañas se hace en Meta, el panel solo lee; para decidir zonas manda la columna Ventas (las visitas de Analytics por provincia son aproximadas).
+
+## Avisame cuando vuelva (automático, 9/11/2026)
+
+- `avisarStockAuto()` en `Codigo.gs` manda el mail "¡Volvieron las fundas!" solo cuando la tienda está abierta al público (`tienda_abierta = SI`) y hay fundas disponibles. Se llama al recibir una tanda (`tandaRecibir`), al cargar stock (`movimiento`), al abrir la tienda (`guardarConfig` con `tienda_abierta: 'SI'`) y en `tareaHoraria` (levanta los que quedaron por el límite diario de mails). Al dueño le llega un mail con cuántos avisó. Si falla, no frena la acción. El botón manual de Recuperar ventas sigue. Prueba: `node dev/test-avisos.js`.
 
 ## Siguientes pasos posibles
 

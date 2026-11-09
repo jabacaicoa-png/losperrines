@@ -154,9 +154,9 @@ function rutear(r) {
     case 'despachar': return despachar(r.id, r.tracking);
     case 'cancelar': var pc = cambiarEstado(r.id, 'cancelado'); marcarCarritoPorPedido(r.id, 'vencido'); return pc;
     case 'reenviar': return reenviar(r.id);
-    case 'movimiento': return movimiento(r);
+    case 'movimiento': var mv = movimiento(r); avisarStockAuto(); return mv;
     case 'avisar': return avisarStock();
-    case 'guardarConfig': return guardarConfig(r.valores || {});
+    case 'guardarConfig': var gc = guardarConfig(r.valores || {}); if ((r.valores || {}).tienda_abierta === 'SI') avisarStockAuto(); return gc;
     case 'exportar': return conLock(function () { return exportarAndreani(r.ids); });
     case 'pagadoLote': return conLock(function () { return enLote(r.ids, function (id) { marcarPagado(String(id)); }); });
     case 'despacharLote': return conLock(function () { return enLote(r.items, function (x) { despachar(String(x.id), x.tracking); }); });
@@ -196,7 +196,7 @@ function rutear(r) {
     case 'pagoBorrar': return conLock(function () { return pagoBorrar(r); });
     case 'tandaCrear': return conLock(function () { return tandaCrear(r); });
     case 'tandaEstado': return conLock(function () { return tandaEstado(r); });
-    case 'tandaRecibir': return conLock(function () { return tandaRecibir(r); });
+    case 'tandaRecibir': var tr = conLock(function () { return tandaRecibir(r); }); avisarStockAuto(); return tr;
     case 'tallerMigrar': return conLock(function () { return tallerMigrar(r); });
   }
   throw new Error('Acción desconocida');
@@ -600,6 +600,21 @@ function avisarStock() {
   });
   return {avisados: n, faltan: faltan};
 }
+/* "Avisame cuando vuelva" automático: apenas la tienda está abierta al público y hay fundas disponibles.
+   Corre al recibir una tanda, al cargar stock, al abrir la tienda y cada hora (por si quedaron pendientes
+   por el límite diario de mails). Si falla, no frena la acción que lo llamó. */
+function avisarStockAuto() {
+  try {
+    var c = cfg(), s = stock();
+    if (c.tienda_abierta !== 'SI') return;
+    if (s.doble.disponible <= 0 && s.individual.disponible <= 0) return;
+    if (!filas(H.avisos).some(function (a) { return a.avisado !== 'SI'; })) return;
+    var r = avisarStock();
+    if (r.avisados && emailOk(c.email_aviso)) enviar(c.email_aviso, 'Les avisé a ' + r.avisados + ' persona' + (r.avisados > 1 ? 's' : '') + ' que volvió el stock',
+      plantilla('Avisos de stock enviados', '<p>Les mandé el mail de “¡Volvieron las fundas!” a <b>' + r.avisados + '</b> persona' + (r.avisados > 1 ? 's' : '') +
+        ' que lo habían pedido.' + (r.faltan ? ' Quedan <b>' + r.faltan + '</b> por el límite diario de mails: salen solos mañana.' : '') + '</p>', c), c);
+  } catch (e) { console.error(e); }
+}
 function waNorm(v) {   // WhatsApp argentino: 549 + característica sin 0 + número sin 15 (misma regla que el panel)
   var d = String(v == null ? '' : v).replace(/\D/g, ''); if (!d) return '';
   d = d.replace(/^00/, ''); if (/^54/.test(d)) d = d.slice(2); if (/^9/.test(d) && d.length === 11) d = d.slice(1); d = d.replace(/^0/, '');
@@ -669,6 +684,7 @@ function vencerReservas() {
 }
 function tareaHoraria() {
   try { enviarRecordatorios(); } catch (e) { console.error(e); }
+  avisarStockAuto();
   vencerReservas();
   try { enviarConsultasEntrega(); } catch (e) { console.error(e); }
   try { resumenSiToca(); } catch (e) { console.error(e); }
