@@ -223,6 +223,7 @@ function agregar(n, obj) { (hoja(n) || asegurarHoja(n)).appendRow(COLS[n].map(fu
 function cfg() {
   var o = {};
   filas(H.config).forEach(function (r) { o[r.clave] = String(r.valor); });
+  if (o.whatsapp) o.whatsapp = waNorm(o.whatsapp);   // aunque esté cargado con espacios o el 15, los links salen bien
   return o;
 }
 function num(v) { var x = Number(String(v).replace(/[^\d.\-]/g, '')); return isFinite(x) ? x : 0; }
@@ -599,7 +600,14 @@ function avisarStock() {
   });
   return {avisados: n, faltan: faltan};
 }
+function waNorm(v) {   // WhatsApp argentino: 549 + característica sin 0 + número sin 15 (misma regla que el panel)
+  var d = String(v == null ? '' : v).replace(/\D/g, ''); if (!d) return '';
+  d = d.replace(/^00/, ''); if (/^54/.test(d)) d = d.slice(2); if (/^9/.test(d) && d.length === 11) d = d.slice(1); d = d.replace(/^0/, '');
+  if (d.length === 12) for (var L = 2; L <= 4; L++) { if (d.substr(L, 2) === '15') { d = d.slice(0, L) + d.slice(L + 2); break; } }
+  return d.length === 10 ? '549' + d : String(v).trim();
+}
 function guardarConfig(vals) {
+  if (vals && vals.whatsapp != null && String(vals.whatsapp).trim()) vals.whatsapp = waNorm(vals.whatsapp);
   var sh = hoja(H.config), hechas = {};
   filas(H.config).forEach(function (r) {
     if (Object.prototype.hasOwnProperty.call(vals, r.clave)) { sh.getRange(r._fila, 2).setValue(String(vals[r.clave]).trim()); hechas[r.clave] = 1; }

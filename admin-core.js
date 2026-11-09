@@ -24,6 +24,12 @@ function api(accion,data){
       if(!j.ok){ if(j.error==="SESION"){ salir(); throw new Error("Tu sesión venció. Volvé a entrar."); } throw new Error(j.error||"Error"); }
       return j; });
 }
+function waNorm(v){   /* WhatsApp argentino: 549 + característica sin 0 + número sin 15. Ej. "(0266) 15 466-9910" → 5492664669910 */
+  var d=String(v==null?"":v).replace(/\D/g,""); if(!d) return "";
+  d=d.replace(/^00/,""); if(/^54/.test(d)) d=d.slice(2); if(/^9/.test(d)&&d.length===11) d=d.slice(1); d=d.replace(/^0/,"");
+  if(d.length===12) for(var L=2;L<=4;L++){ if(d.substr(L,2)==="15"){ d=d.slice(0,L)+d.slice(L+2); break; } }
+  return d.length===10?"549"+d:String(v).trim();
+}
 function salir(){ S.token=""; sessionStorage.removeItem("lp_token"); S.data=null; S.taller=null; render(); }
 function cargarTaller(){
   return api("taller").then(function(t){ S.taller=t; S.tallerError=""; })
@@ -363,7 +369,9 @@ document.addEventListener("click",function(e){
     }).catch(function(e){ toast(e.message,6000); t.disabled=false; t.textContent="Borrar datos de prueba"; });
   }
   else if(a==="probarMeta"){ t.disabled=true; api("probarMeta").then(function(r){ toast("Listo: fijate en Probar eventos de Meta (código "+r.codigo+"). Tiene que aparecer una Compra de $1.",7000); cargar(); }).catch(function(e){ toast(e.message,8000); t.disabled=false; }); }
-  else if(a==="guardarCfg"){ var vals={}; new FormData($("#cfg")).forEach(function(v,k){vals[k]=v;}); accion("guardarConfig",{valores:vals},"Configuración guardada",t); }
+  else if(a==="guardarCfg"){ var vals={}; new FormData($("#cfg")).forEach(function(v,k){vals[k]=v;});
+    if(vals.whatsapp!=null&&String(vals.whatsapp).trim()){ var w=waNorm(vals.whatsapp); if(!/^549\d{10}$/.test(w)){ toast("Revisá el WhatsApp: tiene que tener característica y número, por ejemplo 2664669910.",6000); return; } vals.whatsapp=w; }
+    accion("guardarConfig",{valores:vals},"Configuración guardada",t); }
   else if(a==="exportar"){
     accion("exportar",{},null,t).then(function(r){ if(!r) return;
       dlg('<div class="row"><h3>Planilla lista</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
