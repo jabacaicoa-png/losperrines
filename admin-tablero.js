@@ -83,7 +83,7 @@ function conclusiones(d, ctx) {
       const mejor = Z.filter(z => z.ventas >= 2).map(z => Object.assign({c: pc(z.ventas, z.visitas)}, z)).sort((a, b) => b.c - a.c)[0];
       if (mejor && mejor.c >= convT * 1.5) out.push(["ok", nombreProv(mejor) + " compra " + String(Math.round(mejor.c / convT * 10) / 10).replace(".", ",") + " veces más que el promedio (" + mejor.ventas + " ventas de " + n0(mejor.visitas) + " visitas): probá una campaña apuntada ahí."]);
     }
-    const fria = Z.filter(z => z.visitas >= 100 && z.ventas === 0).sort((a, b) => b.visitas - a.visitas)[0];
+    const fria = Z.filter(z => z.visitas >= 100 && z.ventas === 0 && z.clave !== "capital federal").sort((a, b) => b.visitas - a.visitas)[0];
     if (fria) out.push(["warn", "De " + nombreProv(fria) + " entraron " + n0(fria.visitas) + " visitas y ninguna compró. Si tenés anuncios apuntados ahí, revisalos: atraen curiosos."]);
     const cel = (g.dispositivos || []).find(x => x.nombre === "mobile"); if (cel && ses >= 30 && pc(cel.sesiones, ses) >= 75) out.push(["info", "El " + pcTxt(pc(cel.sesiones, ses)) + " entra desde el celular: lo que más importa es cómo se ve la web en el teléfono."]);
   }
@@ -146,7 +146,7 @@ function vTablero() {
   h += '<h3 style="margin:18px 0 0">¿Dónde vendés? <span class="muted small" style="font-weight:600">· para elegir a quién apuntar los anuncios</span></h3>'
     + '<div class="cols2" style="margin-top:10px"><div class="block" style="margin-top:0"><h3>Provincias</h3>' + tablaZonas(Z.provincias.slice(0, 12), nombreProv, hayGA) + '</div>'
     + '<div class="block" style="margin-top:0"><h3>Ciudades</h3>' + tablaZonas(Z.ciudades.slice(0, 10), nombreCiudad, hayGA) + '</div></div>'
-    + '<p class="muted small" style="margin:8px 0 0">Las <b>ventas</b> salen de la dirección de envío de cada pedido: son exactas. Las <b>visitas</b> son de Google Analytics y la ubicación es aproximada (a veces toma la ciudad de la compañía de internet). Con pocas visitas el porcentaje engaña, por eso no se muestra.</p>';
+    + '<p class="muted small" style="margin:8px 0 0">Las <b>ventas</b> salen de la dirección de envío de cada pedido: son exactas. Las <b>visitas</b> son de Google Analytics y la ubicación es aproximada: sale de la conexión a internet, no del GPS. <b>En celulares con datos móviles suele ubicar a la gente en Buenos Aires</b> aunque esté en otra provincia, así que esa fila tiene visitas de más. Para decidir, mirá sobre todo la columna Ventas. Con pocas visitas el porcentaje engaña, por eso no se muestra.</p>';
   h += '<h3 style="margin:18px 0 0">Los anuncios <span class="muted small" style="font-weight:600">· Meta</span></h3>'
     + '<div class="block" style="margin-top:10px">' + (d.meta && d.meta.inversion != null && !d.meta.falta
       ? '<div style="display:flex;gap:24px;flex-wrap:wrap"><span><span class="muted small">Invertido</span><br><b style="font-size:1.3rem">' + money(inv) + '</b></span><span><span class="muted small">Costo por venta</span><br><b style="font-size:1.3rem">' + (inv && v.pedidos ? money(inv / v.pedidos) : "—") + '</b></span><span><span class="muted small">Tocaron el anuncio</span><br><b style="font-size:1.3rem">' + n0(d.meta.clics) + '</b></span></div>'
