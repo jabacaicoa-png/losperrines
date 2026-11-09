@@ -139,7 +139,7 @@ function vTablero() {
       + P.map((x, i) => '<div class="paso' + (i === peor ? " peor" : "") + '"><span>' + esc(x[0]) + '</span><div class="barra"><i style="width:' + Math.max(1, pc(x[1], P[0][1] || 1)) + '%"></i></div><b>' + n0(x[1]) + (i && P[i - 1][1] ? ' <span class="muted small">(' + pcTxt(pc(x[1], P[i - 1][1])) + ')</span>' : "") + '</b></div>').join("") + '</div></div>';
     const F = fuentes(g);
     h += '<div class="cols2" style="margin-top:14px"><div class="block"><h3>¿De dónde llegan?</h3>' + (F ? lista(F, t.sesiones, x => x) : lista(g.canales, t.sesiones, x => CANAL[x] || x))
-      + '<p class="muted small" style="margin:10px 0 0">Los links que se mandan por WhatsApp casi siempre figuran como “Directo”. Para que los anuncios de Meta aparezcan separados, en cada anuncio poné en <b>Parámetros de URL</b>: <code>utm_source={{site_source_name}}&amp;utm_medium=paid</code>.</p></div>'
+      + '<p class="muted small" style="margin:10px 0 0">Los links que se mandan por WhatsApp casi siempre figuran como “Directo”. Para que los anuncios de Meta aparezcan separados, en cada anuncio poné en <b>Parámetros de URL</b>: <code>utm_source={{site_source_name}}&amp;utm_medium=paid</code> <button class="btn ghost sm" data-a="copiar" data-txt="utm_source={{site_source_name}}&amp;utm_medium=paid">Copiar</button></p></div>'
       + '<div class="block"><h3>¿Desde qué aparato?</h3>' + lista(g.dispositivos, t.sesiones, x => DISP[x] || x) + '</div></div>';
   }
   const Z = d.zonas || {provincias: [], ciudades: []}, hayGA = !!g;

@@ -331,6 +331,9 @@ document.addEventListener("click",function(e){
   else if(a==="salir") salir();
   else if(a==="refrescar") cargar("Actualizado");
   else if(a==="cerrar") cerrarDlg();
+  else if(a==="copiar"){ var txt=t.dataset.txt||"", listo=function(){ toast("Copiado: ya lo podés pegar"); var o=t.innerHTML; t.innerHTML="✓ Copiado"; setTimeout(function(){ if(document.body.contains(t)) t.innerHTML=o; },2000); };
+    if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(txt).then(listo,function(){ prompt("Copiá este texto:",txt); });
+    else { var ta=document.createElement("textarea"); ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); listo(); }catch(e){ prompt("Copiá este texto:",txt); } ta.remove(); } }
   else if(a==="tienda"){ if(t.dataset.v==="SI" && !confirm("¿Abrir la tienda al público? Cualquiera va a poder comprar.")) return; accion("guardarConfig",{valores:{tienda_abierta:t.dataset.v}},t.dataset.v==="SI"?"Tienda abierta":"Tienda cerrada",t); }
   else if(a==="pagado"){ if(confirm("¿Confirmás que recibiste el pago del pedido "+id+"? Le llega un mail al cliente.")) accion("pagado",{id:id},"Pedido marcado como pagado",t); }
   else if(a==="cancelar"){ if(confirm("¿Cancelar el pedido "+id+"? Se libera el stock.")) accion("cancelar",{id:id},"Pedido cancelado",t); }

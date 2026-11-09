@@ -61,12 +61,28 @@ function urlMeta(campana) {
   if (!act) return "https://adsmanager.facebook.com/";
   return campana ? base + "adsets?act=" + act + "&selected_campaign_ids=" + encodeURIComponent(campana) : base + "campaigns?act=" + act;
 }
+/* Lo que hay que pegar en cada anuncio de Meta, a mano para copiar (también lo usa el Tablero). */
+const PARAMS_URL = "utm_source={{site_source_name}}&utm_medium=paid", WEB = "https://www.losperrines.com.ar";
+function filaCopiar(titulo, txt, ayuda) {
+  return '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:10px"><div style="min-width:0"><b class="small">' + esc(titulo) + '</b>' + (ayuda ? ' <span class="muted small">' + esc(ayuda) + '</span>' : '')
+    + '<div class="copy" style="margin-top:4px;font-family:ui-monospace,monospace;font-size:.85rem">' + esc(txt) + '</div></div><button class="btn ghost sm" data-a="copiar" data-txt="' + esc(txt) + '">Copiar</button></div>';
+}
+function paraCadaAnuncio() {
+  let abierto = true; try { abierto = localStorage.getItem("lp_pub_pegar") !== "0"; } catch (e) {}
+  return '<details class="block" id="pubPegar" style="margin-top:0"' + (abierto ? " open" : "") + '><summary style="cursor:pointer;font-weight:700">Para pegar en cada anuncio de Meta</summary>'
+    + filaCopiar("Sitio web", WEB, "(donde dice “URL del sitio web”)")
+    + filaCopiar("Parámetros de URL", PARAMS_URL, "(abajo, en “Seguimiento” o “Parámetros de URL”)")
+    + '<p class="muted small" style="margin:10px 0 0">Es siempre lo mismo, en todos los anuncios. Los parámetros le avisan a Google Analytics que la visita vino de un anuncio y si fue de Instagram o de Facebook.</p></details>';
+}
+document.addEventListener("toggle", e => { if (e.target && e.target.id === "pubPegar") { try { localStorage.setItem("lp_pub_pegar", e.target.open ? "1" : "0"); } catch (x) {} } }, true);
+window.LP_PARAMS_URL = PARAMS_URL;
 function vPublicidad() {
   cargar();
   const d = PUB.datos[PUB.dias], T = window.TALLER;
   let h = '<div class="ph"><div><h2>Publicidad</h2><p class="sub">Lo que invertís en anuncios de Meta contra lo que vendés de verdad y lo que te queda en el bolsillo.</p></div>'
     + '<div class="acts"><a class="btn main sm" href="' + esc(urlMeta()) + '" target="_blank" rel="noopener">＋ Crear campaña en Meta ↗</a><button class="btn ghost sm" data-a="pubRecargar" aria-label="Actualizar datos de Meta">↻ Actualizar</button></div></div>'
-    + '<div class="filters">' + [[1, "Hoy"], [7, "Últimos 7 días"], [30, "Últimos 30 días"]].map(x => '<button class="chip" data-a="pubDias" data-d="' + x[0] + '" aria-pressed="' + (PUB.dias === x[0]) + '">' + x[1] + '</button>').join("") + '</div>';
+    + '<div class="filters">' + [[1, "Hoy"], [7, "Últimos 7 días"], [30, "Últimos 30 días"]].map(x => '<button class="chip" data-a="pubDias" data-d="' + x[0] + '" aria-pressed="' + (PUB.dias === x[0]) + '">' + x[1] + '</button>').join("") + '</div>'
+    + paraCadaAnuncio();
   if (!d) return h + '<p class="muted"><span class="spinner"></span> Consultando a Meta…</p>';
   if (d.error === "backend") return h + '<div class="note bad"><b>Falta actualizar el backend.</b> Pegá el nuevo <code>Codigo.gs</code> en Apps Script y publicá una nueva versión. Después tocá ↻.</div>';
   if (d.error) return h + '<div class="note bad">' + esc(d.error) + '</div>';
