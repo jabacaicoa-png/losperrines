@@ -16,6 +16,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | `admin-tablero.js` | Pantalla **Tablero** (primera de Números): "Qué mirar" (conclusiones escritas), ventas/cobrado/ganancia con comparación al período anterior, días de stock, transferencias pagadas, visitas de Google Analytics (canales, aparato, provincias, embudo) y resumen de Meta. |
 | `admin-publicidad.js` | Pantalla **Publicidad** (grupo Números): inversión en Meta vs ventas reales de la planilla y ganancia después de anuncios (usa `TALLER.costoFunda`/`gananciaFunda`), embudo y campañas con veredicto. |
 | `admin-taller.js` | Taller: insumos, productos (medidas + receta + bolsa), tandas, proveedores y pagos, planificar, rentabilidad, importación. Define `window.PANEL_VERSION` (se muestra abajo del menú). |
+| `admin.webmanifest`, `iconos/` | Ícono del panel para el acceso directo en el celular (logo sobre fondo oliva; `admin-512-maskable.png` con más margen para Android). Nombre corto "LP Admin". |
 | `corte.html` | Plano de corte e impresión de la ficha para la costurera. Con `#panel` toma las medidas que le pasa el panel por `sessionStorage`. |
 | `Codigo.gs` | Backend en Google Apps Script sobre una planilla de Google. **No se publica solo**: el dueño lo pega en Apps Script, ejecuta `instalar()` y hace *Implementar → Administrar implementaciones → Editar → Nueva versión*. |
 | `costos.html`, `insumos.html`, `pagos.html`, `admin-viejo.html` | Herramientas anteriores, ya reemplazadas. Se conservan como respaldo. |

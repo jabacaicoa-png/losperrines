@@ -1,0 +1,14 @@
+{
+  "name": "Los Perrines · Administración",
+  "short_name": "LP Admin",
+  "start_url": "/admin.html",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#F2F3EC",
+  "theme_color": "#4E5B3A",
+  "icons": [
+    {"src": "/iconos/admin-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/iconos/admin-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "/iconos/admin-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
