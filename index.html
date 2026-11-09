@@ -274,7 +274,11 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .vs b{display:block;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;opacity:.75;margin-bottom:2px}
 .illus{overflow:hidden}
 .logo img.logoimg{width:44px;height:44px;flex:none}
-.illus .foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:28px}
+.illus .foto,.illus .foto-fondo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.illus .foto{object-fit:contain}   /* la foto de portada se ve entera */
+.illus .foto-fondo{filter:blur(22px) brightness(.8);transform:scale(1.2)}   /* lo que sobra: la misma foto desenfocada */
+.illus.con-foto{padding:0;aspect-ratio:var(--ar,4/3)}   /* el recuadro toma la forma de la foto (como mucho, cuadrado) */
+.illus.con-foto>svg,.illus.con-foto>figcaption{display:none}
 .gallery{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
 @media(min-width:760px){.gallery{grid-template-columns:repeat(4,1fr)}}
 .gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:16px;background:var(--card)}
@@ -740,7 +744,11 @@ function urlImg(id,w){ return "https://lh3.googleusercontent.com/d/"+id+"=w"+(w|
 function fotos(){
   var hero=document.createElement("img"); hero.className="foto"; hero.alt="Funda tipo canasto colocada en el asiento trasero";
   var pp=principalDe("portada");
-  hero.onerror=function(){hero.remove();}; hero.src=pp?urlImg(pp.drive,1600):"foto-principal.jpg"; $(".illus").appendChild(hero);
+  hero.onerror=function(){hero.remove();};
+  hero.onload=function(){ var fig=$(".illus"), r=hero.naturalWidth/hero.naturalHeight; if(!fig||!r) return;
+    var fondo=document.createElement("img"); fondo.className="foto-fondo"; fondo.alt=""; fondo.setAttribute("aria-hidden","true"); fondo.src=hero.src; fig.insertBefore(fondo,hero);
+    fig.style.setProperty("--ar",Math.max(r,1)); fig.classList.add("con-foto"); };
+  hero.src=pp?urlImg(pp.drive,1600):"foto-principal.jpg"; $(".illus").appendChild(hero);
   var port=MED("portada").filter(function(m){return !pp||m.id!==pp.id;});
   if(port.length){
     $("#gallery").innerHTML=port.map(function(m,i){ return m.tipo==="img"?'<img src="'+urlImg(m.drive,900)+'" alt="Foto de la funda" loading="lazy" data-gal="portada" data-i="'+(i+(pp?1:0))+'">':'<button class="galvid" data-gal="portada" data-i="'+(i+(pp?1:0))+'" aria-label="Ver video">▶</button>'; }).join("");
