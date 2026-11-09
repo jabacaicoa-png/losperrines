@@ -293,6 +293,51 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 @media (prefers-reduced-motion: reduce){.spinner{animation-duration:2.4s}}
 .linkbtn{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;font:inherit;cursor:pointer}
 .big{font-size:2rem;font-weight:800;letter-spacing:-.02em}
+/* ===== celular: menos cosas fijas, menos largo ===== */
+.m-only{display:none}
+.wa-in{display:none}
+#bbCta[hidden]{display:none}
+details.m-det summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.m-det summary::-webkit-details-marker{display:none}
+details.m-det summary::after{content:"＋";font-weight:800;color:var(--muted)}
+details.m-det[open] summary::after{content:"−"}
+.desliza{display:none}
+@media(max-width:899px){
+  .anuncio{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.78rem;padding:0 10px;height:30px;line-height:30px}
+  .anuncio .andreani-a{width:20px;height:14px;margin-right:4px}
+  .d-only{display:none} .m-only{display:inline;font-weight:inherit!important}
+  header.top{top:calc(env(safe-area-inset-top,0px) - 31px)}   /* la franja amarilla se va al bajar; queda solo el logo y el carrito */
+  .top .wrap{height:52px}
+  .logoimg{width:34px;height:34px}
+  .logo{font-size:1.1rem}
+  .cart-btn{padding:7px 14px;font-size:.9rem}
+  /* WhatsApp: adentro de la barra de abajo, no flotando sobre el texto */
+  a.wa:not(.wa-in){display:none}
+  .buybar{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));gap:10px}
+  .buybar .p{flex:1;min-width:0}
+  .buybar .p strong{font-size:1.02rem}
+  .buybar .p small{font-size:.82rem}
+  .buybar .btn{padding:12px 16px;white-space:nowrap}
+  .wa-in{display:grid;position:static;flex:none;width:46px;height:46px;border-radius:50%;background:#25D366;place-items:center;box-shadow:none}
+  .wa-in svg{width:26px;height:26px}
+  /* menos largo */
+  .hero{padding:24px 0 20px}
+  .hero .grid{gap:22px}
+  h1{font-size:clamp(1.9rem,8vw,2.4rem)}
+  .lead{font-size:1rem;margin-bottom:16px}
+  .illus{padding:10px;border-radius:20px}
+  .illus svg{max-height:210px;display:block;margin:0 auto}
+  .modelo .m-beneficio-desc{display:none}
+  .modelo .m-body{padding:16px 16px 18px}
+  .modelo .m-foto{aspect-ratio:16/9}
+  .tela .grid4,.hgrid,.features{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;padding-bottom:8px;margin:0 -20px;padding-left:20px;padding-right:20px;scrollbar-width:none;scroll-padding-left:20px}
+  .tela .grid4::-webkit-scrollbar,.hgrid::-webkit-scrollbar,.features::-webkit-scrollbar{display:none}
+  .tela .grid4>*,.hgrid>*,.features>*{flex:0 0 80%;scroll-snap-align:start}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .desliza{display:block;color:var(--muted);font-size:.85rem;margin:-6px 0 10px}
+  .measures>svg{max-width:280px;margin:0 auto;display:block}
+  section h2{margin-bottom:8px}
+}
 </style>
 </head>
 <body>
@@ -313,7 +358,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 <div id="tienda" hidden>
 <div class="preview-bar" id="previewBar" hidden>Vista previa: la tienda está cerrada al público. Las compras que hagas son reales.</div>
 <header class="top">
-  <div class="anuncio"><span class="andreani-slot"></span>ENVÍO GRATIS POR ANDREANI A TODA ARGENTINA <span>· <span data-p="desc">10</span>% off por transferencia</span></div>
+  <div class="anuncio"><span class="andreani-slot"></span>ENVÍO GRATIS <span class="d-only">POR ANDREANI A TODA ARGENTINA</span><span class="m-only">A TODO EL PAÍS</span> <span>· <span data-p="desc">10</span>% off por transferencia</span></div>
   <div class="wrap">
     <a class="logo" href="#inicio" aria-label="Los Perrines, inicio"><img class="logoimg" src="logo.png" alt="" width="44" height="44" onerror="this.style.display='none'"> Los Perrines</a>
     <button class="cart-btn" id="openCart" aria-label="Abrir carrito">Carrito <b id="cartCount">0</b></button>
@@ -415,7 +460,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 
 <section class="tela">
   <div class="wrap">
-    <h2>No es una tela cualquiera</h2>
+    <h2>No es una tela cualquiera</h2><span class="desliza">Deslizá para ver más →</span>
     <p class="sub">Está hecha con una tela técnica, acolchada y con las dos caras terminadas, pensada para el uso diario con mascotas.</p>
     <div class="grid4">
       <div class="tcard"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="9" fill="#4E5B3A"/><path d="M10 16l6 6-6 6M22 10l6 6-6 6M22 22l6 6-6 6M34 16l-6 6 6 6" stroke="#D9E15A" stroke-width="2.4" fill="none" stroke-linejoin="round"/></svg><h3>Trucker matelaseado impermeable</h3><p>Una tela técnica, firme y resistente al roce de las patas, con tratamiento impermeable. Barro, agua o un accidente no llegan al tapizado.</p></div>
@@ -428,7 +473,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 
 <section class="hecho">
   <div class="wrap">
-    <h2>Hecha acá, pensada para durar</h2>
+    <h2>Hecha acá, pensada para durar</h2><span class="desliza">Deslizá para ver más →</span>
     <p class="sub">Cada funda se diseña y se confecciona en San Luis. Eso se nota en los detalles y en cómo te respondemos.</p>
     <div class="hgrid">
       <div class="hcard"><h3>Confección cuidada</h3><p>Se cose y se revisa una por una: costuras reforzadas donde hace fuerza, bies en todos los bordes y cierres en las cuatro esquinas.</p></div>
@@ -454,7 +499,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 
 <section>
   <div class="wrap">
-    <h2>Hecho para el uso de todos los días</h2>
+    <h2>Hecho para el uso de todos los días</h2><span class="desliza">Deslizá para ver más →</span>
     <div class="features">
       <div class="feat">
         <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6c8 10 14 17 14 24a14 14 0 0 1-28 0c0-7 6-14 14-24z" fill="#4E5B3A"/><path d="M18 30a6 6 0 0 0 6 6" stroke="#D9E15A" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
@@ -538,9 +583,10 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
   </div>
 </footer>
 
-<div class="buybar">
-  <div class="p"><strong>Elegí tu funda</strong> <small><b class="gratis">Envío gratis</b> a todo el país</small></div>
-  <button class="btn btn-main" data-add>Ver productos</button>
+<div class="buybar" id="buybar">
+  <a class="wa wa-in" href="#" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm0 23.6c-2 0-3.9-.5-5.6-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.6 10.6 0 1 1 16 26.6zm5.8-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7.1-.2 0-.4 0-.5l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.2 3.2 0 0 0 2.1-1.5 2.6 2.6 0 0 0 .2-1.5c-.1-.1-.3-.2-.6-.4z"/></svg></a>
+  <div class="p" id="bbTxt"><strong>Elegí tu funda</strong> <small><b class="gratis">Envío gratis</b> a todo el país</small></div>
+  <button class="btn btn-main" id="bbCta" data-add>Ver productos</button>
 </div>
 <a class="wa" href="#" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp">
   <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm0 23.6c-2 0-3.9-.5-5.6-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.6 10.6 0 1 1 16 26.6zm5.8-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7.1-.2 0-.4 0-.5l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.2 3.2 0 0 0 2.1-1.5 2.6 2.6 0 0 0 .2-1.5c-.1-.1-.3-.2-.6-.4z"/></svg>
@@ -665,6 +711,8 @@ var INFO={
   individual:{sub:"Una plaza, lado izquierdo o derecho",foto:"foto-individual.jpg",ancho:24,
     det:["60 × 130 cm: misma base que la doble", "Laterales de 40 × 36 cm en los dos lados, con cierres", "Se usa del lado izquierdo o del derecho", "Ideal si viajás con alguien atrás"]}
 };
+var DET_ABIERTO={};   /* las medidas plegadas recuerdan si las abriste (la tarjeta se redibuja al cambiar el stock) */
+document.addEventListener("toggle",function(e){ var t=e.target; if(t&&t.id&&/^det-/.test(t.id)) DET_ABIERTO[t.id.slice(4)]=t.open; },true);
 function pintarModelos(){
   var sd=$("#specDyn"); if(sd) sd.innerHTML=PRODS().map(function(p){ var i0=INFO[p.id]||{det:[]}, det=(p.medidas&&p.medidas.length)?p.medidas:i0.det; return '<dt>'+esc(p.nombre)+'</dt><dd>'+det.map(esc).join('<br>')+'</dd>'; }).join("");
   var g=$("#modelosGrid"); if(!g) return;
@@ -677,9 +725,9 @@ function pintarModelos(){
       +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<p class="m-envio">'+ANDREANI_LOGO+' <b>ENVÍO GRATIS por Andreani a todo el país:</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s>':'')+'</p>'
       +'<div class="m-transf"><span>💚 Precio por transferencia <small>'+d+'% off</small></span><b>'+money(p.precio_transferencia)+'</b></div>'
-      +'<button class="btn btn-main m-cta" style="width:100%;margin-top:16px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'COMPRAR AHORA')+'</button>'
-      +'<div class="m-det"><p class="m-det-t">Medidas y detalles</p><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>'
       +(sin?'<p class="stockline low">Sin stock por el momento</p>':(p.disponible<=5?'<p class="stockline low">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
+      +'<button class="btn btn-main m-cta" style="width:100%;margin-top:16px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'COMPRAR AHORA')+'</button>'
+      +'<details class="m-det" id="det-'+p.id+'"'+(DET_ABIERTO[p.id]?' open':'')+'><summary class="m-det-t">Medidas y detalles</summary><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>'
       +'</div></article>';
   }).join("");
 }
@@ -723,7 +771,23 @@ function totQ(){ return (Q.doble||0)+(Q.individual||0); }
 function sumT(){ var t=0; PRODS().forEach(function(p){ t+=p.precio_tarjeta*(Q[p.id]||0); }); return t; }
 function sumX(){ var t=0; PRODS().forEach(function(p){ t+=p.precio_transferencia*(Q[p.id]||0); }); return t; }
 function maxQ(id){ var p=PR(id); return p?Math.max(0,Math.min(5,p.disponible)):0; }
-function setCount(){ $("#cartCount").textContent=totQ(); }
+function setCount(){ $("#cartCount").textContent=totQ(); bbUpdate(); }
+/* Barra de abajo (solo celular): no repite "Ver productos" cuando ya los estás viendo;
+   si hay algo en el carrito, lleva al carrito; mientras mirás los productos, invita a preguntar por WhatsApp. */
+var BB={hero:false,modelos:false};
+function bbUpdate(){
+  var cta=$("#bbCta"), txt=$("#bbTxt"); if(!cta||!txt) return;
+  var n=typeof totQ==="function"?totQ():0;
+  if(n>0){ cta.hidden=false; cta.removeAttribute("data-add"); cta.textContent="Ver carrito ("+n+")"; cta.onclick=function(){ $("#openCart").click(); };
+    txt.innerHTML='<strong>Tu carrito</strong> <small><b class="gratis">Envío gratis</b></small>'; return; }
+  cta.onclick=null; cta.setAttribute("data-add",""); cta.textContent="Ver productos";
+  if(BB.modelos){ cta.hidden=true; txt.innerHTML='<strong>¿Dudas con las medidas?</strong> <small>Escribinos por WhatsApp, te respondemos</small>'; }
+  else { cta.hidden=BB.hero; txt.innerHTML='<strong>Elegí tu funda</strong> <small><b class="gratis">Envío gratis</b> a todo el país</small>'; if(innerWidth<900) txt.querySelector("small").innerHTML='<b class="gratis">Envío gratis</b> · <span data-p="ncuotas">'+((typeof C!=="undefined"&&C&&C.cuotas)||3)+'</span> cuotas'; }
+}
+if("IntersectionObserver" in window) window.addEventListener("load",function(){
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.target.id==="modelos") BB.modelos=e.isIntersecting; else BB.hero=e.isIntersecting; }); bbUpdate(); },{rootMargin:"-60px 0px -90px 0px"});
+  var m=$("#modelos"), h=$(".hero .buy-row"); if(m) io.observe(m); if(h) io.observe(h);
+});
 function render(){
   if(step==="cart"){
     dTitle.textContent="Tu carrito";
