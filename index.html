@@ -183,7 +183,18 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .cupon{margin:4px 0 6px}
 .cupon-row{display:flex;gap:8px;margin-top:4px}
 .cupon-row input{flex:1;text-transform:uppercase}
-.modelo .m-foto[data-gal]{cursor:pointer}
+.modelo .m-foto[data-gal],.m-slide{cursor:pointer}
+.m-track{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.m-track::-webkit-scrollbar{display:none}
+.m-slide{position:relative;flex:0 0 100%;height:100%;overflow:hidden;scroll-snap-align:start;scroll-snap-stop:always}
+.m-vid{position:absolute;inset:0;display:grid;place-items:center;color:#D9E15A;font-size:3rem;background:#2F3822}
+.m-dots{position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.m-dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.55);box-shadow:0 0 2px rgba(0,0,0,.4)}
+.m-dots i.on{background:#fff;width:18px;border-radius:4px}
+.m-fl{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.85);color:#1E2418;font-size:1.6rem;line-height:1;cursor:pointer;display:none;z-index:2}
+.m-fl-prev{left:10px}.m-fl-next{right:10px}
+.m-carr .m-galbadge{top:10px;bottom:auto}
+@media(hover:hover) and (pointer:fine){.m-carr:hover .m-fl{display:block}}   /* flechitas solo en la compu (en el celu se desliza) */
 .m-galbadge{position:absolute;right:10px;bottom:10px;background:rgba(30,36,24,.75);color:#fff;font-weight:700;font-size:.85rem;border-radius:999px;padding:3px 10px}
 .galvid{width:100%;aspect-ratio:4/3;border:0;border-radius:16px;background:#2F3822;color:#D9E15A;font-size:2.4rem;cursor:pointer}
 #gallery img[data-gal]{cursor:pointer}
@@ -727,7 +738,7 @@ function pintarModelos(){
   g.innerHTML=ps.map(function(p){ var i0=INFO[p.id]||{sub:"",det:[],ancho:40,foto:""}, i={sub:p.sub||i0.sub,det:(p.medidas&&p.medidas.length)?p.medidas:i0.det,ancho:i0.ancho,foto:i0.foto}, sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
     var ilus='<svg viewBox="0 0 120 80" aria-hidden="true"><rect x="0" y="0" width="120" height="80" rx="12" fill="#2F3822"/><rect x="'+(60-i.ancho/2)+'" y="18" width="'+i.ancho+'" height="44" rx="6" fill="#D9E15A" stroke="#F2F3EC" stroke-width="2"/><path d="M'+(60-i.ancho/2)+' 40H'+(60+i.ancho/2)+'" stroke="#4E5B3A" stroke-width="2" stroke-dasharray="4 3"/></svg>';
     return '<article class="modelo">'
-      +(function(){ var pm=principalDe(p.id), nm=MED(p.id).length; return '<div class="m-foto"'+(nm?' role="button" tabindex="0" data-gal="'+p.id+'" data-i="0" aria-label="Ver fotos de '+esc(p.nombre)+'"':'')+'>'+ilus+(function(){ var src=pm?urlImg(pm.drive,900):i.foto; return '<img class="m-fondo" src="'+src+'" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()"><img class="m-img" src="'+src+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()">'; })()+(nm>1?'<span class="m-galbadge">📷 '+nm+'</span>':'')+'</div>'; })()
+      +fotoCard(p,i,ilus)
       +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-beneficio-desc">Funda impermeable para mascotas: protege los asientos del agua, barro y pelos.</p><div class="m-beneficios"><span>💧 IMPERMEABLE</span><span>🛡️ PROTECCIÓN</span><span>ACOLCHADA</span></div><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<p class="m-envio">'+ANDREANI_LOGO+' <b>ENVÍO GRATIS por Andreani a todo el país:</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s>':'')+'</p>'
@@ -738,6 +749,26 @@ function pintarModelos(){
       +'</div></article>';
   }).join("");
 }
+/* Foto de la tarjeta del producto. Con varias fotos se deslizan con el dedo ahí mismo (carrusel);
+   tocar una la abre en grande en esa misma foto. */
+function fotoCard(p,i,ilus){
+  var pm=principalDe(p.id), l=MED(p.id), nm=l.length;
+  if(pm) l=[pm].concat(l.filter(function(m){return m.id!==pm.id;}));
+  var img=function(src,alt,lazy){ return '<img class="m-fondo" src="'+src+'" alt="" aria-hidden="true"'+(lazy?' loading="lazy"':'')+' onerror="this.remove()"><img class="m-img" src="'+src+'" alt="'+esc(alt)+'"'+(lazy?' loading="lazy"':'')+' onerror="this.remove()">'; };
+  if(nm<2){ var src=pm?urlImg(pm.drive,900):i.foto;
+    return '<div class="m-foto"'+(nm?' role="button" tabindex="0" data-gal="'+p.id+'" data-i="0" aria-label="Ver fotos de '+esc(p.nombre)+'"':'')+'>'+ilus+img(src,p.nombre,true)+'</div>'; }
+  return '<div class="m-foto m-carr">'+ilus+'<div class="m-track" data-track>'
+    +l.map(function(m,k){ return '<div class="m-slide" role="button" tabindex="0" data-gal="'+p.id+'" data-i="'+k+'" aria-label="Ver foto '+(k+1)+' de '+nm+' de '+esc(p.nombre)+'">'
+      +(m.tipo==="img"?img(urlImg(m.drive,900),p.nombre+' · foto '+(k+1),k>0):'<span class="m-vid">▶</span>')+'</div>'; }).join("")
+    +'</div><button class="m-fl m-fl-prev" data-mfl="-1" aria-label="Foto anterior">‹</button><button class="m-fl m-fl-next" data-mfl="1" aria-label="Foto siguiente">›</button>'
+    +'<span class="m-galbadge" data-cnt>1 / '+nm+'</span><div class="m-dots">'+l.map(function(_,k){ return '<i'+(k?'':' class="on"')+'></i>'; }).join("")+'</div></div>';
+}
+document.addEventListener("scroll",function(e){   // al deslizar: actualiza "2 / 5" y los puntitos
+  var t=e.target; if(!t.classList||!t.classList.contains("m-track")) return;
+  var k=Math.round(t.scrollLeft/t.clientWidth), f=t.parentNode, c=f.querySelector("[data-cnt]");
+  if(c) c.textContent=(k+1)+" / "+t.children.length;
+  f.querySelectorAll(".m-dots i").forEach(function(d,j){ d.classList.toggle("on",j===k); });
+},true);
 function MED(dest){ return (C.media||[]).filter(function(m){return m.destino===dest;}).sort(function(a,b){return a.orden-b.orden;}); }
 function principalDe(dest){ var l=MED(dest); return l.filter(function(m){return m.principal&&m.tipo==="img";})[0]||l.filter(function(m){return m.tipo==="img";})[0]||null; }
 function urlImg(id,w){ return "https://lh3.googleusercontent.com/d/"+id+"=w"+(w||1600); }
@@ -1030,6 +1061,7 @@ function enviarDlg(tipo,btn){
 
 /* ---------- eventos ---------- */
 document.addEventListener("click",function(e){
+  var fl=e.target.closest("[data-mfl]"); if(fl){ var tr=fl.parentNode.querySelector("[data-track]"); tr.scrollBy({left:tr.clientWidth*Number(fl.dataset.mfl),behavior:"smooth"}); return; }
   var gg=e.target.closest("[data-gal]"); if(gg){ abrirGaleria(gg.dataset.gal,parseInt(gg.dataset.i,10)||0); return; }
   if(e.target.closest("#galPrev")){ if(GAL.i>0){ GAL.i--; pintarGaleria(); } return; }
   if(e.target.closest("#galNext")){ if(GAL.i<GAL.lista.length-1){ GAL.i++; pintarGaleria(); } return; }
