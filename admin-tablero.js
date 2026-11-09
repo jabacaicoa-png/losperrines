@@ -13,6 +13,33 @@ const pcTxt = v => String(Math.round(v * 10) / 10).replace(".", ",") + "%";
 const CANAL = {"Direct": "Directo (dirección o link guardado)", "Organic Social": "Redes sin anuncio (Instagram, Facebook)", "Paid Social": "Anuncios en redes",
   "Organic Search": "Búsqueda en Google", "Paid Search": "Anuncios en Google", "Referral": "Otros sitios", "Email": "Mail", "Organic Video": "Videos", "Unassigned": "Sin identificar", "(other)": "Otros"};
 const DISP = {mobile: "Celular", desktop: "Computadora", tablet: "Tablet"};
+const PAGO = /^(paid|cpc|ppc|ads?|paidsocial|paid_social|cpm)$/i;
+function fuenteDe(f) {   // "l.instagram.com / referral" → "Instagram (sin anuncio)"; "ig / paid" → "Instagram (anuncio)"
+  const s = String(f.fuente || "").toLowerCase(), m = String(f.medio || "").toLowerCase(), pago = PAGO.test(m);
+  if (/instagram|^ig$/.test(s)) return pago ? "Instagram (anuncio)" : "Instagram (sin anuncio)";
+  if (/facebook|^fb$|^an$|^msg$|messenger/.test(s)) return pago ? "Facebook (anuncio)" : "Facebook (sin anuncio)";
+  if (/whatsapp|wa\.me/.test(s)) return "WhatsApp";
+  if (/google/.test(s)) return pago ? "Google (anuncio)" : "Búsqueda en Google";
+  if (s === "(direct)" || m === "(none)") return "Directo o WhatsApp (link guardado, escrito o compartido)";
+  return "Otros sitios";
+}
+function fuentes(g) {
+  if (!g.fuentes || !g.fuentes.length) return null;
+  const o = {}; g.fuentes.forEach(f => { const k = fuenteDe(f); o[k] = (o[k] || 0) + f.sesiones; });
+  return Object.keys(o).map(k => ({nombre: k, sesiones: o[k]})).sort((a, b) => b.sesiones - a.sesiones);
+}
+const PROV = {"capital federal": "Ciudad de Buenos Aires", "buenos aires": "Provincia de Buenos Aires", "cordoba": "Córdoba", "neuquen": "Neuquén", "rio negro": "Río Negro", "tucuman": "Tucumán", "entre rios": "Entre Ríos"};
+function nombreProv(z) { return PROV[z.clave] || z.clave.replace(/(^|\s)\S/g, x => x.toUpperCase()); }
+const ACENTOS = {"cordoba": "Córdoba", "neuquen": "Neuquén", "tucuman": "Tucumán", "rio cuarto": "Río Cuarto", "san martin": "San Martín", "san nicolas": "San Nicolás", "general roca": "General Roca"};
+function nombreCiudad(x) { const s = String(x.nombre).toLowerCase(); return ACENTOS[s] || s.replace(/(^|\s)\S/g, c => c.toUpperCase()); }
+function tablaZonas(lista, nombre, hayGA) {
+  if (!lista.length) return '<p class="muted small" style="margin:0">Sin datos todavía.</p>';
+  return '<div class="tw"><table><thead><tr><th>' + (nombre === nombreProv ? "Provincia" : "Ciudad") + '</th>' + (hayGA ? '<th class="n">Visitas</th>' : '') + '<th class="n">Ventas</th>' + (hayGA ? '<th class="n">De cada 100 compran</th>' : '<th class="n">Cobrado</th>') + '</tr></thead><tbody>'
+    + lista.map(z => { const conv = z.visitas >= 20 ? pc(z.ventas, z.visitas) : null;
+      return '<tr><td>' + esc(nombre(z)) + '</td>' + (hayGA ? '<td class="n">' + n0(z.visitas) + '</td>' : '') + '<td class="n"><b>' + z.ventas + '</b></td>'
+        + (hayGA ? '<td class="n">' + (conv == null ? '<span class="muted small">pocas visitas</span>' : String(Math.round(conv * 10) / 10).replace(".", ",")) + '</td>' : '<td class="n">' + money(z.cobrado) + '</td>') + '</tr>'; }).join("")
+    + '</tbody></table></div>';
+}
 
 function cargar() {
   if (TB.cargando || TB.datos[TB.dias]) return;
@@ -49,7 +76,15 @@ function conclusiones(d, ctx) {
     if (ses >= 100) { const conv = pc(v.pedidos, ses);
       if (conv < 0.5) out.push(["warn", "De cada 100 visitas compra menos de 1 (" + pcTxt(conv) + "). Revisá fotos, precio y medidas en la web."]);
       else out.push(["ok", "De cada 100 visitas compran " + String(Math.round(conv * 10) / 10).replace(".", ",") + ": está muy bien para una tienda online (lo común es 1 a 2)."]); }
-    const top = (g.canales || [])[0]; if (top && ses >= 30) out.push(["info", "La mayoría llega por " + (CANAL[top.nombre] || top.nombre).split(" (")[0].toLowerCase() + " (" + pcTxt(pc(top.sesiones, ses)) + " de las visitas)."]);
+    const F = fuentes(g), top = F ? F[0] : (g.canales || [])[0];
+    if (top && ses >= 30) out.push(["info", "La mayoría llega por " + (F ? top.nombre.split(" (")[0] + (/sin anuncio/.test(top.nombre) ? " sin anuncio" : /anuncio/.test(top.nombre) ? " (anuncios)" : "") : (CANAL[top.nombre] || top.nombre).split(" (")[0].toLowerCase()) + " (" + pcTxt(pc(top.sesiones, ses)) + " de las visitas)."]);
+    const Z = (d.zonas && d.zonas.provincias || []).filter(z => z.visitas >= 50), convT = pc(v.pedidos, ses);
+    if (convT > 0) {
+      const mejor = Z.filter(z => z.ventas >= 2).map(z => Object.assign({c: pc(z.ventas, z.visitas)}, z)).sort((a, b) => b.c - a.c)[0];
+      if (mejor && mejor.c >= convT * 1.5) out.push(["ok", nombreProv(mejor) + " compra " + String(Math.round(mejor.c / convT * 10) / 10).replace(".", ",") + " veces más que el promedio (" + mejor.ventas + " ventas de " + n0(mejor.visitas) + " visitas): probá una campaña apuntada ahí."]);
+    }
+    const fria = Z.filter(z => z.visitas >= 100 && z.ventas === 0).sort((a, b) => b.visitas - a.visitas)[0];
+    if (fria) out.push(["warn", "De " + nombreProv(fria) + " entraron " + n0(fria.visitas) + " visitas y ninguna compró. Si tenés anuncios apuntados ahí, revisalos: atraen curiosos."]);
     const cel = (g.dispositivos || []).find(x => x.nombre === "mobile"); if (cel && ses >= 30 && pc(cel.sesiones, ses) >= 75) out.push(["info", "El " + pcTxt(pc(cel.sesiones, ses)) + " entra desde el celular: lo que más importa es cómo se ve la web en el teléfono."]);
   }
   return out;
@@ -102,10 +137,16 @@ function vTablero() {
     let peor = -1, caida = -1; P.forEach((x, i) => { if (i && P[i - 1][1] > 0) { const c = 1 - x[1] / P[i - 1][1]; if (c > caida) { caida = c; peor = i; } } });
     h += '<div class="block"><h3>Dónde abandona la gente</h3><p class="muted small" style="margin:-4px 0 10px">Todas las visitas, vengan de donde vengan. En naranja, el paso donde más se pierde.</p><div class="embudo">'
       + P.map((x, i) => '<div class="paso' + (i === peor ? " peor" : "") + '"><span>' + esc(x[0]) + '</span><div class="barra"><i style="width:' + Math.max(1, pc(x[1], P[0][1] || 1)) + '%"></i></div><b>' + n0(x[1]) + (i && P[i - 1][1] ? ' <span class="muted small">(' + pcTxt(pc(x[1], P[i - 1][1])) + ')</span>' : "") + '</b></div>').join("") + '</div></div>';
-    h += '<div class="cols2" style="margin-top:14px"><div class="block"><h3>¿De dónde llegan?</h3>' + lista(g.canales, t.sesiones, x => CANAL[x] || x) + '</div>'
-      + '<div class="block"><h3>¿Desde qué aparato?</h3>' + lista(g.dispositivos, t.sesiones, x => DISP[x] || x)
-      + '<h3 style="margin-top:16px">¿Desde dónde?</h3>' + lista(g.regiones, t.sesiones, x => String(x).replace(/ Province$/, "").replace("(not set)", "Sin identificar")) + '</div></div>';
+    const F = fuentes(g);
+    h += '<div class="cols2" style="margin-top:14px"><div class="block"><h3>¿De dónde llegan?</h3>' + (F ? lista(F, t.sesiones, x => x) : lista(g.canales, t.sesiones, x => CANAL[x] || x))
+      + '<p class="muted small" style="margin:10px 0 0">Los links que se mandan por WhatsApp casi siempre figuran como “Directo”. Para que los anuncios de Meta aparezcan separados, en cada anuncio poné en <b>Parámetros de URL</b>: <code>utm_source={{site_source_name}}&amp;utm_medium=paid</code>.</p></div>'
+      + '<div class="block"><h3>¿Desde qué aparato?</h3>' + lista(g.dispositivos, t.sesiones, x => DISP[x] || x) + '</div></div>';
   }
+  const Z = d.zonas || {provincias: [], ciudades: []}, hayGA = !!g;
+  h += '<h3 style="margin:18px 0 0">¿Dónde vendés? <span class="muted small" style="font-weight:600">· para elegir a quién apuntar los anuncios</span></h3>'
+    + '<div class="cols2" style="margin-top:10px"><div class="block" style="margin-top:0"><h3>Provincias</h3>' + tablaZonas(Z.provincias.slice(0, 12), nombreProv, hayGA) + '</div>'
+    + '<div class="block" style="margin-top:0"><h3>Ciudades</h3>' + tablaZonas(Z.ciudades.slice(0, 10), nombreCiudad, hayGA) + '</div></div>'
+    + '<p class="muted small" style="margin:8px 0 0">Las <b>ventas</b> salen de la dirección de envío de cada pedido: son exactas. Las <b>visitas</b> son de Google Analytics y la ubicación es aproximada (a veces toma la ciudad de la compañía de internet). Con pocas visitas el porcentaje engaña, por eso no se muestra.</p>';
   h += '<h3 style="margin:18px 0 0">Los anuncios <span class="muted small" style="font-weight:600">· Meta</span></h3>'
     + '<div class="block" style="margin-top:10px">' + (d.meta && d.meta.inversion != null && !d.meta.falta
       ? '<div style="display:flex;gap:24px;flex-wrap:wrap"><span><span class="muted small">Invertido</span><br><b style="font-size:1.3rem">' + money(inv) + '</b></span><span><span class="muted small">Costo por venta</span><br><b style="font-size:1.3rem">' + (inv && v.pedidos ? money(inv / v.pedidos) : "—") + '</b></span><span><span class="muted small">Tocaron el anuncio</span><br><b style="font-size:1.3rem">' + n0(d.meta.clics) + '</b></span></div>'

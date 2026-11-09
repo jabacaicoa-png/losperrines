@@ -1132,7 +1132,7 @@ function leerGA(c, dias, forzar) {
   var prop = String(c.ga_property_id || '').replace(/\D/g, '');
   if (!prop) return {falta: 'propiedad'};
   if (typeof AnalyticsData === 'undefined') return {falta: 'servicio'};
-  var cur = periodoAtras(dias, 0), prev = periodoAtras(dias, 1), clave = 'ga_' + prop + '_' + cur.since + '_' + cur.until, cache = CacheService.getScriptCache(), g = cache.get(clave);
+  var cur = periodoAtras(dias, 0), prev = periodoAtras(dias, 1), clave = 'ga2_' + prop + '_' + cur.since + '_' + cur.until, cache = CacheService.getScriptCache(), g = cache.get(clave);
   if (g && !forzar) return JSON.parse(g);
   var rango = [{startDate: cur.since, endDate: cur.until}], dos = [{startDate: cur.since, endDate: cur.until, name: 'actual'}, {startDate: prev.since, endDate: prev.until, name: 'anterior'}];
   function dim(n, lim) { return {dateRanges: rango, dimensions: [{name: n}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: lim || 6}; }
@@ -1156,8 +1156,45 @@ function leerGA(c, dias, forzar) {
   var lista = function (r) { return filasDe(r).map(function (x) { return {nombre: x.d[0], sesiones: x.m[0]}; }); };
   var ev = {}; filasDe(R[4]).forEach(function (x) { ev[x.d[0]] = x.m[0]; });
   var out = {total: tot, canales: lista(R[1]), dispositivos: lista(R[2]), regiones: lista(R[3]), eventos: ev, periodo: cur};
+  try {   // segundo pedido: de qué sitio llegan (Instagram, Facebook, Google…), todas las provincias y las ciudades
+    var R2 = AnalyticsData.Properties.batchRunReports({requests: [
+      {dateRanges: rango, dimensions: [{name: 'sessionSource'}, {name: 'sessionMedium'}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 25},
+      {dateRanges: rango, dimensions: [{name: 'region'}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 40},
+      {dateRanges: rango, dimensions: [{name: 'city'}, {name: 'region'}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 40}
+    ]}, 'properties/' + prop).reports || [];
+    out.fuentes = filasDe(R2[0]).map(function (x) { return {fuente: x.d[0], medio: x.d[1], sesiones: x.m[0]}; });
+    out.regiones = lista(R2[1]);
+    out.ciudades = filasDe(R2[2]).map(function (x) { return {nombre: x.d[0], region: x.d[1], sesiones: x.m[0]}; });
+  } catch (e) { console.error(e); }
   cache.put(clave, JSON.stringify(out), 1800);
   return out;
+}
+/* ---------- zonas: dónde miran (Analytics) y dónde compran (dirección de envío de los pedidos) ---------- */
+function sinAcentos(s) { return String(s || '').toLowerCase().replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i').replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n').trim(); }
+function claveProv(nombre, deAnalytics) {   // une "Cordoba Province" (Analytics) con "CORDOBA" (planilla)
+  var s = sinAcentos(nombre);
+  if (deAnalytics && s === 'buenos aires') return 'capital federal';   // en Analytics, "Buenos Aires" a secas es la ciudad
+  if (/autonom|caba|capital federal|ciudad de buenos aires/.test(s)) return 'capital federal';
+  return s.replace(/ province$/, '').replace(/^provincia de /, '').replace(/ provincia$/, '').trim();
+}
+function zonasEntre(per, P, ga) {
+  var prov = {}, ciu = {};
+  function p(k, nombre) { return prov[k] || (prov[k] = {clave: k, nombre: nombre, visitas: 0, ventas: 0, cobrado: 0}); }
+  function c(k, nombre, pk) { return ciu[k] || (ciu[k] = {nombre: nombre, provincia: pk, visitas: 0, ventas: 0, cobrado: 0}); }
+  P.forEach(function (x) {
+    if (VENDIDO.indexOf(x.estado) < 0) return;
+    var dia = Utilities.formatDate(new Date(tsDe(x.pagado_el) || tsDe(x.fecha)), TZ, 'yyyy-MM-dd');
+    if (dia < per.since || dia > per.until) return;
+    var partes = String(x.prov_loc_cp || '').split(' / '), pk = claveProv(partes[0]), loc = partes[1] || '';
+    if (!pk) return;
+    var a = p(pk, partes[0]); a.ventas++; a.cobrado += num(x.total);
+    if (pk === 'capital federal') loc = 'Ciudad de Buenos Aires';   // los barrios de Capital van juntos (Analytics los ve como una sola ciudad)
+    if (loc) { var b = c(pk + '|' + sinAcentos(loc), loc, pk); b.ventas++; b.cobrado += num(x.total); }
+  });
+  if (ga && ga.regiones) ga.regiones.forEach(function (x) { if (/not set/.test(x.nombre)) return; p(claveProv(x.nombre, true), x.nombre).visitas += x.sesiones; });
+  if (ga && ga.ciudades) ga.ciudades.forEach(function (x) { if (/not set/.test(x.nombre)) return; var pk = claveProv(x.region, true), nom = pk === 'capital federal' ? 'Ciudad de Buenos Aires' : x.nombre; c(pk + '|' + sinAcentos(nom), nom, pk).visitas += x.sesiones; });
+  function orden(a, b) { return (b.ventas - a.ventas) || (b.visitas - a.visitas); }
+  return {provincias: Object.keys(prov).map(function (k) { return prov[k]; }).sort(orden), ciudades: Object.keys(ciu).map(function (k) { return ciu[k]; }).sort(orden).slice(0, 15)};
 }
 function tablero(r) {
   var c = cfg(), dias = [1, 7, 30].indexOf(num(r.dias)) >= 0 ? num(r.dias) : 7, P = filas(H.pedidos), s = stock();
@@ -1167,10 +1204,10 @@ function tablero(r) {
     var porDia = ult30.porProducto[p.id] / 30;
     stk[p.id] = {nombre: p.nombre, disponible: Math.max(0, s[p.id].disponible), porDia: Math.round(porDia * 100) / 100, dias: porDia > 0 ? Math.floor(Math.max(0, s[p.id].disponible) / porDia) : null};
   });
-  var meta = leerMetaAds(c, dias, !!r.forzar);
-  return {dias: dias, periodo: cur, ventas: ventasEntre(c, cur, P), anterior: ventasEntre(c, prev, P), reservas: reservasEntre(cur, P), stock: stk,
+  var meta = leerMetaAds(c, dias, !!r.forzar), ga = leerGA(c, dias, !!r.forzar);
+  return {dias: dias, zonas: zonasEntre(cur, P, ga && ga.total ? ga : null), periodo: cur, ventas: ventasEntre(c, cur, P), anterior: ventasEntre(c, prev, P), reservas: reservasEntre(cur, P), stock: stk,
     meta: meta && meta.total ? {inversion: meta.total.inversion, compras: meta.total.compras, clics: meta.total.clics} : {falta: meta && (meta.falta || meta.error) ? (meta.falta || 'error') : ''},
-    ga: leerGA(c, dias, !!r.forzar)};
+    ga: ga};
 }
 
 /* ================= MAILS ================= */
