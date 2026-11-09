@@ -120,7 +120,7 @@ function vInicio(d){
   if(res) todo.push(['warn',res+' transferencia'+(res>1?'s':'')+' esperando pago.','hoy','Ver']);
   if(pag) todo.push(['warn',pag+' pedido'+(pag>1?'s':'')+' pagado'+(pag>1?'s':'')+' para preparar y exportar a Andreani.','hoy','Ver']);
   if(exp) todo.push(['info',exp+' envío'+(exp>1?'s':'')+' exportado'+(exp>1?'s':'')+' sin número de seguimiento.','hoy','Cargar']);
-  if(d.avisos.length && (d.stock.doble.disponible>0||d.stock.individual.disponible>0)) todo.push(['info',d.avisos.length+' persona'+(d.avisos.length>1?'s':'')+' esperan aviso de stock.','stock','Ver']);
+  if(d.avisos.length && (d.stock.doble.disponible>0||d.stock.individual.disponible>0)) todo.push(['info',d.avisos.length+' persona'+(d.avisos.length>1?'s':'')+' esperan aviso de stock.','recuperar','Ver']);
   if(window.TALLER) todo=todo.concat(TALLER.pendientes());
   h+='<div class="block"><h3>Para hacer</h3>'+(todo.length?'<ul class="todo">'+todo.map(function(t){ return '<li class="'+t[0]+'"><span>'+esc(t[1])+'</span><button class="btn ghost sm" data-go="'+t[2]+'"'+(t[4]?' data-f="'+t[4]+'"':'')+'>'+esc(t[3])+'</button></li>'; }).join("")+'</ul>':'<p class="muted" style="margin:0">Todo al día.</p>')+'</div>';
   if(window.TALLER) h+=TALLER.inicio();
@@ -165,7 +165,7 @@ function vStock(d){
   h+='<div class="block"><h3>Historial</h3>'+(d.movimientos.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th class="n">Cantidad</th></tr></thead><tbody>'
     +d.movimientos.map(function(m){return '<tr><td>'+esc(m.fecha)+'</td><td>'+(m.producto==="individual"?"Individual":"Doble")+'</td><td>'+esc(m.motivo)+'</td><td class="n '+(m.cantidad>0?'pos':'neg')+'">'+(m.cantidad>0?'+':'')+m.cantidad+'</td></tr>';}).join("")
     +'</tbody></table></div>':'<p class="muted" style="margin:0">Sin movimientos todavía.</p>')+'</div>';
-  h+='<div class="block"><h3>Avisame cuando vuelva</h3>'+(d.avisos.length?'<p class="muted" style="margin:0 0 10px">'+d.avisos.length+' personas esperan aviso.</p><ul style="margin:0 0 12px;padding-left:18px">'+d.avisos.map(function(a){return '<li>'+esc(a)+'</li>';}).join("")+'</ul><button class="btn main" data-a="avisar"'+((d.stock.doble.disponible>0||d.stock.individual.disponible>0)?'':' disabled')+'>Avisarles que hay stock</button>':'<p class="muted" style="margin:0">Nadie en espera.</p>')+'</div>';
+  h+='<div class="block"><h3>Avisame cuando vuelva</h3><p class="muted" style="margin:0">'+(d.avisos.length?d.avisos.length+' persona'+(d.avisos.length>1?'s':'')+' esperan que vuelva el stock.':'Nadie esperando aviso.')+' La lista y el botón para avisarles están en <button class="linkb" data-go="recuperar">Recuperar ventas</button>.</p></div>';
   return h;
 }
 function vEnvios(d){
@@ -270,8 +270,11 @@ function waRecuperar(x){
 function vRecuperar(){
   if(!RC){ cargarRecuperar(); return '<div class="ph"><div><h2>Recuperar ventas</h2></div></div><p class="muted"><span class="spinner"></span> Cargando…</p>'; }
   var st=RC.stats||{}, L=RC.lista||[], cups=RC.cupones||[];
-  var h='<div class="ph"><div><h2>Recuperar ventas</h2><p class="sub">Clientes que empezaron a comprar y no terminaron, y ya recibieron el primer recordatorio automático. Escribiles por WhatsApp o mandales un segundo mail con un beneficio.</p></div></div>'
+  var h='<div class="ph"><div><h2>Recuperar ventas</h2><p class="sub">Gente que se interesó y todavía no compró: los que esperan que vuelva el stock, y los que empezaron a comprar y no terminaron (ya recibieron el recordatorio automático). Escribiles por WhatsApp o mandales un segundo mail con un beneficio.</p></div></div>'
     +'<div class="cards" style="margin-top:0"><div class="kpi"><small>Recordatorios automáticos</small><b>'+(st.recordatorios||0)+'</b></div><div class="kpi"><small>Segundos mails</small><b>'+(st.segundos||0)+'</b></div><div class="kpi ok"><small>Ventas recuperadas</small><b>'+(st.recuperadas||0)+'</b></div><div class="kpi"><small>Sin comprar ahora</small><b>'+L.length+'</b></div></div>';
+  var D=S.data||{avisos:[],stock:{doble:{},individual:{}}}, hayStock=(D.stock.doble.disponible>0||D.stock.individual.disponible>0);
+  h+='<div class="block"><h3>Esperan aviso de stock ('+D.avisos.length+')</h3><p class="muted small" style="margin:-4px 0 10px">Dejaron su mail en “Avisame cuando vuelva” cuando no había fundas. Cuando haya stock, avisales: les llega un mail con el botón “Comprar ahora”.</p>'
+    +(D.avisos.length?'<ul style="margin:0 0 12px;padding-left:18px">'+D.avisos.map(function(a){return '<li>'+esc(a)+'</li>';}).join("")+'</ul><button class="btn main" data-a="avisar"'+(hayStock?'':' disabled')+'>Avisarles que hay stock</button>'+(hayStock?'':'<p class="muted small" style="margin:8px 0 0">Se habilita cuando haya fundas disponibles.</p>'):'<p class="muted" style="margin:0">Nadie esperando por ahora.</p>')+'</div>';
   h+='<div class="block"><h3>Clientes sin comprar</h3>';
   if(!L.length) h+='<p class="muted" style="margin:0">No hay nadie en la lista.</p>';
   else {
