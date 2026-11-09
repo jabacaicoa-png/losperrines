@@ -222,7 +222,10 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 @media(min-width:720px){.modelos-grid{grid-template-columns:1fr 1fr}}
 .modelo{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;display:flex;flex-direction:column}
 .modelo .m-foto{position:relative;aspect-ratio:3/2;background:#2F3822}
+.modelo .m-foto{overflow:hidden}
 .modelo .m-foto svg,.modelo .m-foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.modelo .m-foto img.m-img{object-fit:contain}   /* la foto se ve entera, con cualquier forma */
+.modelo .m-foto img.m-fondo{filter:blur(22px) brightness(.8);transform:scale(1.2)}   /* lo que sobra se rellena con la misma foto desenfocada */
 .modelo .m-body{padding:18px 20px 20px;display:flex;flex-direction:column;flex:1}
 .modelo .m-transf{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .modelo .m-transf small{color:var(--ok);font-weight:700;font-size:.9rem}
@@ -329,7 +332,7 @@ details.m-det[open] summary::after{content:"−"}
   .illus svg{max-height:210px;display:block;margin:0 auto}
   .modelo .m-beneficio-desc{display:none}
   .modelo .m-body{padding:16px 16px 18px}
-  .modelo .m-foto{aspect-ratio:16/9}
+  .modelo .m-foto{aspect-ratio:4/3}
   .tela .grid4,.hgrid,.features{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;padding-bottom:8px;margin:0 -20px;padding-left:20px;padding-right:20px;scrollbar-width:none;scroll-padding-left:20px}
   .tela .grid4::-webkit-scrollbar,.hgrid::-webkit-scrollbar,.features::-webkit-scrollbar{display:none}
   .tela .grid4>*,.hgrid>*,.features>*{flex:0 0 80%;scroll-snap-align:start}
@@ -720,7 +723,7 @@ function pintarModelos(){
   g.innerHTML=ps.map(function(p){ var i0=INFO[p.id]||{sub:"",det:[],ancho:40,foto:""}, i={sub:p.sub||i0.sub,det:(p.medidas&&p.medidas.length)?p.medidas:i0.det,ancho:i0.ancho,foto:i0.foto}, sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
     var ilus='<svg viewBox="0 0 120 80" aria-hidden="true"><rect x="0" y="0" width="120" height="80" rx="12" fill="#2F3822"/><rect x="'+(60-i.ancho/2)+'" y="18" width="'+i.ancho+'" height="44" rx="6" fill="#D9E15A" stroke="#F2F3EC" stroke-width="2"/><path d="M'+(60-i.ancho/2)+' 40H'+(60+i.ancho/2)+'" stroke="#4E5B3A" stroke-width="2" stroke-dasharray="4 3"/></svg>';
     return '<article class="modelo">'
-      +(function(){ var pm=principalDe(p.id), nm=MED(p.id).length; return '<div class="m-foto"'+(nm?' role="button" tabindex="0" data-gal="'+p.id+'" data-i="0" aria-label="Ver fotos de '+esc(p.nombre)+'"':'')+'>'+ilus+'<img src="'+(pm?urlImg(pm.drive,900):i.foto)+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()">'+(nm>1?'<span class="m-galbadge">📷 '+nm+'</span>':'')+'</div>'; })()
+      +(function(){ var pm=principalDe(p.id), nm=MED(p.id).length; return '<div class="m-foto"'+(nm?' role="button" tabindex="0" data-gal="'+p.id+'" data-i="0" aria-label="Ver fotos de '+esc(p.nombre)+'"':'')+'>'+ilus+(function(){ var src=pm?urlImg(pm.drive,900):i.foto; return '<img class="m-fondo" src="'+src+'" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()"><img class="m-img" src="'+src+'" alt="'+esc(p.nombre)+'" loading="lazy" onerror="this.remove()">'; })()+(nm>1?'<span class="m-galbadge">📷 '+nm+'</span>':'')+'</div>'; })()
       +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-beneficio-desc">Funda impermeable para mascotas: protege los asientos del agua, barro y pelos.</p><div class="m-beneficios"><span>💧 IMPERMEABLE</span><span>🛡️ PROTECCIÓN</span><span>ACOLCHADA</span></div><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<p class="m-envio">'+ANDREANI_LOGO+' <b>ENVÍO GRATIS por Andreani a todo el país:</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s>':'')+'</p>'
