@@ -54,11 +54,18 @@ function embudo(m) {
     + (i ? ' <span class="muted small">(' + String(pct(x[1], P[i - 1][1])).replace(".", ",") + '%)</span>' : "") + '</b></div>').join("") + '</div>'
     + (diag && P[peor][1] < P[peor - 1][1] ? '<div class="note warn">' + esc(diag) + '</div>' : "");
 }
+/* Links al Administrador de anuncios de Meta, ya abierto en tu cuenta (crear y editar se hace allá: el panel solo lee). */
+function cuentaMeta() { return String(((L.S.data || {}).config || {}).meta_ad_account || "").replace(/\D/g, ""); }
+function urlMeta(campana) {
+  const act = cuentaMeta(), base = "https://adsmanager.facebook.com/adsmanager/manage/";
+  if (!act) return "https://adsmanager.facebook.com/";
+  return campana ? base + "adsets?act=" + act + "&selected_campaign_ids=" + encodeURIComponent(campana) : base + "campaigns?act=" + act;
+}
 function vPublicidad() {
   cargar();
   const d = PUB.datos[PUB.dias], T = window.TALLER;
   let h = '<div class="ph"><div><h2>Publicidad</h2><p class="sub">Lo que invertís en anuncios de Meta contra lo que vendés de verdad y lo que te queda en el bolsillo.</p></div>'
-    + '<button class="btn ghost sm" data-a="pubRecargar" aria-label="Actualizar datos de Meta">↻ Actualizar</button></div>'
+    + '<div class="acts"><a class="btn main sm" href="' + esc(urlMeta()) + '" target="_blank" rel="noopener">＋ Crear campaña en Meta ↗</a><button class="btn ghost sm" data-a="pubRecargar" aria-label="Actualizar datos de Meta">↻ Actualizar</button></div></div>'
     + '<div class="filters">' + [[1, "Hoy"], [7, "Últimos 7 días"], [30, "Últimos 30 días"]].map(x => '<button class="chip" data-a="pubDias" data-d="' + x[0] + '" aria-pressed="' + (PUB.dias === x[0]) + '">' + x[1] + '</button>').join("") + '</div>';
   if (!d) return h + '<p class="muted"><span class="spinner"></span> Consultando a Meta…</p>';
   if (d.error === "backend") return h + '<div class="note bad"><b>Falta actualizar el backend.</b> Pegá el nuevo <code>Codigo.gs</code> en Apps Script y publicá una nueva versión. Después tocá ↻.</div>';
@@ -87,9 +94,9 @@ function vPublicidad() {
   if (m.total) {
     h += '<div class="block"><h3>Dónde se pierde la gente</h3><p class="muted small" style="margin:-4px 0 10px">De la gente que llegó por los anuncios. El % es sobre el paso anterior; en naranja, el paso donde más se cae.</p>' + embudo(t) + '</div>';
     const C = m.campanas || [];
-    h += '<div class="block"><h3>Campañas</h3>' + (!C.length ? '<p class="muted" style="margin:0">Todavía no hay anuncios en este período. Cuando arranques una campaña en el Administrador de anuncios, acá vas a ver cuánto gastó cada una, cuántas ventas trajo y si conviene seguir, ajustar o apagar.</p>'
+    h += '<div class="block"><h3>Campañas</h3>' + (!C.length ? '<p class="muted" style="margin:0 0 10px">Todavía no hay anuncios en este período. Cuando arranques una campaña en el Administrador de anuncios, acá vas a ver cuánto gastó cada una, cuántas ventas trajo y si conviene seguir, ajustar o apagar.</p><a class="btn main" href="' + esc(urlMeta()) + '" target="_blank" rel="noopener">＋ Crear tu primera campaña en Meta ↗</a>'
       : '<div class="tw"><table><thead><tr><th>Campaña</th><th class="n">Invertido</th><th class="n">Compras</th><th class="n">Costo por venta</th><th class="n">Toques</th><th class="n">Veces que la vio cada uno</th><th>¿Qué hago?</th></tr></thead><tbody>'
-      + C.map(c => { const vv = veredicto(c, gan), tips = consejos(c); return '<tr><td><b>' + esc(c.nombre) + '</b>' + (tips.length ? '<br><span class="small" style="color:var(--warn)">' + tips.map(esc).join("<br>") + '</span>' : "") + '</td><td class="n">' + money(c.inversion) + '</td><td class="n">' + n0(c.compras) + '</td><td class="n">' + (c.compras ? money(c.inversion / c.compras) : "—") + '</td><td class="n">' + String(c.ctr).replace(".", ",") + '%</td><td class="n">' + String(c.frecuencia).replace(".", ",") + '</td><td><span class="pill ' + vv[0] + '">' + esc(vv[1]) + '</span></td></tr>'; }).join("")
+      + C.map(c => { const vv = veredicto(c, gan), tips = consejos(c); return '<tr><td><b>' + esc(c.nombre) + '</b> <a class="small" href="' + esc(urlMeta(c.id)) + '" target="_blank" rel="noopener" title="Editar o pausar en Meta">Abrir en Meta ↗</a>' + (tips.length ? '<br><span class="small" style="color:var(--warn)">' + tips.map(esc).join("<br>") + '</span>' : "") + '</td><td class="n">' + money(c.inversion) + '</td><td class="n">' + n0(c.compras) + '</td><td class="n">' + (c.compras ? money(c.inversion / c.compras) : "—") + '</td><td class="n">' + String(c.ctr).replace(".", ",") + '%</td><td class="n">' + String(c.frecuencia).replace(".", ",") + '</td><td><span class="pill ' + vv[0] + '">' + esc(vv[1]) + '</span></td></tr>'; }).join("")
       + '</tbody></table></div><p class="muted small" style="margin:10px 0 0"><b>Toques</b>: de cada 100 que vieron el anuncio, cuántos lo tocaron (menos de 1% = no engancha). <b>Veces que la vio cada uno</b>: más de 3,5 = la gente se cansa, cambiá la imagen.</p>')
       + '</div>';
   }
