@@ -775,14 +775,13 @@ function setCount(){ $("#cartCount").textContent=totQ(); bbUpdate(); }
 /* Barra de abajo (solo celular): no repite "Ver productos" cuando ya los estás viendo;
    si hay algo en el carrito, lleva al carrito; mientras mirás los productos, invita a preguntar por WhatsApp. */
 var BB={hero:false,modelos:false};
-function bbUpdate(){
+function bbUpdate(){   // el texto de al lado del WhatsApp es siempre el mismo (lo pidió el dueño); solo cambia el botón
   var cta=$("#bbCta"), txt=$("#bbTxt"); if(!cta||!txt) return;
+  txt.innerHTML='<strong>Elegí tu funda</strong> <small>'+(innerWidth<900?'<b class="gratis">Envío gratis</b> · <span data-p="ncuotas">'+((typeof C!=="undefined"&&C&&C.cuotas)||3)+'</span> cuotas':'<b class="gratis">Envío gratis</b> a todo el país')+'</small>';
   var n=typeof totQ==="function"?totQ():0;
-  if(n>0){ cta.hidden=false; cta.removeAttribute("data-add"); cta.textContent="Ver carrito ("+n+")"; cta.onclick=function(){ $("#openCart").click(); };
-    txt.innerHTML='<strong>Tu carrito</strong> <small><b class="gratis">Envío gratis</b></small>'; return; }
+  if(n>0){ cta.hidden=false; cta.removeAttribute("data-add"); cta.textContent="Ver carrito ("+n+")"; cta.onclick=function(){ $("#openCart").click(); }; return; }
   cta.onclick=null; cta.setAttribute("data-add",""); cta.textContent="Ver productos";
-  if(BB.modelos){ cta.hidden=true; txt.innerHTML='<strong>¿Dudas con las medidas?</strong> <small>Escribinos por WhatsApp, te respondemos</small>'; }
-  else { cta.hidden=BB.hero; txt.innerHTML='<strong>Elegí tu funda</strong> <small><b class="gratis">Envío gratis</b> a todo el país</small>'; if(innerWidth<900) txt.querySelector("small").innerHTML='<b class="gratis">Envío gratis</b> · <span data-p="ncuotas">'+((typeof C!=="undefined"&&C&&C.cuotas)||3)+'</span> cuotas'; }
+  cta.hidden=!!(BB.modelos||BB.hero);
 }
 if("IntersectionObserver" in window) window.addEventListener("load",function(){
   var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.target.id==="modelos") BB.modelos=e.isIntersecting; else BB.hero=e.isIntersecting; }); bbUpdate(); },{rootMargin:"-60px 0px -90px 0px"});
