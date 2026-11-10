@@ -20,6 +20,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | `admin.webmanifest`, `iconos/` | Ícono del panel para el acceso directo en el celular (logo sobre fondo oliva; `admin-512-maskable.png` con más margen para Android). Nombre corto "LP Admin". |
 | `corte.html` | Plano de corte e impresión de la ficha para la costurera. Con `#panel` toma las medidas que le pasa el panel por `sessionStorage`. |
 | `Codigo.gs` | Backend en Google Apps Script sobre una planilla de Google. **No se publica solo**: el dueño lo pega en Apps Script, ejecuta `instalar()` y hace *Implementar → Administrar implementaciones → Editar → Nueva versión*. |
+| `ig/index.html` | Link corto para la bio de Instagram (`losperrines.com.ar/ig`): redirige a `/?utm_source=instagram&utm_medium=bio`. |
 | `costos.html`, `insumos.html`, `pagos.html`, `admin-viejo.html` | Herramientas anteriores, ya reemplazadas. Se conservan como respaldo. |
 | `dev/` | Herramientas de prueba: emulador de Apps Script y helpers de Playwright (ver abajo). |
 
