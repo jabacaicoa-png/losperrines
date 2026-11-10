@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "10/11 · 9";
+window.PANEL_VERSION = "10/11 · 10";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -103,6 +103,14 @@ function consumos(f, n, out) {
   if (bolsaActiva(f)) (f.bolsa.items || []).forEach(x => { if (x.insumo) out[x.insumo] = (out[x.insumo] || 0) + bolsaUso(f.bolsa, x) * n; });
   return out;
 }
+/* Plata de lo que falta entregar de una tanda: confección a pagar al recibir, lo que entra si se vende todo (mezcla
+   tarjeta/transferencia de Precios y rentabilidad), costo total y ganancia. Misma cuenta que Planificar tanda. */
+function plataTanda(t) {
+  initRS(); const pend = pendienteTanda(t), o = {fundas: 0, conf: 0, ingreso: 0, costo: 0, gan: 0};
+  PRODS.forEach(p => { const n = pend[p] || 0; if (!n) return; const f = fichaGuardada(p), r = rent(p);
+    o.fundas += n; o.conf += n * confU(f); o.costo += n * costo(f).total; o.ingreso += n * (r.mix * r.recT + (1 - r.mix) * r.px); o.gan += n * r.gMix; });
+  return o;
+}
 function pendienteTanda(t) { const o = {}; (t.items || []).forEach(it => { o[it.producto] = Math.max(0, it.cantidad - ((t.recibido || {})[it.producto] || 0)); }); return o; }
 function reservado() { // lo que tiene el taller para tandas en confección
   const out = {};
@@ -181,7 +189,7 @@ function inicio() {
   const bajos = bajoMinimo(), sal = saldos(), deuda = Object.keys(sal).reduce((a, k) => a + Math.max(0, sal[k].saldo), 0);
   const prods = PRODS.filter(p => T().fichas.some(f => f.producto === p));
   let h = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:22px;flex-wrap:wrap"><h3 style="margin:0">Taller y números</h3><button class="btn ghost sm" data-a="tExport">Descargar datos del taller</button></div><div class="cards">'
-    + '<div class="kpi' + (fundas ? " warn" : "") + '"><small>En confección</small><b>' + fundas + '</b><span class="k2">' + (enConf.length ? enConf.length + " tanda" + (enConf.length > 1 ? "s" : "") : "Ninguna tanda") + "</span></div>"
+    + (pc => '<div class="kpi' + (fundas ? " warn" : "") + '"><small>En confección</small><b>' + fundas + '</b><span class="k2">' + (enConf.length ? enConf.length + " tanda" + (enConf.length > 1 ? "s" : "") + " · confección " + money(pc.conf) + " · venden " + money(pc.ingreso) : "Ninguna tanda") + "</span></div>")(enConf.reduce((a, t) => { const x = plataTanda(t); a.conf += x.conf; a.ingreso += x.ingreso; return a; }, {conf: 0, ingreso: 0}))
     + '<div class="kpi' + (bajos.length ? " bad" : " ok") + '"><small>Insumos bajo el mínimo</small><b>' + bajos.length + '</b><span class="k2">' + (bajos.length ? esc(bajos.slice(0, 2).map(i => i.nombre).join(", ")) : "Todo en orden") + "</span></div>"
     + '<div class="kpi' + (deuda ? " warn" : "") + '"><small>Debés a proveedores</small><b>' + money(deuda) + '</b><span class="k2">Compras y confección sin pagar</span></div>';
   if (prods.length) {
@@ -277,6 +285,7 @@ function vTandas() {
       + (t.estado === "planificada" || t.estado === "en_confeccion" ? '<button class="btn ghost sm" data-a="tdEditar" data-id="' + esc(t.id) + '">Editar</button>' : "")
       + (t.estado === "planificada" || (t.estado === "en_confeccion" && !Object.keys(rec).length) ? '<button class="btn ghost sm" data-a="tdEstado" data-id="' + esc(t.id) + '" data-v="cancelada">Cancelar</button>' : "")
       + (t.estado === "en_confeccion" && Object.keys(rec).length ? '<button class="btn ghost sm" data-a="tdEstado" data-id="' + esc(t.id) + '" data-v="recibida">Cerrar sin recibir el resto</button>' : "") + "</div></div>"
+      + ((t.estado === "en_confeccion" || t.estado === "planificada") ? (pt => pt.fundas ? '<div class="note" style="margin:10px 0 0"><b>Falta entregar: ' + pt.fundas + ' funda' + (pt.fundas > 1 ? "s" : "") + '</b><br>Confección a pagar al recibir: <b>' + money(pt.conf) + '</b> · Si las vendés todas recibís <b>' + money(pt.ingreso) + '</b> · Costo total ' + money(pt.costo) + ' · Ganancia <b>' + money(pt.gan) + '</b></div>' : "")(plataTanda(t)) : "")
       + '<div class="g2" style="margin-top:10px">' + (t.items || []).map(it => { const r = rec[it.producto] || 0, pc = Math.min(100, r / it.cantidad * 100);
         return '<div><div style="display:flex;justify-content:space-between" class="small"><span>' + esc(nombreP(it.producto)) + "</span><b>" + r + " de " + it.cantidad + ' recibidas</b></div><div style="height:8px;border-radius:6px;background:var(--field);border:1px solid var(--line);overflow:hidden;margin-top:4px"><i style="display:block;height:100%;width:' + pc + '%;background:var(--ok)"></i></div></div>'; }).join("") + "</div></div>";
   }).join("");
