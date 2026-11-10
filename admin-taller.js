@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "10/11 · 6";
+window.PANEL_VERSION = "10/11 · 8";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -12,7 +12,7 @@ const MED_DEF = {
   doble: {an: 125, t1: 48, t2: 40, t3: 38, la: 40, lb: 38, nl: 2, nc: 6, tf: 10, tr: 60},
   individual: {an: 60, t1: 48, t2: 40, t3: 38, la: 40, lb: 38, nl: 2, nc: 4, tf: 10, tr: 60}
 };
-const MED_LBL = [["an", "Ancho"], ["t3", "Respaldo delantero"], ["t2", "Asiento"], ["t1", "Respaldo trasero"], ["la", "Lateral: alto"], ["lb", "Lateral: ancho"], ["nl", "Laterales"], ["nc", "Correas (hebillas)"], ["tf", "Tira fija"], ["tr", "Tira regulable"]];
+const MED_LBL = [["an", "Ancho"], ["t3", "Respaldo delantero"], ["t2", "Asiento"], ["t1", "Respaldo trasero"], ["la", "Lateral: largo junto al asiento"], ["lb", "Lateral: alto (hacia la puerta)"], ["nl", "Laterales"], ["nc", "Correas (hebillas)"], ["tf", "Tira fija"], ["tr", "Tira regulable"]];
 const AUTO_TXT = {tela: "sale del corte", correas: "1 por correa", cinta: "correas × (tira fija + regulable)"};
 const ESTADO = {planificada: ["Planificada", "mute"], en_confeccion: ["En confección", "warn"], recibida: ["Recibida", "ok"], cancelada: ["Cancelada", "mute"]};
 
@@ -639,9 +639,11 @@ function migrarDlg() {
 function abrirPlano(f) {
   const m = med(f), n = Math.max(1, Math.floor(nd(PL.q[f.producto])) || 1);
   const modelo = Object.assign({id: "panel-" + f.producto, nom: nombreP(f.producto), q: n}, m);
-  // localStorage (no sessionStorage): el plano se abre en otra pestaña y la sessionStorage no viaja a una pestaña nueva
-  try { localStorage.setItem("lp_corte_panel", JSON.stringify({ts: Date.now(), modelos: [modelo], rollo: {rw: String(conf("rollo_ancho", 150)), rl: String(conf("rollo_largo", 60)), rp: String((ins(telaId()) || {}).precio || ""), mg: String(conf("margen_costura", 1))}})); } catch (e) {}
-  window.open("corte.html#panel", "_blank", "noopener");
+  const rd = rolloDraft(), datos = JSON.stringify({ts: Date.now(), modelos: [modelo], rollo: {rw: String(nd(rd.rollo_ancho) || 150), rl: String(nd(rd.rollo_largo) || 60), rp: String((ins(telaId()) || {}).precio || ""), mg: String(nd(rd.margen_costura))}});
+  // Las medidas viajan en el mismo link (y de respaldo en localStorage): la pestaña nueva no comparte la sessionStorage.
+  // El ?v= evita que el navegador abra una copia vieja guardada del plano.
+  try { localStorage.setItem("lp_corte_panel", datos); } catch (e) {}
+  window.open("corte.html?v=" + Date.now() + "#panel=" + encodeURIComponent(datos), "_blank", "noopener");
 }
 
 /* ================= eventos ================= */
