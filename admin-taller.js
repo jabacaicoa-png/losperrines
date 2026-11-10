@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "10/11 · 4";
+window.PANEL_VERSION = "10/11 · 5";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -639,7 +639,8 @@ function migrarDlg() {
 function abrirPlano(f) {
   const m = med(f), n = Math.max(1, Math.floor(nd(PL.q[f.producto])) || 1);
   const modelo = Object.assign({id: "panel-" + f.producto, nom: nombreP(f.producto), q: n}, m);
-  try { sessionStorage.setItem("lp_corte_panel", JSON.stringify({modelos: [modelo], rollo: {rw: String(conf("rollo_ancho", 150)), rl: String(conf("rollo_largo", 60)), rp: String((ins(telaId()) || {}).precio || ""), mg: String(conf("margen_costura", 1))}})); } catch (e) {}
+  // localStorage (no sessionStorage): el plano se abre en otra pestaña y la sessionStorage no viaja a una pestaña nueva
+  try { localStorage.setItem("lp_corte_panel", JSON.stringify({ts: Date.now(), modelos: [modelo], rollo: {rw: String(conf("rollo_ancho", 150)), rl: String(conf("rollo_largo", 60)), rp: String((ins(telaId()) || {}).precio || ""), mg: String(conf("margen_costura", 1))}})); } catch (e) {}
   window.open("corte.html#panel", "_blank", "noopener");
 }
 

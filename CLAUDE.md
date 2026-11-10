@@ -18,7 +18,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | `admin-publicidad.js` | Pantalla **Publicidad** (grupo Números): inversión en Meta vs ventas reales de la planilla y ganancia después de anuncios (usa `TALLER.costoFunda`/`gananciaFunda`), embudo y campañas con veredicto. |
 | `admin-taller.js` | Taller: insumos, productos (medidas + receta + bolsa), tandas, proveedores y pagos, planificar, rentabilidad, importación. Define `window.PANEL_VERSION` (se muestra abajo del menú). |
 | `admin.webmanifest`, `iconos/` | Ícono del panel para el acceso directo en el celular (logo sobre fondo oliva; `admin-512-maskable.png` con más margen para Android). Nombre corto "LP Admin". |
-| `corte.html` | Plano de corte e impresión de la ficha para la costurera. Con `#panel` toma las medidas que le pasa el panel por `sessionStorage`. |
+| `corte.html` | Plano de corte e impresión de la ficha para la costurera. Con `#panel` toma las medidas que le pasa el panel por `localStorage` (`lp_corte_panel`; no `sessionStorage`, que no viaja a la pestaña nueva que abre `window.open`). |
 | `Codigo.gs` | Backend en Google Apps Script sobre una planilla de Google. **No se publica solo**: el dueño lo pega en Apps Script, ejecuta `instalar()` y hace *Implementar → Administrar implementaciones → Editar → Nueva versión*. |
 | `ig/index.html` | Link corto para la bio de Instagram (`losperrines.com.ar/ig`): redirige a `/?utm_source=instagram&utm_medium=bio`. |
 | `costos.html`, `insumos.html`, `pagos.html`, `admin-viejo.html` | Herramientas anteriores, ya reemplazadas. Se conservan como respaldo. |
