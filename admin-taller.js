@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "10/11 · 8";
+window.PANEL_VERSION = "10/11 · 9";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -17,8 +17,9 @@ const AUTO_TXT = {tela: "sale del corte", correas: "1 por correa", cinta: "corre
 const ESTADO = {planificada: ["Planificada", "mute"], en_confeccion: ["En confección", "warn"], recibida: ["Recibida", "ok"], cancelada: ["Cancelada", "mute"]};
 
 /* ================= calculadora de corte (misma lógica que corte.html) ================= */
-/* Cuerpo: largo de corte = tramos terminados + 2 cm por cada pliegue (son 2). Los extremos llevan bies: no suman costura. */
-function piezas(md, mg) { return {CW: md.an + 2 * mg, CL: md.t1 + md.t2 + md.t3 + 2 * 2, LA: md.la + 2 * mg, LB: md.lb + mg, nl: Math.max(0, Math.round(md.nl))}; }
+/* Criterio del dueño (10/11/2026), igual que corte.html: cuerpo ancho sin margen (gross); largo = tramos + 4 márgenes
+   (2 en el pliegue con el respaldo delantero y 2 en la unión con el trasero); lateral: lado del asiento sin margen, alto + 1 margen. */
+function piezas(md, mg) { return {CW: md.an, CL: md.t1 + md.t2 + md.t3 + 4 * mg, LA: md.la, LB: md.lb + mg, nl: Math.max(0, Math.round(md.nl))}; }
 function fit(w, l, LA, LB) { const a = Math.floor(w / LA) * Math.floor(l / LB), b = Math.floor(w / LB) * Math.floor(l / LA); return a >= b ? {n: a} : {n: b}; }
 function bloque(n, P, RW, giro) {
   const cA = giro ? P.CL : P.CW, cL = giro ? P.CW : P.CL; if (cA > RW || cA <= 0 || cL <= 0) return null;
@@ -313,7 +314,7 @@ function vProductos() {
   let h = cabecera("Productos y recetas", "La ficha de cada funda: medidas de corte, qué lleva y cuánto cuesta. La tela, las hebillas y la cinta se calculan solas a partir de las medidas.") + bannerMigrar()
     + '<div class="filters">' + PRODS.map(x => '<button class="chip" data-a="pdTab" data-p="' + x + '" aria-pressed="' + (x === p) + '">' + esc(nombreP(x)) + "</button>").join("") + "</div>";
   h += '<div class="cols2"><div class="block"><h3>Medidas de corte</h3><div class="g3">' + MED_LBL.map(k => '<label class="f">' + k[1] + '<input id="md-' + k[0] + '" data-in="pdMed" data-k="' + k[0] + '" inputmode="decimal" value="' + esc(f.medidas && f.medidas[k[0]] != null ? f.medidas[k[0]] : m[k[0]]) + '"></label>').join("") + "</div>"
-    + '<p class="muted small" style="margin:-4px 0 10px">Centímetros, medidas terminadas. Al largo del cuerpo se le suman 2 cm por cada pliegue (los extremos llevan bies); al ancho y a los laterales, el margen de costura.</p>'
+    + '<p class="muted small" style="margin:-4px 0 10px">Centímetros. El <b>ancho</b> del cuerpo se corta tal cual (los bordes llevan gross: si querés dejarle lugar a Susana para emprolijar, cargalo con algo de más). Al <b>largo</b> se le suma el margen de costura de cada lado de las dos uniones del asiento (4 márgenes). Al lateral se le suma 1 margen en el alto, por la costura con el asiento.</p>'
     + '<div class="note" style="margin-top:0"><b>' + q(telaU(f)) + ' m de tela por funda</b><br><span class="small">Piezas de corte: cuerpo ' + Math.round(A.P.CW) + " × " + Math.round(A.P.CL) + " · " + A.P.nl + " laterales de " + Math.round(A.P.LA) + " × " + Math.round(A.P.LB) + ". Conviene cortar de a " + (A.best ? A.best.n : "—") + " (" + (A.best ? q(A.best.len / 100) : "—") + " m). Un rollo de " + esc(rd.rollo_largo) + " m rinde " + porLargo(A, nd(rd.rollo_largo) * 100) + " fundas.</span></div>"
     + '<div class="acts" style="margin-top:10px"><button class="btn ghost sm" data-a="pdPlano">Ver plano e imprimir ficha</button></div>'
     + '<details id="pdRolloDet" style="margin-top:12px"' + (PD.rolloAbierto ? " open" : "") + '><summary class="small" style="cursor:pointer;font-weight:700">Margen de costura: ' + q(nd(rd.margen_costura)) + ' cm · rollo de ' + q(nd(rd.rollo_ancho)) + ' cm × ' + q(nd(rd.rollo_largo)) + ' m <span class="muted" style="font-weight:600">(tocá para cambiar · vale para todos los productos)</span></summary><div class="g3" style="margin-top:10px">'

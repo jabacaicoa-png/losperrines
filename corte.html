@@ -179,12 +179,16 @@ function up2(x){return Math.ceil(x*100-1e-9)/100;}
 
 /* ---------- cálculo ---------- */
 /* Corte y unión entre asiento y respaldo trasero (lo pidió Susana: corta ahí y vuelve a unir, así el abrojo de las
-   aberturas del cinturón queda más prolijo). La unión, cosida a 1 cm de cada lado, usa los mismos 2 cm que el pliegue:
-   el largo total de corte no cambia. */
-function corteUnion(m){ var del=m.t3+2+m.t2+1, tra=m.t1+1; return {del:del, tra:tra}; }
-/* largo del cuerpo: tramos + 2 cm por cada pliegue (los extremos llevan bies) */
+   aberturas del cinturón queda más prolijo). Pliegue y unión se cosen con el margen de costura (mg) de cada lado. */
+function MG(){ return num("#mg"); }
+function corteUnion(m){ var g=MG(); return {del:m.t3+2*g+m.t2+g, tra:m.t1+g}; }
+/* Criterio del dueño (10/11/2026):
+   - Cuerpo, ancho: sin margen (los bordes llevan gross); el ancho cargado es el de corte (pone 2 cm de más para emprolijar).
+   - Cuerpo, largo: tramos + 2 márgenes en cada unión del asiento (pliegue con el respaldo delantero y unión con el trasero) = + 4 × mg.
+   - Lateral: la = lado que se cose al asiento (sin margen: los cierres de las puntas no suman); lb = alto, donde van los cierres,
+     + 1 margen por la costura con el asiento (el borde de arriba lleva gross). Ej. 40 × 42 con 1 cm → se corta 40 × 43. */
 function piezas(md,mg){
-  return {CW:md.an+2*mg, CL:md.t1+md.t2+md.t3+2*2, LA:md.la+2*mg, LB:md.lb+mg, nl:Math.max(0,Math.round(md.nl))};
+  return {CW:md.an, CL:md.t1+md.t2+md.t3+4*mg, LA:md.la, LB:md.lb+mg, nl:Math.max(0,Math.round(md.nl))};
 }
 function fit(w,l,LA,LB){ // cuántos laterales entran en un área w × l (w a lo ancho)
   var a=Math.floor(w/LA)*Math.floor(l/LB), b=Math.floor(w/LB)*Math.floor(l/LA);
@@ -343,13 +347,13 @@ function renderLista(){
 function leyendaBN(m){
   var it=[
     ['<line x1="2" y1="9" x2="34" y2="9" stroke="#7A4508" stroke-width="4" stroke-dasharray="6 3"/><text x="40" y="13" font-size="10" font-weight="700">C</text>','Rayas gruesas (C): cierres en las 4 esquinas. Se unen los bordes marcados con C.'],
-    ['<line x1="2" y1="9" x2="34" y2="9" stroke="#1E2418" stroke-width="1.4" stroke-dasharray="4 3"/><text x="40" y="13" font-size="10" font-weight="700">P</text>','Línea de guiones con P: pliegue cosido. Se dobla la tela y se cose a 1 cm del doblez (usa 2 cm de tela).'],
+    ['<line x1="2" y1="9" x2="34" y2="9" stroke="#1E2418" stroke-width="1.4" stroke-dasharray="4 3"/><text x="40" y="13" font-size="10" font-weight="700">P</text>','Línea de guiones con P: pliegue cosido. Se dobla la tela y se cose a '+fmtN(MG())+' cm del doblez.'],
     ['<line x1="2" y1="7" x2="34" y2="7" stroke="#3A2A55" stroke-width="1.6"/><line x1="2" y1="11" x2="34" y2="11" stroke="#3A2A55" stroke-width="1.6"/>','Doble línea: costura fija del lateral al costado del asiento.'],
     ['<line x1="2" y1="9" x2="22" y2="9" stroke="#1E2418" stroke-width="2.5"/><rect x="22" y="3" width="12" height="12" fill="#fff" stroke="#1E2418" stroke-width="1.2"/><text x="28" y="12.5" font-size="9" font-weight="700" text-anchor="middle">F</text>','Línea llena con F: tira fija de '+fmtN(tiraF(m))+' cm, con la parte de la hebilla sin deslizador.'],
     ['<line x1="2" y1="9" x2="22" y2="9" stroke="#1E2418" stroke-width="2.5" stroke-dasharray="4 2"/><rect x="22" y="3" width="12" height="12" fill="#1E2418"/><text x="28" y="12.5" font-size="9" font-weight="700" text-anchor="middle" fill="#fff">R</text>','Línea punteada con R: tira regulable de '+fmtN(tiraR(m))+' cm, con la parte deslizante. ('+correas(m)+' hebillas'+(correas(m)>=6?': 2 en cada respaldo y 1 en cada lateral':'')+'.)'],
     ['<defs><pattern id="lgp" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#fff"/><line x1="0" y1="0" x2="0" y2="4" stroke="#1E2418" stroke-width="1.3"/></pattern></defs><rect x="11" y="3" width="12" height="12" fill="url(#lgp)" stroke="#1E2418"/>','Cuadrado rayado: parche de refuerzo debajo de cada tira.'],
     ['<rect x="4" y="6" width="28" height="6" fill="#fff" stroke="#1E2418" stroke-width="1.2"/><text x="40" y="13" font-size="10" font-weight="700">A</text>','Rectángulo con A: abertura para el cinturón, en la unión asiento/respaldo trasero (se deja sin coser).'],
-    ['<line x1="2" y1="9" x2="34" y2="9" stroke="#B3261E" stroke-width="3"/>','Línea roja: corte y unión. Se separa el cuerpo y se vuelve a unir a 1 cm (usa 2 cm de tela).']
+    ['<line x1="2" y1="9" x2="34" y2="9" stroke="#B3261E" stroke-width="3"/>','Línea roja: corte y unión. Se separa el cuerpo y se vuelve a unir a '+fmtN(MG())+' cm.']
   ];
   return '<table class="leyenda">'+it.map(function(x){ return '<tr><td style="width:56px"><svg width="50" height="18" viewBox="0 0 50 18">'+x[0]+'</svg></td><td>'+x[1]+'</td></tr>'; }).join("")+'</table>';
 }
@@ -414,7 +418,7 @@ function planoSVG(m,mg){
   // cuerpo con esquinas redondeadas
   o.push('<rect x="'+x0+'" y="'+y0+'" width="'+cw+'" height="'+(L*k)+'" rx="'+(r*k)+'" fill="#EEF1E8" stroke="#1E2418" stroke-width="2.2"/>');
   // pliegues
-  Ln(x0,y0+t3,x0+cw,y0+t3,1.6,'6 4'); T(x0+cw-6,y0+t3-6,'P · pliegue: doblar y coser a 1 cm',11,'end',1);
+  Ln(x0,y0+t3,x0+cw,y0+t3,1.6,'6 4'); T(x0+cw-6,y0+t3-6,'P · pliegue: doblar y coser a '+fmtN(MG())+' cm',11,'end',1);
   var cu=corteUnion(m); Ln(x0-14,y0+t3+t2,x0+cw+14,y0+t3+t2,3,null,'#B3261E'); T(x0+cw/2,y0+t3+t2-7,'✂ CORTE Y UNIÓN · a '+fmtN(cu.del)+' cm'+(m.an<90?'':' del borde superior'),11,'middle',1,'#B3261E');
   T(x0+cw/2,y0+t3/2+5,'RESPALDO DELANTERO',15,'middle',1); T(x0+cw/2,y0+t3+t2/2+5,'ASIENTO',15,'middle',1); T(x0+cw/2,y0+t3+t2+t1/2+5,'RESPALDO TRASERO',15,'middle',1);
   // aberturas del cinturón (15 cm, al 30% y 70%)
@@ -442,8 +446,8 @@ function planoHTML(){
       +'<div class="pl-grid"><div class="pl-svg">'+planoSVG(m,mg)+'</div><div class="pl-side">'
       +'<h3>Cortar (ya incluye costuras)</h3><table><tr><td>Cuerpo ×1</td><td class="medida">'+P.CW+' × '+P.CL+'</td></tr><tr><td>&nbsp;↳ Corte: parte delantera</td><td class="medida">'+P.CW+' × '+corteUnion(m).del+'</td></tr><tr><td>&nbsp;↳ Corte: parte trasera</td><td class="medida">'+P.CW+' × '+corteUnion(m).tra+'</td></tr><tr><td>Lateral ×'+P.nl+'</td><td class="medida">'+P.LA+' × '+P.LB+'</td></tr><tr><td>Parches de refuerzo ×'+(correas(m)*2)+'</td><td class="medida">8 × 8</td></tr><tr><td>Tiras F ×'+correas(m)+'</td><td class="medida">'+fmtN(tiraF(m))+' cm</td></tr><tr><td>Tiras R ×'+correas(m)+'</td><td class="medida">'+fmtN(tiraR(m))+' cm</td></tr></table>'
       +'<p class="mini">Números junto a F y R: distancia en cm desde el borde izquierdo (en los laterales, desde el lado del respaldo delantero).</p>'
-      +'<p class="mini">El forro se corta igual, en tracker común. Cuerpo terminado '+m.an+' × '+L+' (el corte suma 2 cm del pliegue y 2 de la unión). Cortarlo entero y separarlo en la línea roja. Esquinas exteriores redondeadas, radio '+fmtN(radio(m))+' cm.</p>'
-      +'<h3>Orden</h3><ol><li>Forro contra la friselina, coser contorno.</li><li><b>P</b>: doblar y coser a 1 cm.</li><li><b>Línea roja</b>: unir a 1 cm, sin coser las <b>A</b> (van con abrojo).</li><li>Bies en todo el borde libre.</li><li>Laterales: doble costura al asiento.</li><li><b>C</b>: cierres en las 4 esquinas.</li><li><b>F</b> y <b>R</b>: tiras sobre parche rayado, costura en caja con X.</li></ol>'
+      +'<p class="mini">El forro se corta igual, en tracker común. Cuerpo terminado '+m.an+' × '+L+' (el largo de corte suma '+fmtN(MG())+' cm de cada lado del pliegue y de la unión; el ancho va justo, con gross). Cortarlo entero y separarlo en la línea roja. Esquinas exteriores redondeadas, radio '+fmtN(radio(m))+' cm.</p>'
+      +'<h3>Orden</h3><ol><li>Forro contra la friselina, coser contorno.</li><li><b>P</b>: doblar y coser a '+fmtN(MG())+' cm.</li><li><b>Línea roja</b>: unir a '+fmtN(MG())+' cm, sin coser las <b>A</b> (van con abrojo).</li><li>Bies en todo el borde libre.</li><li>Laterales: doble costura al asiento.</li><li><b>C</b>: cierres en las 4 esquinas.</li><li><b>F</b> y <b>R</b>: tiras sobre parche rayado, costura en caja con X.</li></ol>'
       +'<h3>Símbolos</h3><p class="mini"><b>Rayas gruesas C</b>: cierre · <b>Doble línea</b>: costura fija · <b>P</b>: pliegue · <b>Línea roja</b>: corte y unión · <b>A</b>: abertura cinturón (en la unión) · <b>F</b> (blanco): tira fija sin deslizador · <b>R</b> (negro, punteada): tira regulable con deslizador · <b>Rayado</b>: parche.</p>'
       +'</div></div></div>';
   }).join("");
@@ -490,8 +494,8 @@ function fichaHTML(){
   h.push('<div class="pg"></div>'+top+'<h1>Armado paso a paso</h1><ol class="pasos">'
     +'<li><b>Cortar</b> todas las piezas de la lista, en matelaseado y en tracker común (forro).</li>'
     +'<li><b>Forro:</b> apoyar el tracker común contra la friselina y coserlo por todo el contorno, a 0,5 cm del borde.</li>'
-    +'<li><b>Pliegue (P):</b> doblar el cuerpo en la línea P (entre respaldo delantero y asiento) y coser a 1 cm del doblez.</li>'
-    +'<li><b>Corte y unión (línea roja):</b> separar el cuerpo en la línea roja y unir asiento y respaldo trasero a 1 cm, sin coser las aberturas A.</li>'
+    +'<li><b>Pliegue (P):</b> doblar el cuerpo en la línea P (entre respaldo delantero y asiento) y coser a '+fmtN(MG())+' cm del doblez.</li>'
+    +'<li><b>Corte y unión (línea roja):</b> separar el cuerpo en la línea roja y unir asiento y respaldo trasero a '+fmtN(MG())+' cm, sin coser las aberturas A.</li>'
     +'<li><b>Bies</b> de 25 mm en todos los bordes libres del cuerpo y de los laterales, tomando las dos capas.</li>'
     +'<li><b>Laterales (doble línea):</b> coser cada lateral fijo al costado del asiento, con doble costura.</li>'
     +'<li><b>Cierres (C):</b> en las 4 esquinas, uniendo cada lateral con los costados de los respaldos. Abren desde abajo hacia arriba.</li>'
