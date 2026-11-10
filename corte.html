@@ -178,6 +178,10 @@ function m2(cm){return (cm/100).toLocaleString("es-AR",{minimumFractionDigits:2,
 function up2(x){return Math.ceil(x*100-1e-9)/100;}
 
 /* ---------- cálculo ---------- */
+/* Corte y unión entre asiento y respaldo trasero (lo pidió Susana: corta ahí y vuelve a unir, así el abrojo de las
+   aberturas del cinturón queda más prolijo). La unión, cosida a 1 cm de cada lado, usa los mismos 2 cm que el pliegue:
+   el largo total de corte no cambia. */
+function corteUnion(m){ var del=m.t3+2+m.t2+1, tra=m.t1+1; return {del:del, tra:tra}; }
 /* largo del cuerpo: tramos + 2 cm por cada pliegue (los extremos llevan bies) */
 function piezas(md,mg){
   return {CW:md.an+2*mg, CL:md.t1+md.t2+md.t3+2*2, LA:md.la+2*mg, LB:md.lb+mg, nl:Math.max(0,Math.round(md.nl))};
@@ -331,7 +335,8 @@ function leyendaBN(m){
     ['<line x1="2" y1="9" x2="22" y2="9" stroke="#1E2418" stroke-width="2.5"/><rect x="22" y="3" width="12" height="12" fill="#fff" stroke="#1E2418" stroke-width="1.2"/><text x="28" y="12.5" font-size="9" font-weight="700" text-anchor="middle">F</text>','Línea llena con F: tira fija de '+fmtN(tiraF(m))+' cm, con la parte de la hebilla sin deslizador.'],
     ['<line x1="2" y1="9" x2="22" y2="9" stroke="#1E2418" stroke-width="2.5" stroke-dasharray="4 2"/><rect x="22" y="3" width="12" height="12" fill="#1E2418"/><text x="28" y="12.5" font-size="9" font-weight="700" text-anchor="middle" fill="#fff">R</text>','Línea punteada con R: tira regulable de '+fmtN(tiraR(m))+' cm, con la parte deslizante. ('+correas(m)+' hebillas'+(correas(m)>=6?': 2 en cada respaldo y 1 en cada lateral':'')+'.)'],
     ['<defs><pattern id="lgp" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#fff"/><line x1="0" y1="0" x2="0" y2="4" stroke="#1E2418" stroke-width="1.3"/></pattern></defs><rect x="11" y="3" width="12" height="12" fill="url(#lgp)" stroke="#1E2418"/>','Cuadrado rayado: parche de refuerzo debajo de cada tira.'],
-    ['<rect x="4" y="6" width="28" height="6" fill="#fff" stroke="#1E2418" stroke-width="1.2"/><text x="40" y="13" font-size="10" font-weight="700">A</text>','Rectángulo con A: abertura para el cinturón, en el pliegue asiento/respaldo trasero.']
+    ['<rect x="4" y="6" width="28" height="6" fill="#fff" stroke="#1E2418" stroke-width="1.2"/><text x="40" y="13" font-size="10" font-weight="700">A</text>','Rectángulo con A: abertura para el cinturón, en la unión asiento/respaldo trasero (se deja sin coser).'],
+    ['<line x1="2" y1="9" x2="34" y2="9" stroke="#B3261E" stroke-width="3"/>','Línea roja: corte y unión. Se separa el cuerpo y se vuelve a unir a 1 cm (usa 2 cm de tela).']
   ];
   return '<table class="leyenda">'+it.map(function(x){ return '<tr><td style="width:56px"><svg width="50" height="18" viewBox="0 0 50 18">'+x[0]+'</svg></td><td>'+x[1]+'</td></tr>'; }).join("")+'</table>';
 }
@@ -344,7 +349,7 @@ function desplegado(md){
   var PID='ry'+Math.random().toString(36).slice(2,7);
   o.push('<defs><pattern id="'+PID+'" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#fff"/><line x1="0" y1="0" x2="0" y2="4" stroke="#1E2418" stroke-width="1.3"/></pattern></defs>');
   o.push('<rect rx="'+(radio(md)*k)+'" x="'+x0+'" y="'+y0+'" width="'+cw+'" height="'+(L*k)+'" fill="#DDE3D3" stroke="#4E5B3A" stroke-width="1.5"/>');
-  Ln(x0,y0+t3,x0+cw,y0+t3,'#1E2418',1.4,'4 3'); Ln(x0,y0+t3+t2,x0+cw,y0+t3+t2,'#1E2418',1.4,'4 3'); T(x0+cw-8,y0+t3-3,'P',9,'#1E2418','end',1); T(x0+cw-8,y0+t3+t2-3,'P',9,'#1E2418','end',1);
+  Ln(x0,y0+t3,x0+cw,y0+t3,'#1E2418',1.4,'4 3'); Ln(x0-10,y0+t3+t2,x0+cw+10,y0+t3+t2,'#B3261E',2.6); T(x0+cw-8,y0+t3-3,'P',9,'#1E2418','end',1); T(x0+cw-8,y0+t3+t2-3,'✂ corte y unión',9,'#B3261E','end',1);
   T(x0+cw/2,y0+t3/2+4,'Respaldo delantero '+md.t3,10,'#1E2418','middle',1); T(x0+cw/2,y0+t3+t2/2+4,'Asiento '+md.t2,10,'#1E2418','middle',1); T(x0+cw/2,y0+t3+t2+t1/2+4,'Respaldo trasero '+md.t1,10,'#1E2418','middle',1);
   [x0-lb,x0+cw].forEach(function(xs,i){ o.push('<rect x="'+xs+'" y="'+ys+'" width="'+lb+'" height="'+la+'" fill="#fff" stroke="#4E5B3A" stroke-width="1.5"/>'); T(xs+lb/2,ys+12,'LATERAL',9,'#4E5B3A','middle',1); T(xs+lb/2,ys+la-5,md.la+' × '+md.lb,9,'#5E6656');
     var xe=i?x0+cw:x0, xo=i?xs+lb:xs, Z='6 3'; Ln(xe-1.5,ys,xe-1.5,ys+la,'#3A2A55',1.6); Ln(xe+1.5,ys,xe+1.5,ys+la,'#3A2A55',1.6);
@@ -396,10 +401,11 @@ function planoSVG(m,mg){
   // cuerpo con esquinas redondeadas
   o.push('<rect x="'+x0+'" y="'+y0+'" width="'+cw+'" height="'+(L*k)+'" rx="'+(r*k)+'" fill="#EEF1E8" stroke="#1E2418" stroke-width="2.2"/>');
   // pliegues
-  [y0+t3,y0+t3+t2].forEach(function(yy){ Ln(x0,yy,x0+cw,yy,1.6,'6 4'); T(x0+cw-6,yy-6,'P · pliegue: doblar y coser a 1 cm',11,'end',1); });
+  Ln(x0,y0+t3,x0+cw,y0+t3,1.6,'6 4'); T(x0+cw-6,y0+t3-6,'P · pliegue: doblar y coser a 1 cm',11,'end',1);
+  var cu=corteUnion(m); Ln(x0-14,y0+t3+t2,x0+cw+14,y0+t3+t2,3,null,'#B3261E'); T(x0+cw/2,y0+t3+t2-7,'✂ CORTE Y UNIÓN · a '+fmtN(cu.del)+' cm'+(m.an<90?'':' del borde superior'),11,'middle',1,'#B3261E');
   T(x0+cw/2,y0+t3/2+5,'RESPALDO DELANTERO',15,'middle',1); T(x0+cw/2,y0+t3+t2/2+5,'ASIENTO',15,'middle',1); T(x0+cw/2,y0+t3+t2+t1/2+5,'RESPALDO TRASERO',15,'middle',1);
   // aberturas del cinturón (15 cm, al 30% y 70%)
-  var yp=y0+t3+t2; [0.3,0.7].forEach(function(fr){ var c=m.an*fr, a=c-7.5; o.push('<rect x="'+(x0+a*k)+'" y="'+(yp-4)+'" width="'+(15*k)+'" height="8" fill="#fff" stroke="#1E2418" stroke-width="1.6"/>'); T(x0+c*k,yp+20,'A · cinturón '+fmtN(a)+' a '+fmtN(a+15),11,'middle',1); });
+  var yp=y0+t3+t2, angosta=m.an<90; [0.3,0.7].forEach(function(fr,ia){ var c=m.an*fr, a=c-7.5; o.push('<rect x="'+(x0+a*k)+'" y="'+(yp-4)+'" width="'+(15*k)+'" height="8" fill="#fff" stroke="#1E2418" stroke-width="1.6"/>'); T(x0+c*k,yp+20+(angosta&&ia?15:0),(angosta?'A · ':'A · cinturón ')+fmtN(a)+' a '+fmtN(a+15),11,'middle',1); });   // en la funda angosta, las dos etiquetas escalonadas
   // tiras
   function tira(x,y,dx,dy,reg,txt){ var lg=reg?40:16, x2=x+dx*lg, y2=y+dy*lg;
     o.push('<rect x="'+(x-7)+'" y="'+(dy<0?y:dy>0?y-14:y-7)+'" width="14" height="14" fill="url(#'+ID+')" stroke="#1E2418"/>');
@@ -421,11 +427,11 @@ function planoHTML(){
     return (i?'<div class="pg"></div>':'')+'<div class="plano1">'
       +'<div class="top"><span><b>LOS PERRINES</b> · Plano de confección · '+esc(m.nom)+(m.q?' · '+m.q+' unidades':'')+'</span><span>'+new Date().toLocaleDateString("es-AR")+'</span></div>'
       +'<div class="pl-grid"><div class="pl-svg">'+planoSVG(m,mg)+'</div><div class="pl-side">'
-      +'<h3>Cortar (ya incluye costuras)</h3><table><tr><td>Cuerpo ×1</td><td class="medida">'+P.CW+' × '+P.CL+'</td></tr><tr><td>Lateral ×'+P.nl+'</td><td class="medida">'+P.LA+' × '+P.LB+'</td></tr><tr><td>Parches de refuerzo ×'+(correas(m)*2)+'</td><td class="medida">8 × 8</td></tr><tr><td>Tiras F ×'+correas(m)+'</td><td class="medida">'+fmtN(tiraF(m))+' cm</td></tr><tr><td>Tiras R ×'+correas(m)+'</td><td class="medida">'+fmtN(tiraR(m))+' cm</td></tr></table>'
+      +'<h3>Cortar (ya incluye costuras)</h3><table><tr><td>Cuerpo ×1</td><td class="medida">'+P.CW+' × '+P.CL+'</td></tr><tr><td>&nbsp;↳ Corte: parte delantera</td><td class="medida">'+P.CW+' × '+corteUnion(m).del+'</td></tr><tr><td>&nbsp;↳ Corte: parte trasera</td><td class="medida">'+P.CW+' × '+corteUnion(m).tra+'</td></tr><tr><td>Lateral ×'+P.nl+'</td><td class="medida">'+P.LA+' × '+P.LB+'</td></tr><tr><td>Parches de refuerzo ×'+(correas(m)*2)+'</td><td class="medida">8 × 8</td></tr><tr><td>Tiras F ×'+correas(m)+'</td><td class="medida">'+fmtN(tiraF(m))+' cm</td></tr><tr><td>Tiras R ×'+correas(m)+'</td><td class="medida">'+fmtN(tiraR(m))+' cm</td></tr></table>'
       +'<p class="mini">Números junto a F y R: distancia en cm desde el borde izquierdo (en los laterales, desde el lado del respaldo delantero).</p>'
-      +'<p class="mini">El forro se corta igual, en tracker común. Cuerpo terminado '+m.an+' × '+L+'; el largo de corte suma 2 cm por cada pliegue. Esquinas exteriores redondeadas, radio '+fmtN(radio(m))+' cm.</p>'
-      +'<h3>Orden</h3><ol><li>Forro contra la friselina, coser el contorno.</li><li><b>P</b>: doblar y coser a 1 cm.</li><li>Bies en todo el borde libre.</li><li>Laterales: doble costura al asiento.</li><li><b>C</b>: cierres en las 4 esquinas.</li><li><b>A</b>: cortes de 15 cm con bies.</li><li><b>F</b> y <b>R</b>: tiras sobre parche rayado, costura en caja con X.</li></ol>'
-      +'<h3>Símbolos</h3><p class="mini"><b>Rayas gruesas C</b>: cierre · <b>Doble línea</b>: costura fija · <b>P</b>: pliegue · <b>A</b>: abertura cinturón · <b>F</b> (blanco): tira fija sin deslizador · <b>R</b> (negro, punteada): tira regulable con deslizador · <b>Rayado</b>: parche.</p>'
+      +'<p class="mini">El forro se corta igual, en tracker común. Cuerpo terminado '+m.an+' × '+L+' (el corte suma 2 cm del pliegue y 2 de la unión). Cortarlo entero y separarlo en la línea roja. Esquinas exteriores redondeadas, radio '+fmtN(radio(m))+' cm.</p>'
+      +'<h3>Orden</h3><ol><li>Forro contra la friselina, coser contorno.</li><li><b>P</b>: doblar y coser a 1 cm.</li><li><b>Línea roja</b>: unir a 1 cm, sin coser las <b>A</b> (van con abrojo).</li><li>Bies en todo el borde libre.</li><li>Laterales: doble costura al asiento.</li><li><b>C</b>: cierres en las 4 esquinas.</li><li><b>F</b> y <b>R</b>: tiras sobre parche rayado, costura en caja con X.</li></ol>'
+      +'<h3>Símbolos</h3><p class="mini"><b>Rayas gruesas C</b>: cierre · <b>Doble línea</b>: costura fija · <b>P</b>: pliegue · <b>Línea roja</b>: corte y unión · <b>A</b>: abertura cinturón (en la unión) · <b>F</b> (blanco): tira fija sin deslizador · <b>R</b> (negro, punteada): tira regulable con deslizador · <b>Rayado</b>: parche.</p>'
       +'</div></div></div>';
   }).join("");
 }
@@ -450,7 +456,7 @@ function fichaHTML(){
   });
   h.push('<h2>2. Piezas a cortar (para toda la tanda)</h2><table class="big"><tr><th></th><th>Pieza</th><th>Tela</th><th>Medida de corte</th><th>Cantidad</th></tr>'
     +filas.map(function(f){ return '<tr><td>'+box+'</td><td>'+esc(f[0])+'</td><td>'+esc(f[1])+'</td><td class="medida">'+f[2]+'</td><td><b>'+f[3]+'</b></td></tr>'; }).join("")+'</table>'
-    +'<p class="nota">Ancho × largo. En el cuerpo, el largo incluye 4 cm para los 2 pliegues cosidos (2 cm cada uno). Tela total de la tanda: <b>'+m2(tot)+' m</b> de matelaseado y lo mismo de tracker común.</p>');
+    +'<p class="nota">Ancho × largo. En el cuerpo, el largo incluye 4 cm: 2 del pliegue entre respaldo delantero y asiento, y 2 de la unión entre asiento y respaldo trasero. Tela total de la tanda: <b>'+m2(tot)+' m</b> de matelaseado y lo mismo de tracker común.</p>');
   // ---------- UNA PÁGINA POR MODELO ----------
   lista.forEach(function(m){
     var A=analizar(m,RW,mg), P=A.P, L=m.t1+m.t2+m.t3, PZ=posiciones(m), pc=prodCostos(m);
@@ -459,6 +465,7 @@ function fichaHTML(){
     h.push('<div class="bloque"><h2>Medidas</h2><table class="big"><tr><th>Pieza</th><th>Terminada</th><th>Corte</th></tr>'
       +'<tr><td>Cuerpo (1 pieza entera)</td><td>'+m.an+' × '+L+'</td><td class="medida">'+P.CW+' × '+P.CL+'</td></tr>'
       +'<tr><td>Tramos del cuerpo</td><td colspan="2">Respaldo delantero '+m.t3+' · asiento '+m.t2+' · respaldo trasero '+m.t1+'</td></tr>'
+      +'<tr><td>Corte y unión</td><td>a '+fmtN(corteUnion(m).del)+' cm del borde</td><td class="medida">'+P.CW+' × '+corteUnion(m).del+' + '+P.CW+' × '+corteUnion(m).tra+'</td></tr>'
       +'<tr><td>Lateral (×'+P.nl+')</td><td>'+m.la+' × '+m.lb+'</td><td class="medida">'+P.LA+' × '+P.LB+'</td></tr></table></div>');
     var fu=[]; ['Respaldo delantero','Respaldo trasero'].forEach(function(nom){ PZ.resp.forEach(function(x,ii){ fu.push('<tr><td>'+nom+(PZ.resp.length>1?' · hebilla '+(ii+1):'')+'</td><td class="medida">'+fmtN(x.f)+'</td><td class="medida">'+fmtN(x.g)+'</td></tr>'); }); });
     if(PZ.lat) fu.push('<tr><td>Cada lateral (desde el lado del respaldo delantero)</td><td class="medida">'+fmtN(PZ.lat.f)+'</td><td class="medida">'+fmtN(PZ.lat.g)+'</td></tr>');
@@ -470,18 +477,19 @@ function fichaHTML(){
   h.push('<div class="pg"></div>'+top+'<h1>Armado paso a paso</h1><ol class="pasos">'
     +'<li><b>Cortar</b> todas las piezas de la lista, en matelaseado y en tracker común (forro).</li>'
     +'<li><b>Forro:</b> apoyar el tracker común contra la friselina y coserlo por todo el contorno, a 0,5 cm del borde.</li>'
-    +'<li><b>Pliegues (P):</b> doblar el cuerpo en cada línea P y coser a 1 cm del doblez. Son 2 pliegues.</li>'
+    +'<li><b>Pliegue (P):</b> doblar el cuerpo en la línea P (entre respaldo delantero y asiento) y coser a 1 cm del doblez.</li>'
+    +'<li><b>Corte y unión (línea roja):</b> separar el cuerpo en la línea roja y unir asiento y respaldo trasero a 1 cm, sin coser las aberturas A.</li>'
     +'<li><b>Bies</b> de 25 mm en todos los bordes libres del cuerpo y de los laterales, tomando las dos capas.</li>'
     +'<li><b>Laterales (doble línea):</b> coser cada lateral fijo al costado del asiento, con doble costura.</li>'
     +'<li><b>Cierres (C):</b> en las 4 esquinas, uniendo cada lateral con los costados de los respaldos. Abren desde abajo hacia arriba.</li>'
-    +'<li><b>Aberturas del cinturón (A):</b> dos cortes de 15 cm en el pliegue asiento/respaldo trasero, terminados con bies.</li>'
+    +'<li><b>Aberturas del cinturón (A):</b> los 15 cm sin coser de la unión, terminados con abrojo.</li>'
     +'<li><b>Tiras de las hebillas:</b> la <b>F</b> (corta) lleva la parte de la hebilla sin deslizador; la <b>R</b> (larga) pasa por la parte con deslizador. Coser cada tira sobre su <b>parche rayado</b>, con costura en caja y una X, doble pasada.</li>'
     +'<li><b>Revisar:</b> tirar fuerte de cada tira; no tiene que ceder.</li></ol>');
   h.push('<h2>Costura</h2><table class="big"><tr><td>Hilo</td><td>Poliéster reforzado N°40 (N°20–30 en las tiras)</td></tr><tr><td>Aguja</td><td>N°16 a 18</td></tr><tr><td>Tela plastificada</td><td>Sin alfileres: sujetar con clips</td></tr></table>');
   h.push('<h2>Prueba del primer prototipo</h2><ul class="pasos">'
     +'<li>'+box+' Cubre asiento y respaldos sin quedar flojo ni tirante.</li><li>'+box+' Los laterales quedan parados y los cierres abren fácil.</li>'
     +'<li>'+box+' Las tiras llegan a los apoyacabezas y a la manija o la puerta.</li><li>'+box+' Las aberturas coinciden con los cinturones.</li>'
-    +'<li>'+box+' Prueba de agua: un vaso con peso arriba, 30 minutos.</li></ul><h3>Notas</h3><div class="note-lines">'+'<div></div>'.repeat(5)+'</div>');
+    +'<li>'+box+' Prueba de agua: un vaso con peso arriba, 30 minutos.</li></ul><h3>Notas</h3><div class="note-lines">'+'<div></div>'.repeat(3)+'</div>');
   // ---------- CORTE DEL ROLLO (al final) ----------
   // Una hoja por bloque: el dibujo del rollo bien grande a la izquierda y el texto en una columna a la derecha
   var seq=[], pos=0; lista.forEach(function(m){ var A=analizar(m,RW,mg); bloquesPara(m.q||1,A).forEach(function(x){ seq.push({m:m,b:x.b,veces:x.veces,desde:pos}); pos+=x.b.len*x.veces; }); });
