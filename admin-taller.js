@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "10/11 · 5";
+window.PANEL_VERSION = "10/11 · 6";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -316,7 +316,7 @@ function vProductos() {
     + '<p class="muted small" style="margin:-4px 0 10px">Centímetros, medidas terminadas. Al largo del cuerpo se le suman 2 cm por cada pliegue (los extremos llevan bies); al ancho y a los laterales, el margen de costura.</p>'
     + '<div class="note" style="margin-top:0"><b>' + q(telaU(f)) + ' m de tela por funda</b><br><span class="small">Piezas de corte: cuerpo ' + Math.round(A.P.CW) + " × " + Math.round(A.P.CL) + " · " + A.P.nl + " laterales de " + Math.round(A.P.LA) + " × " + Math.round(A.P.LB) + ". Conviene cortar de a " + (A.best ? A.best.n : "—") + " (" + (A.best ? q(A.best.len / 100) : "—") + " m). Un rollo de " + esc(rd.rollo_largo) + " m rinde " + porLargo(A, nd(rd.rollo_largo) * 100) + " fundas.</span></div>"
     + '<div class="acts" style="margin-top:10px"><button class="btn ghost sm" data-a="pdPlano">Ver plano e imprimir ficha</button></div>'
-    + '<details id="pdRolloDet" style="margin-top:12px"' + (PD.rolloAbierto ? " open" : "") + '><summary class="small" style="cursor:pointer;font-weight:700">Rollo y margen (para todos los productos)</summary><div class="g3" style="margin-top:10px">'
+    + '<details id="pdRolloDet" style="margin-top:12px"' + (PD.rolloAbierto ? " open" : "") + '><summary class="small" style="cursor:pointer;font-weight:700">Margen de costura: ' + q(nd(rd.margen_costura)) + ' cm · rollo de ' + q(nd(rd.rollo_ancho)) + ' cm × ' + q(nd(rd.rollo_largo)) + ' m <span class="muted" style="font-weight:600">(tocá para cambiar · vale para todos los productos)</span></summary><div class="g3" style="margin-top:10px">'
     + '<label class="f">Ancho del rollo (cm)<input id="rl-a" data-in="pdRollo" data-k="rollo_ancho" inputmode="decimal" value="' + esc(rd.rollo_ancho) + '"></label>'
     + '<label class="f">Margen de costura (cm)<input id="rl-m" data-in="pdRollo" data-k="margen_costura" inputmode="decimal" value="' + esc(rd.margen_costura) + '"></label>'
     + '<label class="f">Metros por rollo<input id="rl-l" data-in="pdRollo" data-k="rollo_largo" inputmode="decimal" value="' + esc(rd.rollo_largo) + '"></label></div></details></div>';
