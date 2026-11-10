@@ -1255,15 +1255,16 @@ function leerGA(c, dias, forzar) {
   var prop = String(c.ga_property_id || '').replace(/\D/g, '');
   if (!prop) return {falta: 'propiedad'};
   if (typeof AnalyticsData === 'undefined') return {falta: 'servicio'};
-  var cur = periodoAtras(dias, 0), prev = periodoAtras(dias, 1), clave = 'ga2_' + prop + '_' + cur.since + '_' + cur.until, cache = CacheService.getScriptCache(), g = cache.get(clave);
+  var cur = periodoAtras(dias, 0), prev = periodoAtras(dias, 1), clave = 'ga3_' + prop + '_' + cur.since + '_' + cur.until, cache = CacheService.getScriptCache(), g = cache.get(clave);
   if (g && !forzar) return JSON.parse(g);
   var rango = [{startDate: cur.since, endDate: cur.until}], dos = [{startDate: cur.since, endDate: cur.until, name: 'actual'}, {startDate: prev.since, endDate: prev.until, name: 'anterior'}];
-  function dim(n, lim) { return {dateRanges: rango, dimensions: [{name: n}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: lim || 6}; }
+  var soloAR = {filter: {fieldName: 'countryId', stringFilter: {value: 'AR'}}};   // provincias y ciudades: solo Argentina (afuera son robots de Meta/Google revisando la web)
+  function dim(n, lim, f) { var q = {dateRanges: rango, dimensions: [{name: n}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: lim || 6}; if (f) q.dimensionFilter = f; return q; }
   var res;
   try {
     res = AnalyticsData.Properties.batchRunReports({requests: [
       {dateRanges: dos, metrics: [{name: 'sessions'}, {name: 'totalUsers'}, {name: 'newUsers'}]},
-      dim('sessionDefaultChannelGroup'), dim('deviceCategory', 3), dim('region'),
+      dim('sessionDefaultChannelGroup'), dim('deviceCategory', 3), dim('region', 6, soloAR),
       {dateRanges: rango, dimensions: [{name: 'eventName'}], metrics: [{name: 'eventCount'}],
         dimensionFilter: {filter: {fieldName: 'eventName', inListFilter: {values: ['view_item_list', 'add_to_cart', 'begin_checkout', 'add_payment_info', 'purchase']}}}}
     ]}, 'properties/' + prop);
@@ -1282,8 +1283,8 @@ function leerGA(c, dias, forzar) {
   try {   // segundo pedido: de qué sitio llegan (Instagram, Facebook, Google…), todas las provincias y las ciudades
     var R2 = AnalyticsData.Properties.batchRunReports({requests: [
       {dateRanges: rango, dimensions: [{name: 'sessionSource'}, {name: 'sessionMedium'}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 25},
-      {dateRanges: rango, dimensions: [{name: 'region'}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 40},
-      {dateRanges: rango, dimensions: [{name: 'city'}, {name: 'region'}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 40}
+      {dateRanges: rango, dimensions: [{name: 'region'}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 40, dimensionFilter: soloAR},
+      {dateRanges: rango, dimensions: [{name: 'city'}, {name: 'region'}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 40, dimensionFilter: soloAR}
     ]}, 'properties/' + prop).reports || [];
     out.fuentes = filasDe(R2[0]).map(function (x) { return {fuente: x.d[0], medio: x.d[1], sesiones: x.m[0]}; });
     out.regiones = lista(R2[1]);

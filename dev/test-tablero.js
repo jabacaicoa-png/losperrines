@@ -4,6 +4,9 @@ let llamadasGA=0, gaFalla=false;
 const ga={Properties:{batchRunReports:(req,prop)=>{ llamadasGA++; if(gaFalla) throw new Error('User does not have sufficient permissions for this property');
   assert.equal(prop,'properties/471234567');
   const fila=(d,m)=>({dimensionValues:d.map(v=>({value:v})),metricValues:[{value:String(m)}]});
+  const soloAR=q=>q.dimensionFilter&&q.dimensionFilter.filter&&q.dimensionFilter.filter.fieldName==='countryId'&&q.dimensionFilter.filter.stringFilter.value==='AR';
+  if(req.requests.length===3){ assert(!soloAR(req.requests[0]),'las fuentes cuentan todo'); assert(soloAR(req.requests[1])&&soloAR(req.requests[2]),'provincias y ciudades: solo Argentina'); }
+  else { assert(soloAR(req.requests[3]),'provincias del primer pedido: solo Argentina'); assert(!req.requests[0].dimensionFilter,'el total cuenta todo'); }
   if(req.requests.length===3) return {reports:[
     {rows:[fila(['l.instagram.com','referral'],180),fila(['ig','paid'],90),fila(['m.facebook.com','referral'],40),fila(['(direct)','(none)'],60),fila(['google','organic'],30)]},
     {rows:[fila(['San Luis Province'],150),fila(['Cordoba Province'],100),fila(['Buenos Aires'],80),fila(['Buenos Aires Province'],70)]},
