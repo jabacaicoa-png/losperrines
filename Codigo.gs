@@ -19,7 +19,8 @@ var COLS = {
   Pedidos: ['id','fecha','estado','pago','cantidad','total','nombre','apellido','dni','email','cel_cod','cel_num',
             'entrega','calle','numero','piso','depto','prov_loc_cp','sucursal','observaciones','vence',
             'mp_preferencia','mp_pago','tracking','exportado','notas','items','cupon','descuento','recordatorio',
-            'pagado_el','preparado','despachado_el','entregado_el','consulta_el','problema_el'],
+            'pagado_el','preparado','despachado_el','entregado_el','consulta_el','problema_el',
+            'origen','canal','medio','bonificacion'],
   Movimientos: ['fecha','tipo','cantidad','motivo','producto'],
   Avisos: ['fecha','email','avisado'],
   Media: ['id','fecha','destino','tipo','nombre','orden','principal','drive_id'],
@@ -150,6 +151,7 @@ function rutear(r) {
   auth(r);
   switch (r.accion) {
     case 'resumen': return resumen();
+    case 'ventaManual': var vm = conLock(function () { return ventaManual(r); }); return vm;
     case 'pagado': return conLock(function () { return marcarPagado(r.id); });
     case 'despachar': return despachar(r.id, r.tracking);
     case 'cancelar': var pc = cambiarEstado(r.id, 'cancelado'); marcarCarritoPorPedido(r.id, 'vencido'); return pc;
@@ -251,7 +253,7 @@ function stock() {
     if (m.tipo === 'ingreso') out[id].ingresado += c; else out[id].ajustes += c;
   });
   filas(H.pedidos).forEach(function (p) {
-    var vend = VENDIDO.indexOf(p.estado) >= 0, res = RESERVA.indexOf(p.estado) >= 0 && new Date(p.vence) > t;
+    var vend = VENDIDO.indexOf(p.estado) >= 0, res = RESERVA.indexOf(p.estado) >= 0 && (p.vence ? new Date(p.vence) > t : esFuera(p));
     if (!vend && !res) return;
     itemsDe(p).forEach(function (it) { var id = it.producto === 'individual' ? 'individual' : 'doble'; if (vend) out[id].vendidas += num(it.cantidad); else out[id].reservadas += num(it.cantidad); });
   });
@@ -364,6 +366,90 @@ function crearPedido(r) {
   mailCompraTransferencia(p, c);
   avisoDueño('Nuevo pedido por transferencia ' + id, p, c);
   return {id: id, pago: 'transferencia', total: p.total, descuento: descuento, cupon: cuponOk ? cuponOk.codigo : '', vence: fmtFecha(vence), transferencia: datosTransferencia(c)};
+}
+/* ================= VENTA POR FUERA DE LA WEB =================
+   La carga el dueño desde el panel (Ventas → Nueva venta). Para el cliente es igual que una compra
+   en la web: mismos datos, mismos mails, misma planilla de Andreani. Cambia solo la gestión:
+   precio libre, cualquier medio de pago, entrega en mano posible, y no se le avisa a Meta
+   ni cuenta como venta de un anuncio. */
+var MEDIOS = {efectivo: 'efectivo', transferencia: 'transferencia', tarjeta: 'tarjeta', otro: 'otro medio'};
+function esFuera(p) { return String(p.origen || '') === 'fuera'; }
+function esMano(p) { return String(p.entrega || '') === 'mano'; }
+function ventaManual(r) {
+  var c = cfg(), s = stock(), prods = productos(c);
+  var medio = MEDIOS[r.medio] ? r.medio : 'transferencia', entrega = ['domicilio', 'sucursal', 'mano'].indexOf(r.entrega) >= 0 ? r.entrega : 'domicilio';
+  var d = {
+    nombre: limpiar(r.nombre, 60), apellido: limpiar(r.apellido, 60), dni: limpiar(r.dni, 12).replace(/\D/g, ''),
+    email: limpiar(r.email, 100).toLowerCase(), cel_cod: limpiar(r.cel_cod, 5).replace(/\D/g, ''), cel_num: limpiar(r.cel_num, 10).replace(/\D/g, ''),
+    entrega: entrega, calle: limpiar(r.calle, 80), numero: limpiar(r.numero, 10), piso: limpiar(r.piso, 5), depto: limpiar(r.depto, 5),
+    prov_loc_cp: limpiar(r.prov_loc_cp, 120), sucursal: limpiar(r.sucursal, 80), observaciones: limpiar(r.observaciones, 200),
+    pago: medio === 'tarjeta' ? 'tarjeta' : 'transferencia', medio: medio, origen: 'fuera', canal: limpiar(r.canal, 40), bonificacion: limpiar(r.bonificacion, 80)
+  };
+  var falta = [];
+  ['nombre', 'apellido', 'email', 'cel_cod', 'cel_num'].forEach(function (k) { if (!d[k]) falta.push(k); });
+  if (entrega !== 'mano') { if (!d.dni) falta.push('dni'); }
+  if (entrega === 'domicilio') ['calle', 'numero', 'prov_loc_cp'].forEach(function (k) { if (!d[k]) falta.push(k); });
+  if (entrega === 'sucursal') { if (!d.sucursal) falta.push('sucursal'); }
+  if (entrega !== 'domicilio') ['calle', 'numero', 'piso', 'depto'].forEach(function (k) { d[k] = ''; });
+  if (entrega === 'mano') { d.prov_loc_cp = d.prov_loc_cp || ''; d.sucursal = ''; } else if (entrega === 'domicilio') d.sucursal = '';
+  if (falta.length) throw new Error('Faltan datos: ' + falta.join(', '));
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) throw new Error('El email no es válido.');
+  if (d.dni && d.dni.length < 7) throw new Error('Revisá el DNI.');
+  var items = [], total = 0, lista = 0;
+  (Array.isArray(r.items) ? r.items : []).forEach(function (it) {
+    var id = it.producto === 'individual' ? 'individual' : 'doble', q = Math.max(0, Math.min(50, Math.floor(num(it.cantidad))));
+    if (!q) return;
+    var pr = prods.filter(function (x) { return x.id === id; })[0];
+    if (!pr) throw new Error('Ese producto no existe.');
+    var precio = Math.round(num(it.precio));
+    if (!(precio > 0)) throw new Error('Poné el precio de ' + pr.nombre + '.');
+    var disp = s[id].disponible;
+    if (disp < q) throw new Error(disp > 0 ? 'De ' + pr.nombre + ' solo te quedan ' + disp + ' en stock.' : 'No tenés stock de ' + pr.nombre + '. Cargalo en Stock de fundas o recibí la tanda.');
+    var web = d.pago === 'tarjeta' ? pr.tarjeta : pr.transferencia;
+    items.push({producto: id, cantidad: q, nombre: pr.nombre, precio: precio, precio_tarjeta: pr.tarjeta});
+    total += precio * q; lista += num(web) * q;
+  });
+  if (!items.length) throw new Error('Elegí qué vendiste.');
+  var pagado = r.pagado !== false, entregado = pagado && entrega === 'mano' && !!r.entregado, ya = ahora();
+  var p = Object.assign(d, {id: siguienteIdPedido(ya), fecha: ya, estado: entregado ? 'entregado' : pagado ? 'pagado' : 'reserva', items: JSON.stringify(items),
+    cantidad: items.reduce(function (a, x) { return a + x.cantidad; }, 0), total: total, descuento: lista > total ? Math.round(lista - total) : '', vence: '',
+    pagado_el: pagado ? ya : '', preparado: entregado ? ya : '', entregado_el: entregado ? ya : ''});
+  agregar(H.pedidos, p);
+  var mail = '';
+  try { mailVentaFuera(p, c); mail = p.email; } catch (e) { mail = ''; console.error(e); }
+  return {id: p.id, mail: mail};
+}
+function detalleEntregaMano() { return 'En mano: la coordinamos con vos'; }
+function mailVentaFuera(p, c) {   // el "¡Gracias por tu compra!" de una venta cargada desde el panel
+  var cuerpo;
+  if (p.estado === 'reserva') {
+    var t = p.medio === 'transferencia' && (c.alias || c.cbu) ? '<div style="background:#F7F8F3;border:1px dashed #D9DCCF;border-radius:12px;padding:14px;margin:14px 0">' +
+      (c.alias ? 'Alias: <b>' + esc(c.alias) + '</b><br>' : '') + (c.cbu ? 'CBU/CVU: <b>' + esc(c.cbu) + '</b><br>' : '') +
+      (c.titular ? 'Titular: ' + esc(c.titular) + '<br>' : '') + (c.banco ? 'Banco: ' + esc(c.banco) + '<br>' : '') + 'Importe: <b>' + plata(p.total) + '</b></div>' : '';
+    cuerpo = '<p>Te reservamos tu pedido. ' + (t ? 'Cuando puedas, transferí el importe:' : 'Apenas recibamos el pago te lo confirmamos.') + '</p>' + t +
+      (t ? '<p>Mandanos el comprobante por WhatsApp indicando el número de pedido.</p>' : '');
+  } else if (esMano(p)) {
+    cuerpo = p.estado === 'entregado' ? '<p>Gracias por elegirnos. Esperamos que tu compañero de viaje disfrute su funda.</p>'
+      : '<p>Ya tenemos tu pedido. Coordinamos la entrega con vos por WhatsApp.</p>';
+  } else cuerpo = '<p>Ya estamos preparando tu pedido y te avisamos cuando salga, con el número de seguimiento.</p>';
+  enviar(p.email, '¡Gracias por tu compra! Pedido ' + p.id, plantilla('¡Gracias, ' + esc(p.nombre) + '!', cuerpo + detalle(p, c), c), c);
+}
+function mailPagoFuera(p, c) {
+  enviar(p.email, 'Recibimos tu pago · Pedido ' + p.id, plantilla('¡Pago recibido!',
+    '<p>Hola ' + esc(p.nombre) + ', confirmamos tu pago. ' + (esMano(p) ? 'Coordinamos la entrega con vos por WhatsApp.' : 'Ya estamos preparando tu pedido y te avisamos cuando salga, con el número de seguimiento.') + '</p>' + detalle(p, c), c), c);
+}
+function mailFotoMano(p, c) {   // a los días de entregarla en mano: ¿cómo le quedó? + pedido de foto (lo mismo que recibe el de la web)
+  enviar(p.email, '¿Cómo le quedó la funda? 🐾', plantilla('¡Gracias por elegirnos!',
+    '<p>Hola ' + esc(p.nombre) + ', esperamos que tu compañero de viaje ya esté estrenando su funda.</p>' + pedidoFoto(p, c), c), c);
+}
+function enviarFotosMano() {
+  var c = cfg(), t = ahora().getTime(), n = 0;
+  filas(H.pedidos).forEach(function (p) {
+    if (p.estado !== 'entregado' || !esMano(p) || p.consulta_el || !tsDe(p.entregado_el) || !emailOk(p.email)) return;
+    if (t - tsDe(p.entregado_el) < 2 * DIA || MailApp.getRemainingDailyQuota() < 10) return;
+    mailFotoMano(p, c); setear(H.pedidos, p._fila, {consulta_el: ahora()}); n++;
+  });
+  return n;
 }
 function hayStock(p) {
   var s = stock();
@@ -543,6 +629,7 @@ function resumen() {
     meta: {token: !!props.getProperty('META_CAPI_TOKEN'), ok: props.getProperty('meta_ok') || '', error: props.getProperty('meta_error') || ''},
     media: listaMedia(),
     oficina: 2,   // 1 = pantalla Hoy; 2 = además, confirmación de entrega
+    ventaManual: 1,   // Ventas → Nueva venta (ventas por fuera de la web)
     ultimoResumen: props.getProperty('resumen_ultimo') ? fmtFecha(new Date(num(props.getProperty('resumen_ultimo')))) : ''
   };
 }
@@ -553,6 +640,7 @@ function marcarPagado(id) {
   setear(H.pedidos, p._fila, {estado: 'pagado', pagado_el: ahora()});
   p.estado = 'pagado';
   marcarCarritoPorPedido(p.id, 'compro');
+  if (esFuera(p)) { setear(H.pedidos, p._fila, {vence: ''}); mailPagoFuera(p, c); return {}; }   // vendida por fuera: no vino de un anuncio, no se avisa a Meta
   if (p.pago === 'transferencia') mailPagoTransferencia(p, c); else mailPagoTarjeta(p, c);
   compraMeta(p, c);
   return {};
@@ -560,6 +648,7 @@ function marcarPagado(id) {
 function despachar(id, tracking) {
   var p = pedido(id), c = cfg(), t = String(tracking || '').replace(/\s/g, '');
   if (!/^\d{6,}$/.test(t)) throw new Error('El número de seguimiento tiene que ser solo números.');
+  if (esMano(p)) throw new Error('El pedido ' + id + ' se entrega en mano: marcalo como entregado.');
   if (['pagado','exportado','despachado'].indexOf(p.estado) < 0) throw new Error(p.estado === 'entregado' ? 'El pedido ' + id + ' ya figura entregado.' : 'Solo se despachan pedidos pagados.');
   setear(H.pedidos, p._fila, {estado: 'despachado', tracking: t, despachado_el: ahora()});
   p.tracking = t;
@@ -570,6 +659,7 @@ function cambiarEstado(id, estado) { setear(H.pedidos, pedido(id)._fila, {estado
 function guardarNota(id, nota) { setear(H.pedidos, pedido(id)._fila, {notas: limpiar(nota, 300)}); return {}; }
 function reenviar(id) {
   var p = pedido(id), c = cfg();
+  if (esFuera(p) && (p.estado === 'reserva' || p.estado === 'pagado' || (esMano(p) && p.estado === 'entregado'))) { mailVentaFuera(p, c); return {}; }
   if (p.estado === 'despachado' || p.estado === 'entregado') mailDespacho(p, c);
   else if (VENDIDO.indexOf(p.estado) >= 0) { if (p.pago === 'transferencia') mailPagoTransferencia(p, c); else mailPagoTarjeta(p, c); }
   else if (p.estado === 'reserva') mailCompraTransferencia(p, c);
@@ -640,7 +730,7 @@ function exportarAndreani(ids) {
   var c = cfg();
   if (!c.plantilla_andreani_id) throw new Error('Falta cargar plantilla_andreani_id en Configuración.');
   var elegidos = Array.isArray(ids) && ids.length ? ids.map(String) : null;   // sin lista: todos los pagados (pantalla Envíos)
-  var pend = filas(H.pedidos).filter(function (p) { return p.estado === 'pagado' && (!elegidos || elegidos.indexOf(String(p.id)) >= 0); });
+  var pend = filas(H.pedidos).filter(function (p) { return p.estado === 'pagado' && !esMano(p) && (!elegidos || elegidos.indexOf(String(p.id)) >= 0); });
   if (!pend.length) throw new Error('No hay pedidos pagados para exportar.');
   var nombre = 'Andreani ' + Utilities.formatDate(ahora(), TZ, 'yyyy-MM-dd HHmm');
   var copia = DriveApp.getFileById(c.plantilla_andreani_id).makeCopy(nombre + ' (temp)');
@@ -687,6 +777,7 @@ function tareaHoraria() {
   avisarStockAuto();
   vencerReservas();
   try { enviarConsultasEntrega(); } catch (e) { console.error(e); }
+  try { enviarFotosMano(); } catch (e) { console.error(e); }
   try { resumenSiToca(); } catch (e) { console.error(e); }
   var c = cfg(), s = stock(), props = PropertiesService.getScriptProperties();
   var hoy = Utilities.formatDate(ahora(), TZ, 'yyyyMMdd');
@@ -716,6 +807,7 @@ function etapaDe(p, t) {
   var e = p.estado;
   if (e === 'reserva') return 'confirmar';
   if (e === 'vencido' && p.pago === 'transferencia' && t - tsDe(p.vence) < 3 * DIA) return 'confirmar';   // por si pagó tarde
+  if (e === 'pagado' && esMano(p)) return p.preparado ? 'camino' : 'preparar';   // en mano: armada → para entregar
   if (e === 'pagado') return p.preparado ? 'etiquetar' : 'preparar';
   if (e === 'exportado') return 'despachar';
   if ((e === 'despachado' || e === 'entregado') && p.problema_el) return 'camino';   // queda a la vista hasta que lo resuelvas
@@ -726,6 +818,7 @@ function etapaDe(p, t) {
 function horasTxt(h) { h = Math.max(1, Math.round(h)); return h < 48 ? h + ' h' : Math.round(h / 24) + ' días'; }
 function alertaDe(p, etapa, t, c) {
   if (etapa === 'confirmar') {
+    if (esFuera(p) && !p.vence) return null;   // venta de afuera que te pagan después: no vence
     var h = (tsDe(p.vence) - t) / 3600000;
     if (h <= 0) return {nivel: 'bad', texto: 'La reserva venció hace ' + horasTxt(-h) + '. Si te pagó igual, marcalo como pagado.'};
     if (h <= 12) return {nivel: 'warn', texto: 'La reserva vence en ' + horasTxt(h) + '.'};
@@ -733,10 +826,11 @@ function alertaDe(p, etapa, t, c) {
   }
   if (etapa === 'preparar' || etapa === 'etiquetar' || etapa === 'despachar') {
     var dias = Math.floor((t - (tsDe(p.pagado_el) || tsDe(p.fecha))) / DIA), lim = num(c.alerta_despacho_dias) || 2;
-    if (dias >= lim) return {nivel: 'bad', texto: 'Pagado hace ' + dias + ' días y todavía no salió.'};
+    if (dias >= lim) return {nivel: 'bad', texto: 'Pagado hace ' + dias + ' días y todavía no ' + (esMano(p) ? 'lo entregaste.' : 'salió.')};
     if (etapa === 'despachar' && tsDe(p.exportado) && t - tsDe(p.exportado) >= DIA) return {nivel: 'warn', texto: 'Exportado hace más de un día: falta cargar el seguimiento.'};
   }
   if (etapa === 'camino') {
+    if (esMano(p)) return null;
     if (p.problema_el) return {nivel: 'bad', texto: 'El cliente avisó que tuvo un problema con la entrega. Comunicate con él.'};
     var sal = tsDe(p.despachado_el), espera = (num(c.consulta_entrega_dias) || 5) + 2;
     if (sal && t - sal >= espera * DIA) return {nivel: 'warn', texto: 'Salió hace ' + Math.floor((t - sal) / DIA) + ' días y nadie confirmó la entrega: mirá el seguimiento.'};
@@ -873,6 +967,17 @@ function enviarConsultasEntrega() {
 }
 function marcarEntregado(id, si) {
   var p = pedido(id), c = cfg();
+  if (esMano(p)) {
+    if (si) {
+      if (p.estado === 'entregado') throw new Error('El pedido ' + id + ' ya figura entregado.');
+      if (p.estado !== 'pagado') throw new Error('El pedido ' + id + ' todavía no está pagado.');
+      setear(H.pedidos, p._fila, {estado: 'entregado', entregado_el: ahora(), preparado: p.preparado || ahora()});   // a los 2 días le pedimos la foto (enviarFotosMano)
+    } else {
+      if (p.estado !== 'entregado') throw new Error('El pedido ' + id + ' no figura entregado.');
+      setear(H.pedidos, p._fila, {estado: 'pagado', entregado_el: ''});
+    }
+    return;
+  }
   if (si) {
     if (p.estado !== 'despachado') throw new Error(p.estado === 'entregado' ? 'El pedido ' + id + ' ya figura entregado.' : 'El pedido ' + id + ' todavía no salió.');
     setear(H.pedidos, p._fila, {estado: 'entregado', entregado_el: ahora()});
@@ -1038,10 +1143,10 @@ function leerMetaAds(c, dias, forzar) {
   return out;
 }
 /* Ventas reales de la planilla en el mismo período (por fecha de pago). */
-function ventasPeriodo(c, dias) {
+function ventasPeriodo(c, dias) {   // para Publicidad: solo las ventas de la web (las de afuera no vinieron de un anuncio)
   var per = periodoMeta(dias), com = num(c.comision_mp) / 100, o = {pedidos: 0, facturado: 0, neto: 0, unidades: {doble: 0, individual: 0}, tarjeta: 0, transferencia: 0};
   filas(H.pedidos).forEach(function (p) {
-    if (VENDIDO.indexOf(p.estado) < 0) return;
+    if (VENDIDO.indexOf(p.estado) < 0 || esFuera(p)) return;
     var dia = Utilities.formatDate(new Date(tsDe(p.pagado_el) || tsDe(p.fecha)), TZ, 'yyyy-MM-dd');
     if (dia < per.since || dia > per.until) return;
     var t = num(p.total); o.pedidos++; o.facturado += t; o.neto += p.pago === 'tarjeta' ? t * (1 - com) : t; o[p.pago === 'tarjeta' ? 'tarjeta' : 'transferencia']++;
@@ -1122,13 +1227,14 @@ function periodoAtras(dias, atras) {
   return {since: Utilities.formatDate(ini, TZ, 'yyyy-MM-dd'), until: Utilities.formatDate(fin, TZ, 'yyyy-MM-dd')};
 }
 function ventasEntre(c, per, P) {
-  var com = num(c.comision_mp) / 100, o = {pedidos: 0, unidades: 0, facturado: 0, neto: 0, tarjeta: 0, transferencia: 0, porProducto: {doble: 0, individual: 0}};
+  var com = num(c.comision_mp) / 100, o = {pedidos: 0, unidades: 0, facturado: 0, neto: 0, tarjeta: 0, transferencia: 0, porProducto: {doble: 0, individual: 0}, fuera: 0, sinEnvio: {doble: 0, individual: 0}};
   P.forEach(function (p) {
     if (VENDIDO.indexOf(p.estado) < 0) return;
     var dia = Utilities.formatDate(new Date(tsDe(p.pagado_el) || tsDe(p.fecha)), TZ, 'yyyy-MM-dd');
     if (dia < per.since || dia > per.until) return;
     var t = num(p.total); o.pedidos++; o.facturado += t; o.neto += p.pago === 'tarjeta' ? t * (1 - com) : t; o[p.pago === 'tarjeta' ? 'tarjeta' : 'transferencia']++;
-    itemsDe(p).forEach(function (it) { var id = it.producto === 'individual' ? 'individual' : 'doble'; o.porProducto[id] += num(it.cantidad); o.unidades += num(it.cantidad); });
+    if (esFuera(p)) o.fuera++;
+    itemsDe(p).forEach(function (it) { var id = it.producto === 'individual' ? 'individual' : 'doble'; o.porProducto[id] += num(it.cantidad); o.unidades += num(it.cantidad); if (esMano(p)) o.sinEnvio[id] += num(it.cantidad); });
   });
   o.neto = Math.round(o.neto);
   return o;
@@ -1136,7 +1242,7 @@ function ventasEntre(c, per, P) {
 function reservasEntre(per, P) {   // pedidos por transferencia hechos en el período: ¿cuántos se pagaron?
   var o = {total: 0, pagadas: 0, vencidas: 0, esperando: 0};
   P.forEach(function (p) {
-    if (p.pago !== 'transferencia') return;
+    if (p.pago !== 'transferencia' || esFuera(p)) return;
     var dia = Utilities.formatDate(new Date(tsDe(p.fecha)), TZ, 'yyyy-MM-dd');
     if (dia < per.since || dia > per.until) return;
     o.total++;
@@ -1239,15 +1345,16 @@ function plantilla(titulo, cuerpo, c) {
     '.<br>Hecho en San Luis para toda Argentina · <a href="' + c.url_web + '" style="color:#4E5B3A">losperrines.com.ar</a></div></div></div>';
 }
 function detalle(p, c) {
-  var dest = p.entrega === 'sucursal' ? 'Retiro en sucursal Andreani <b>' + esc(p.sucursal) + '</b>'
+  var dest = esMano(p) ? detalleEntregaMano() : p.entrega === 'sucursal' ? 'Retiro en sucursal Andreani <b>' + esc(p.sucursal) + '</b>'
     : esc(p.calle + ' ' + p.numero + (p.piso ? ', piso ' + p.piso : '') + (p.depto ? ' depto ' + p.depto : '')) + '<br>' + esc(p.prov_loc_cp);
   return '<table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0">' +
     '<tr><td style="padding:6px 0;color:#5E6656">Pedido</td><td style="text-align:right"><b>' + p.id + '</b></td></tr>' +
     '<tr><td style="padding:6px 0;color:#5E6656">Productos</td><td style="text-align:right">' + esc(textoItems(p, c)) + '</td></tr>' +
     (p.cupon ? '<tr><td style="padding:6px 0;color:#5E6656">Código ' + esc(p.cupon) + '</td><td style="text-align:right">−' + plata(p.descuento) + '</td></tr>' : '') +
-    '<tr><td style="padding:6px 0;color:#5E6656">Total</td><td style="text-align:right"><b>' + plata(p.total) + '</b> (' + (p.pago === 'tarjeta' ? 'tarjeta' : 'transferencia') + ')</td></tr>' +
-    '<tr><td style="padding:6px 0;color:#5E6656">Envío</td><td style="text-align:right">Gratis</td></tr></table>' +
-    '<p style="margin:8px 0 0;color:#5E6656;font-size:14px">Envío a:<br><span style="color:#1E2418">' + dest + '</span></p>';
+    (!p.cupon && p.bonificacion ? '<tr><td style="padding:6px 0;color:#5E6656">' + esc(p.bonificacion) + '</td><td style="text-align:right">' + (num(p.descuento) > 0 ? '−' + plata(p.descuento) : '') + '</td></tr>' : '') +
+    '<tr><td style="padding:6px 0;color:#5E6656">Total</td><td style="text-align:right"><b>' + plata(p.total) + '</b> (' + (MEDIOS[p.medio] || (p.pago === 'tarjeta' ? 'tarjeta' : 'transferencia')) + ')</td></tr>' +
+    (esMano(p) ? '' : '<tr><td style="padding:6px 0;color:#5E6656">Envío</td><td style="text-align:right">Gratis</td></tr>') + '</table>' +
+    '<p style="margin:8px 0 0;color:#5E6656;font-size:14px">' + (esMano(p) ? 'Entrega:' : 'Envío a:') + '<br><span style="color:#1E2418">' + dest + '</span></p>';
 }
 function mailCompraTransferencia(p, c) {
   var t = '<div style="background:#F7F8F3;border:1px dashed #D9DCCF;border-radius:12px;padding:14px;margin:14px 0">' +

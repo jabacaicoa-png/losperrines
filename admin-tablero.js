@@ -5,6 +5,7 @@
  */
 (function () {
 "use strict";
+const web = v => v.pedidos - (v.fuera || 0);   // las vendidas en la web (las de afuera no pasaron por la página ni por un anuncio)
 const L = window.LP, esc = L.esc, money = L.money;
 const TB = {dias: 7, datos: {}, cargando: false, forzar: false};
 const n0 = v => new Intl.NumberFormat("es-AR").format(Math.round(v || 0));
@@ -68,17 +69,17 @@ function conclusiones(d, ctx) {
     else if (v.pedidos < a.pedidos) out.push(["warn", "Vendiste " + v.pedidos + " " + per + ", " + (a.pedidos - v.pedidos) + " menos que en el período anterior."]);
   } else out.push(["info", "Todavía no hay ventas " + per + "."]);
   if (ctx.queda != null && v.pedidos && ctx.queda < 0) out.push(["bad", "En este período perdiste plata: lo invertido en anuncios supera lo que dejaron las ventas."]);
-  if (d.meta && d.meta.inversion && v.pedidos && ctx.gan > 0) { const cpv = d.meta.inversion / v.pedidos;
+  if (d.meta && d.meta.inversion && v.pedidos && ctx.gan > 0) { const cpv = d.meta.inversion / Math.max(1, web(v));
     out.push(cpv < ctx.gan ? ["ok", "Cada venta te costó " + money(cpv) + " de anuncios y una funda te deja " + money(ctx.gan) + ": los anuncios rinden."] : ["bad", "Cada venta te costó " + money(cpv) + " de anuncios, más de lo que te deja una funda (" + money(ctx.gan) + "): revisá las campañas en Publicidad."]); }
   const R = d.reservas; if (R.total >= 3 && R.pagadas / R.total < 0.6) out.push(["warn", "De " + R.total + " compras por transferencia se pagaron " + R.pagadas + ". Escribiles por WhatsApp desde Hoy apenas reservan: es plata que se pierde."]);
   if (g) {
     const ses = g.total.actual.sesiones;
-    if (ses >= 100) { const conv = pc(v.pedidos, ses);
+    if (ses >= 100) { const conv = pc(web(v), ses);
       if (conv < 0.5) out.push(["warn", "De cada 100 visitas compra menos de 1 (" + pcTxt(conv) + "). Revisá fotos, precio y medidas en la web."]);
       else out.push(["ok", "De cada 100 visitas compran " + String(Math.round(conv * 10) / 10).replace(".", ",") + ": está muy bien para una tienda online (lo común es 1 a 2)."]); }
     const F = fuentes(g), top = F ? F[0] : (g.canales || [])[0];
     if (top && ses >= 30) out.push(["info", "La mayoría llega por " + (F ? top.nombre.split(" (")[0] + (/sin anuncio/.test(top.nombre) ? " sin anuncio" : /anuncio/.test(top.nombre) ? " (anuncios)" : "") : (CANAL[top.nombre] || top.nombre).split(" (")[0].toLowerCase()) + " (" + pcTxt(pc(top.sesiones, ses)) + " de las visitas)."]);
-    const Z = (d.zonas && d.zonas.provincias || []).filter(z => z.visitas >= 50), convT = pc(v.pedidos, ses);
+    const Z = (d.zonas && d.zonas.provincias || []).filter(z => z.visitas >= 50), convT = pc(web(v), ses);
     if (convT > 0) {
       const mejor = Z.filter(z => z.ventas >= 2).map(z => Object.assign({c: pc(z.ventas, z.visitas)}, z)).sort((a, b) => b.c - a.c)[0];
       if (mejor && mejor.c >= convT * 1.5) out.push(["ok", nombreProv(mejor) + " compra " + String(Math.round(mejor.c / convT * 10) / 10).replace(".", ",") + " veces más que el promedio (" + mejor.ventas + " ventas de " + n0(mejor.visitas) + " visitas): probá una campaña apuntada ahí."]);
@@ -109,11 +110,12 @@ function vTablero() {
   if (d.error) return h + '<div class="note bad">' + esc(d.error) + '</div>';
   const v = d.ventas, a = d.anterior, inv = d.meta && d.meta.inversion || 0, g = d.ga && d.ga.total ? d.ga : null;
   const costoU = id => (T && T.costoFunda ? T.costoFunda(id) : 0), gan = T && T.gananciaFunda ? T.gananciaFunda("doble") : 0;
-  const hayCostos = costoU("doble") > 0, queda = hayCostos ? v.neto - v.porProducto.doble * costoU("doble") - v.porProducto.individual * costoU("individual") - inv : null;
+  const envU = id => (T && T.envioFunda ? T.envioFunda(id) : 0), sinEnv = v.sinEnvio || {doble: 0, individual: 0};   // entregadas en mano: no pagaste el envío
+  const hayCostos = costoU("doble") > 0, queda = hayCostos ? v.neto - v.porProducto.doble * costoU("doble") - v.porProducto.individual * costoU("individual") + sinEnv.doble * envU("doble") + sinEnv.individual * envU("individual") - inv : null;
   const C = conclusiones(d, {gan: gan, queda: queda}), compTxt = TB.dias === 1 ? "vs ayer" : "vs los " + TB.dias + " días anteriores";
   h += '<div class="block" style="margin-top:0"><h3>Qué mirar</h3><ul class="todo">' + C.map(x => '<li class="' + x[0] + '"><span>' + esc(x[1]) + '</span></li>').join("") + '</ul></div>';
   h += '<h3 style="margin:18px 0 0">La plata</h3><div class="cards">'
-    + '<div class="kpi"><small>Ventas</small><b>' + v.pedidos + '</b><span class="k2">' + v.unidades + ' funda' + (v.unidades === 1 ? "" : "s") + ' · ' + delta(v.pedidos, a.pedidos) + ' ' + compTxt + '</span></div>'
+    + '<div class="kpi"><small>Ventas</small><b>' + v.pedidos + '</b><span class="k2">' + v.unidades + ' funda' + (v.unidades === 1 ? "" : "s") + ' · ' + delta(v.pedidos, a.pedidos) + ' ' + compTxt + (v.fuera ? '<br>' + (v.pedidos - v.fuera) + ' en la web · ' + v.fuera + ' por fuera' : '') + '</span></div>'
     + '<div class="kpi"><small>Cobrado</small><b>' + money(v.facturado) + '</b><span class="k2">' + delta(v.facturado, a.facturado) + ' · ' + v.tarjeta + ' tarjeta, ' + v.transferencia + ' transf.</span></div>'
     + '<div class="kpi' + (queda == null || !v.pedidos ? "" : queda >= 0 ? " ok" : " bad") + '"><small>Te quedó</small><b>' + (queda == null ? "—" : money(queda)) + '</b><span class="k2">' + (queda == null ? "faltan costos del taller" : "después de comisión, fundas" + (inv ? " y " + money(inv) + " de anuncios" : "")) + '</span></div>'
     + '<div class="kpi"><small>Venta promedio</small><b>' + (v.pedidos ? money(v.facturado / v.pedidos) : "—") + '</b><span class="k2">por pedido</span></div></div>';
@@ -131,9 +133,9 @@ function vTablero() {
     h += '<div class="cards">'
       + '<div class="kpi"><small>Visitas</small><b>' + n0(t.sesiones) + '</b><span class="k2">' + delta(t.sesiones, tp.sesiones) + ' ' + compTxt + '</span></div>'
       + '<div class="kpi"><small>Personas</small><b>' + n0(t.personas) + '</b><span class="k2">' + n0(t.nuevas) + ' nuevas</span></div>'
-      + '<div class="kpi"><small>De cada 100 visitas compran</small><b>' + (t.sesiones ? String(Math.round(pc(v.pedidos, t.sesiones) * 10) / 10).replace(".", ",") : "—") + '</b><span class="k2">lo común: 1 a 2</span></div>'
+      + '<div class="kpi"><small>De cada 100 visitas compran</small><b>' + (t.sesiones ? String(Math.round(pc(web(v), t.sesiones) * 10) / 10).replace(".", ",") : "—") + '</b><span class="k2">lo común: 1 a 2</span></div>'
       + '<div class="kpi"><small>Agregaron al carrito</small><b>' + n0(ev.add_to_cart) + '</b><span class="k2">' + (t.sesiones ? pcTxt(pc(ev.add_to_cart || 0, t.sesiones)) + ' de las visitas' : "") + '</span></div></div>';
-    const P = [["Entraron a la web", t.sesiones], ["Vieron las fundas", ev.view_item_list || 0], ["Agregaron al carrito", ev.add_to_cart || 0], ["Empezaron a comprar", ev.begin_checkout || 0], ["Compraron (planilla)", v.pedidos]].filter((x, i) => i !== 1 || x[1] > 0);
+    const P = [["Entraron a la web", t.sesiones], ["Vieron las fundas", ev.view_item_list || 0], ["Agregaron al carrito", ev.add_to_cart || 0], ["Empezaron a comprar", ev.begin_checkout || 0], ["Compraron (planilla)", web(v)]].filter((x, i) => i !== 1 || x[1] > 0);
     let peor = -1, caida = -1; P.forEach((x, i) => { if (i && P[i - 1][1] > 0) { const c = 1 - x[1] / P[i - 1][1]; if (c > caida) { caida = c; peor = i; } } });
     h += '<div class="block"><h3>Dónde abandona la gente</h3><p class="muted small" style="margin:-4px 0 10px">Todas las visitas, vengan de donde vengan. En naranja, el paso donde más se pierde.</p><div class="embudo">'
       + P.map((x, i) => '<div class="paso' + (i === peor ? " peor" : "") + '"><span>' + esc(x[0]) + '</span><div class="barra"><i style="width:' + Math.max(1, pc(x[1], P[0][1] || 1)) + '%"></i></div><b>' + n0(x[1]) + (i && P[i - 1][1] ? ' <span class="muted small">(' + pcTxt(pc(x[1], P[i - 1][1])) + ')</span>' : "") + '</b></div>').join("") + '</div></div>';
@@ -149,7 +151,7 @@ function vTablero() {
     + '<p class="muted small" style="margin:8px 0 0">Las <b>ventas</b> salen de la dirección de envío de cada pedido: son exactas. Las <b>visitas</b> son de Google Analytics y la ubicación es aproximada: sale de la conexión a internet, no del GPS. <b>En celulares con datos móviles suele ubicar a la gente en Buenos Aires</b> aunque esté en otra provincia, así que esa fila tiene visitas de más. Para decidir, mirá sobre todo la columna Ventas. Con pocas visitas el porcentaje engaña, por eso no se muestra.</p>';
   h += '<h3 style="margin:18px 0 0">Los anuncios <span class="muted small" style="font-weight:600">· Meta</span></h3>'
     + '<div class="block" style="margin-top:10px">' + (d.meta && d.meta.inversion != null && !d.meta.falta
-      ? '<div style="display:flex;gap:24px;flex-wrap:wrap"><span><span class="muted small">Invertido</span><br><b style="font-size:1.3rem">' + money(inv) + '</b></span><span><span class="muted small">Costo por venta</span><br><b style="font-size:1.3rem">' + (inv && v.pedidos ? money(inv / v.pedidos) : "—") + '</b></span><span><span class="muted small">Tocaron el anuncio</span><br><b style="font-size:1.3rem">' + n0(d.meta.clics) + '</b></span></div>'
+      ? '<div style="display:flex;gap:24px;flex-wrap:wrap"><span><span class="muted small">Invertido</span><br><b style="font-size:1.3rem">' + money(inv) + '</b></span><span><span class="muted small">Costo por venta</span><br><b style="font-size:1.3rem">' + (inv && web(v) ? money(inv / web(v)) : "—") + '</b></span><span><span class="muted small">Tocaron el anuncio</span><br><b style="font-size:1.3rem">' + n0(d.meta.clics) + '</b></span></div>'
       : '<p class="muted" style="margin:0">' + (d.meta && d.meta.falta === "token" ? "Falta conectar Meta." : "Sin datos de anuncios en este período.") + '</p>')
     + '<p style="margin:10px 0 0"><button class="linkb" data-go="publicidad">Ver el detalle por campaña en Publicidad →</button></p></div>';
   h += '<p class="muted small" style="margin:14px 0 0">Período: ' + esc(d.periodo.since.split("-").reverse().join("/") + " al " + d.periodo.until.split("-").reverse().join("/")) + '. Ventas y stock, al momento; Meta se actualiza cada 10 minutos y Google Analytics cada 30 (y Google tarda unas horas en procesar las visitas).</p>';

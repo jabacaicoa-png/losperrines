@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "9/11 · 18";
+window.PANEL_VERSION = "10/11 · 1";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -878,6 +878,6 @@ L.vista("rentabilidad", "Números", "Precios y rentabilidad", vRentabilidad);
 document.addEventListener("toggle", e => { if (e.target && e.target.id === "pdRolloDet") PD.rolloAbierto = e.target.open; }, true);
 window.addEventListener("beforeunload", e => { if (PD.dirty) { e.preventDefault(); e.returnValue = ""; } });
 window.TALLER = {inicio: inicio, pendientes: pendientes,
-  costoFunda: p => (T() ? costo(fichaGuardada(p)).total : 0), gananciaFunda: p => (T() ? rent(p).gMix : 0),   // para la pantalla Publicidad
+  costoFunda: p => (T() ? costo(fichaGuardada(p)).total : 0), gananciaFunda: p => (T() ? rent(p).gMix : 0), envioFunda: p => (T() ? costo(fichaGuardada(p)).envio || 0 : 0),   // para la pantalla Publicidad
   _test: {analizar: analizar, largoPara: largoPara, costo: costo, rent: rent, armarMigracion: armarMigracion, fichaGuardada: fichaGuardada, RS: RS}};
 })();

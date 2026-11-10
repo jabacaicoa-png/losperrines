@@ -127,23 +127,26 @@ function vInicio(d){
   return h;
 }
 function tarjetaPedido(p){
-  var dest=p.entrega==="sucursal"?'Retira en sucursal '+p.sucursal:(p.calle+' '+p.numero+(p.piso?' piso '+p.piso:'')+(p.depto?' '+p.depto:'')+' · '+p.prov_loc_cp);
+  var mano=p.entrega==="mano", dest=mano?'Entrega en mano':p.entrega==="sucursal"?'Retira en sucursal '+p.sucursal:(p.calle+' '+p.numero+(p.piso?' piso '+p.piso:'')+(p.depto?' '+p.depto:'')+' · '+p.prov_loc_cp);
+  var MED={efectivo:"Efectivo",transferencia:"Transferencia",tarjeta:"Tarjeta",otro:"Otro medio"}, medio=MED[p.medio]||(p.pago==="transferencia"?"Transferencia":"Tarjeta");
   var acts='';
   if(p.estado==="reserva"||p.estado==="vencido"||p.estado==="pendiente_mp"){
-    if(p.estado==="reserva"){ var hs=Math.max(0,Math.ceil((p._vence_ts-Date.now())/3600000)); acts+='<span class="muted small">Vence en '+hs+' h</span>'; }
+    if(p.estado==="reserva"&&p._vence_ts){ var hs=Math.max(0,Math.ceil((p._vence_ts-Date.now())/3600000)); acts+='<span class="muted small">Vence en '+hs+' h</span>'; }
     acts+='<button class="btn main" data-a="pagado" data-id="'+esc(p.id)+'">Marcar como pagado</button><button class="btn ghost" data-a="cancelar" data-id="'+esc(p.id)+'">Cancelar</button>';
   }
-  if(p.estado==="pagado"||p.estado==="exportado"){
+  if(mano&&p.estado==="pagado") acts+='<button class="btn main" data-a="entregadoMano" data-id="'+esc(p.id)+'">Marcar como entregado</button>';
+  else if(p.estado==="pagado"||p.estado==="exportado"){
     acts+='<div class="inline" style="width:100%"><input class="inp" inputmode="numeric" placeholder="N° de seguimiento Andreani" id="tr-'+esc(p.id)+'"><button class="btn main" data-a="despachar" data-id="'+esc(p.id)+'">Despachar</button></div>';
   }
   if(["reserva","pagado","exportado","despachado","entregado"].indexOf(p.estado)>=0) acts+='<button class="btn ghost" data-a="reenviar" data-id="'+esc(p.id)+'">Reenviar mail</button>';
   var wa=String(p.cel_cod||"")+String(p.cel_num||""); if(wa) acts+='<a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/549'+esc(wa.replace(/\D/g,""))+'">WhatsApp</a>';
   return '<article class="order"><div class="head"><div class="who"><b>'+esc(p.nombre+" "+p.apellido)+'</b><small>'+esc(p.id)+' · '+esc(p.fecha)+'</small></div>'
-    +'<div class="amt"><b>'+money(p.total)+'</b><small class="meta">'+(p.pago==="transferencia"?"Transferencia":"Tarjeta")+' · '+esc(p._items||(p.cantidad+' u.'))+'</small></div></div>'
-    +'<div class="meta"><span class="st '+esc(p.estado)+'">'+esc(LABEL[p.estado]||p.estado)+'</span></div>'
-    +'<div class="meta">'+esc(dest)+'</div><div class="meta">DNI '+esc(p.dni)+' · '+esc(p.email)+' · '+esc(p.cel_cod+" "+p.cel_num)+'</div>'
+    +'<div class="amt"><b>'+money(p.total)+'</b><small class="meta">'+medio+' · '+esc(p._items||(p.cantidad+' u.'))+'</small></div></div>'
+    +'<div class="meta"><span class="st '+esc(p.estado)+'">'+esc(mano&&p.estado==="pagado"?"Pagado · para entregar en mano":p.origen==="fuera"&&p.estado==="reserva"?"Vendido por fuera · falta que te pague":LABEL[p.estado]||p.estado)+'</span>'+(p.origen==="fuera"?' <span class="pill">Fuera de la web'+(p.canal?' · '+esc(p.canal):'')+'</span>':'')+'</div>'
+    +'<div class="meta">'+esc(dest)+'</div><div class="meta">'+(p.dni?'DNI '+esc(p.dni)+' · ':'')+''+esc(p.email)+' · '+esc(p.cel_cod+" "+p.cel_num)+'</div>'
     +(p.tracking?'<div class="meta">Seguimiento: <a href="https://www.andreani.com/envio/'+esc(p.tracking)+'" target="_blank" rel="noopener">'+esc(p.tracking)+'</a></div>':'')
     +(p.cupon?'<div class="meta">Código '+esc(p.cupon)+': −'+money(p.descuento)+'</div>':'')
+    +(!p.cupon&&(p.bonificacion||+p.descuento>0)?'<div class="meta">'+esc(p.bonificacion||"Precio especial")+(+p.descuento>0?': −'+money(p.descuento)+' vs la web':'')+'</div>':'')
     +(p.notas?'<div class="meta">Nota: '+esc(p.notas)+'</div>':'')
     +'<div class="acts" style="margin-top:12px">'+acts+'</div></article>';
 }
@@ -169,7 +172,7 @@ function vStock(d){
   return h;
 }
 function vEnvios(d){
-  var pag=d.pedidos.filter(function(p){return p.estado==="pagado";}), exp=d.pedidos.filter(function(p){return p.estado==="exportado";});
+  var pag=d.pedidos.filter(function(p){return p.estado==="pagado"&&p.entrega!=="mano";}), exp=d.pedidos.filter(function(p){return p.estado==="exportado";});
   var h='<div class="ph"><div><h2>Envíos</h2><p class="sub">Exportá los pedidos pagados, subí el Excel en andreani.com y después cargá el número de seguimiento de cada uno: al cliente le llega el mail con el link.</p></div></div>';
   h+='<div class="block" style="margin-top:0"><h3>1. Para exportar ('+pag.length+')</h3>';
   if(pag.length){
@@ -300,7 +303,7 @@ function vRecuperar(){
 function pendientesPedidos(){ var P=S.data?S.data.pedidos:[]; return P.filter(function(p){return ["reserva","pagado","exportado"].indexOf(p.estado)>=0;}).length; }
 vista("inicio","","Inicio",vInicio);
 vista("pedidos","Ventas","Pedidos",vPedidos,function(){ return {n:pendientesPedidos()}; });
-vista("envios","Ventas","Envíos",vEnvios,function(){ var P=S.data?S.data.pedidos:[]; return {n:P.filter(function(p){return p.estado==="pagado"||p.estado==="exportado";}).length}; });
+vista("envios","Ventas","Envíos",vEnvios,function(){ var P=S.data?S.data.pedidos:[]; return {n:P.filter(function(p){return (p.estado==="pagado"&&p.entrega!=="mano")||p.estado==="exportado";}).length}; });
 vista("recuperar","Ventas","Recuperar ventas",vRecuperar);
 
 /* ---------- eventos ---------- */
@@ -338,6 +341,7 @@ document.addEventListener("click",function(e){
   else if(a==="pagado"){ if(confirm("¿Confirmás que recibiste el pago del pedido "+id+"? Le llega un mail al cliente.")) accion("pagado",{id:id},"Pedido marcado como pagado",t); }
   else if(a==="cancelar"){ if(confirm("¿Cancelar el pedido "+id+"? Se libera el stock.")) accion("cancelar",{id:id},"Pedido cancelado",t); }
   else if(a==="reenviar") accion("reenviar",{id:id},"Mail reenviado",t);
+  else if(a==="entregadoMano"){ if(confirm("¿Ya le entregaste el pedido "+id+"? A los 2 días le mandamos un mail pidiéndole una foto de su mascota con la funda.")) accion("entregado",{ids:[id]},null,t).then(function(r){ if(r) toast(r.errores&&r.errores.length?r.errores[0].error||"No se pudo":"Listo: pedido entregado"); }); }
   else if(a==="despachar"){ var v=($("#tr-"+CSS.escape(id))||{}).value||""; if(!v.trim()){ toast("Poné el número de seguimiento."); return; } accion("despachar",{id:id,tracking:v},"Despachado: le avisamos al cliente",t); }
   else if(a==="mov"){
     var tipo=$("#mvTipo").value, cant=parseInt($("#mvCant").value,10), mot=$("#mvMot").value.trim();

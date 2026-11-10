@@ -10,8 +10,9 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | Archivo | Qué es |
 |---|---|
 | `index.html` | La tienda pública (GitHub Pages, dominio `www.losperrines.com.ar`, ver `CNAME`). |
-| `admin.html` | Cascarón del panel: estilos + carga `admin-core.js`, `admin-hoy.js`, `admin-taller.js`, `admin-publicidad.js` y `admin-tablero.js` con `?v=Date.now()` (para que el navegador nunca use una copia vieja). |
+| `admin.html` | Cascarón del panel: estilos + carga `admin-core.js`, `admin-hoy.js`, `admin-venta.js`, `admin-taller.js`, `admin-publicidad.js` y `admin-tablero.js` con `?v=Date.now()` (para que el navegador nunca use una copia vieja). |
 | `admin-core.js` | Núcleo del panel: sesión, navegación por áreas, vistas de Ventas y Tienda. Expone `window.LP`. |
+| `admin-venta.js` | Pantalla **Ventas → Nueva venta**: cargar una venta hecha por fuera de la web (ver sección abajo). |
 | `admin-hoy.js` | Pantalla **Hoy** (la "oficina"): pedidos por etapa, acciones en lote, hoja de preparación, WhatsApp prearmado y hora del resumen diario. |
 | `admin-tablero.js` | Pantalla **Tablero** (primera de Números): "Qué mirar" (conclusiones escritas), ventas/cobrado/ganancia con comparación al período anterior, días de stock, transferencias pagadas, visitas de Google Analytics (canales, aparato, provincias, embudo) y resumen de Meta. |
 | `admin-publicidad.js` | Pantalla **Publicidad** (grupo Números): inversión en Meta vs ventas reales de la planilla y ganancia después de anuncios (usa `TALLER.costoFunda`/`gananciaFunda`), embudo y campañas con veredicto. |
@@ -56,6 +57,7 @@ node dev/test-meta.js                         # aviso de compras a Meta (API de 
 node dev/test-cero.js                         # "Empezar de cero": borra solo lo de prueba, respaldo y conteo real
 node dev/test-tablero.js                      # Tablero: ventas con comparación, transferencias, días de stock, Google Analytics simulado
 node dev/test-avisos.js                       # "Avisame cuando vuelva" automático (tienda abierta + stock, límite de mails)
+node dev/test-venta.js                        # Nueva venta (por fuera de la web): mails, entrega en mano, Andreani, stock, Tablero, nada a Meta
 node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # levanta el backend emulado en :8787 con una tienda de ejemplo
 ```
 
@@ -100,7 +102,7 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 
 ## Dónde quedamos (sesión del 9/11/2026) y qué sigue
 
-- **Pendiente del dueño:** pegar el último `Codigo.gs` (trae "¿Dónde vendés?", las fuentes de Instagram/Facebook en el Tablero, el WhatsApp que se acomoda solo y los avisos automáticos de "Avisame cuando vuelva") y publicar nueva versión; pagar a Casa Natalia y cargar el pago; subir fotos reales cuando lleguen las fundas (panel → Fotos y videos).
+- **Pendiente del dueño:** pegar el último `Codigo.gs`, **ejecutar `instalar()`** (crea las columnas de las ventas por fuera de la web) y publicar nueva versión (trae Nueva venta, "¿Dónde vendés?", las fuentes de Instagram/Facebook en el Tablero, el WhatsApp que se acomoda solo y los avisos automáticos de "Avisame cuando vuelva") y publicar nueva versión; pagar a Casa Natalia y cargar el pago; subir fotos reales cuando lleguen las fundas (panel → Fotos y videos).
 - **Lanzamiento:** cuando reciba la tanda (la semana del 9/11): recibirla, abrir la tienda, avisar a los de "avisame cuando vuelva" (ahora están en Recuperar ventas), compra real con tarjeta y devolverla.
 - **Ofrecido y pendiente de armar:** guía paso a paso de la primera campaña de Meta (objetivo, público, presupuesto chico de prueba, parámetros de URL que están en Publicidad → "Para pegar en cada anuncio"); sección "Perrines viajando" con fotos de clientes; catálogo de productos para Instagram/Meta (feed con precio y stock); combo "dos autos"; precio mayorista para veterinarias.
 - **Precios y envío (9/11/2026):** el dueño bajó los precios a propósito para ganar por cantidad y no por pocas ventas caras. El envío cargado en el costo es lo que de verdad le cobra Andreani; el valor tachado de la web (`valor_envio`) es la referencia de lo que cobran otras tiendas, no su costo. Cuando abra la tienda quiere que lo guíes paso a paso con la primera campaña de Meta.
@@ -109,6 +111,16 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 ## Avisame cuando vuelva (automático, 9/11/2026)
 
 - `avisarStockAuto()` en `Codigo.gs` manda el mail "¡Volvieron las fundas!" solo cuando la tienda está abierta al público (`tienda_abierta = SI`) y hay fundas disponibles. Se llama al recibir una tanda (`tandaRecibir`), al cargar stock (`movimiento`), al abrir la tienda (`guardarConfig` con `tienda_abierta: 'SI'`) y en `tareaHoraria` (levanta los que quedaron por el límite diario de mails). Al dueño le llega un mail con cuántos avisó. Si falla, no frena la acción. El botón manual de Recuperar ventas sigue. Prueba: `node dev/test-avisos.js`.
+
+## Ventas por fuera de la web (Ventas → Nueva venta, 10/11/2026)
+
+- Lo pidió el dueño: vende también por WhatsApp/Instagram/en mano y quiere registrarlas. **Para el cliente tiene que ser igual que comprar en la web** (mismos datos, mismos mails, misma imagen); cambia solo la gestión.
+- Acción `ventaManual` → fila normal en Pedidos con columnas nuevas al final: `origen` (`fuera`; vacío = web), `canal` (WhatsApp, Instagram, Conocido, Veterinaria, Feria…), `medio` (efectivo/transferencia/tarjeta/otro; `pago` queda `tarjeta` o `transferencia` para la comisión) y `bonificacion` (texto que ve el cliente; `descuento` = diferencia con el precio de la web). `resumen().ventaManual === 1` (si falta, la pantalla pide pegar el `Codigo.gs`).
+- Precio libre por unidad (arranca en el de la web según el medio). Mail obligatorio; DNI obligatorio solo si va por Andreani. Valida stock.
+- Entrega: `domicilio`/`sucursal` (igual que la web: entra a `exportarAndreani`, despacho con seguimiento, "¿Ya te llegó?") o `mano` (nueva): no va a Andreani ni a Envíos; en Hoy pasa Preparar → En camino ("lista para entregar") → Entregado (`marcarEntregado` acepta `pagado` si es en mano). A los 2 días de entregada, `enviarFotosMano` (en `tareaHoraria`) le manda "¿Cómo le quedó la funda?" con `pedidoFoto` (usa `consulta_el` para no repetir).
+- "Todavía no me pagó": queda `reserva` sin `vence` (no se vence sola, aparta stock en `stock()`), en Confirmar pago sin alerta; el mail lleva los datos para transferir si el medio es transferencia.
+- Mails: `mailVentaFuera` (gracias por la compra, según estado/entrega), `mailPagoFuera` (al marcarla pagada), `mailFotoMano`; `detalle()` muestra medio, bonificación y "En mano". **No se avisa a Meta** (`marcarPagado` corta antes de `compraMeta`) y no cuenta en Publicidad (`ventasPeriodo`) ni en "Compras por transferencia"; el Tablero las suma en ventas/cobrado (con `fuera` = cuántas) y en "Te quedó" devuelve el envío de las entregadas en mano (`sinEnvio` × `TALLER.envioFunda`); la conversión de la web y el costo por venta usan solo las de la web.
+- Prueba: `node dev/test-venta.js`.
 
 ## Siguientes pasos posibles
 

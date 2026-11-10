@@ -232,7 +232,7 @@ var API = "https://script.google.com/macros/s/AKfycbzjecDhiNGDrmWjWtz8U2HIBwoQDb
 <script>
 /* Carga el panel siempre en su última versión (sin copias viejas guardadas en el navegador) */
 (function(){
-  var v=Date.now(), archivos=["admin-core.js","admin-hoy.js","admin-taller.js","admin-publicidad.js","admin-tablero.js"], i=0;
+  var v=Date.now(), archivos=["admin-core.js","admin-hoy.js","admin-venta.js","admin-taller.js","admin-publicidad.js","admin-tablero.js"], i=0;
   function siguiente(){
     if(i>=archivos.length){ LP.arrancar(); return; }
     var s=document.createElement("script"); s.src=archivos[i++]+"?v="+v; s.onload=siguiente;

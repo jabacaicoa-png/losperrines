@@ -13,7 +13,7 @@ const ETAPAS = [
   ["preparar", "Preparar", "Ya pagados. Imprimí la hoja de preparación, armá los paquetes y marcalos como preparados."],
   ["etiquetar", "Etiquetar", "Paquetes armados. Exportá la planilla, subila en andreani.com e imprimí las etiquetas."],
   ["despachar", "Despachar", "Ya están en Andreani. Cargá el número de seguimiento de cada uno (Enter pasa al siguiente) y guardá: a cada cliente le llega el mail con el link."],
-  ["camino", "En camino", "Ya salieron. A los días que elijas abajo le preguntamos al cliente por mail si le llegó; cuando toca “Sí, llegó”, pasa solo a Entregado. Si te avisa por otro lado, marcalo vos."],
+  ["camino", "En camino", "Ya salieron (o están listos para entregar en mano). A los días que elijas abajo le preguntamos al cliente por mail si le llegó; cuando toca “Sí, llegó”, pasa solo a Entregado. Si te avisa por otro lado, marcalo vos."],
   ["entregado", "Entregado", "Confirmados en los últimos 7 días. Al cliente le llegó un gracias con el pedido de foto de su mascota en el auto y tu Instagram."]
 ];
 const SEL = {confirmar: {}, preparar: {}, camino: {}};   // pedidos tildados en cada etapa
@@ -32,7 +32,7 @@ function grupos(d) {
 function elegidos(k) { return Object.keys(SEL[k]).filter(id => SEL[k][id]); }
 function itemsDe(p) { try { const j = JSON.parse(p.items); if (Array.isArray(j) && j.length) return j; } catch (e) {} return [{producto: "doble", cantidad: +p.cantidad || 1}]; }
 function nombreProd(d, id) { const x = (d.productos || []).filter(p => p.id === id)[0]; return x ? x.nombre : (id === "individual" ? "Funda individual" : "Funda doble"); }
-function destino(p) { return p.entrega === "sucursal" ? "Retira en sucursal Andreani " + p.sucursal : (p.calle + " " + p.numero + (p.piso ? " piso " + p.piso : "") + (p.depto ? " " + p.depto : "") + " · " + p.prov_loc_cp); }
+function destino(p) { return p.entrega === "mano" ? "Entrega en mano" : p.entrega === "sucursal" ? "Retira en sucursal Andreani " + p.sucursal : (p.calle + " " + p.numero + (p.piso ? " piso " + p.piso : "") + (p.depto ? " " + p.depto : "") + " · " + p.prov_loc_cp); }
 
 /* ---------- WhatsApp con el mensaje ya escrito ---------- */
 function tel(p) { let t = (String(p.cel_cod || "") + String(p.cel_num || "")).replace(/\D/g, ""); if (t.length < 8) return ""; return /^54/.test(t) ? t : "549" + t; }
@@ -43,6 +43,7 @@ function mensaje(p, k, d) {
     return "Hola " + n + "! Te escribo de Los Perrines 🐾 Tenemos reservado tu pedido " + p.id + " (" + (p._items || "") + ") por " + money(p.total) + ". Para confirmarlo transferí "
       + (c.alias ? "al alias " + c.alias : "a la cuenta que te mandamos por mail") + (p.vence ? " antes del " + p.vence : "") + " y mandame el comprobante por acá. ¡Gracias!";
   }
+  if (k === "camino" && p.entrega === "mano") return "Hola " + n + "! Tu pedido " + p.id + " de Los Perrines ya está listo 🐾 ¿Cuándo te queda bien que te lo alcance?";
   if (k === "camino" && p.problema_el) return "Hola " + n + ", te escribo de Los Perrines 🐾 Vi que tuviste un problema con tu pedido " + p.id + ". Contame qué pasó así lo solucionamos.";
   if (k === "camino") return "Hola " + n + "! Tu pedido " + p.id + " de Los Perrines ya salió 🚚 Lo podés seguir acá: https://www.andreani.com/envio/" + p.tracking + " Cualquier cosa, escribime.";
   if (k === "entregado") { const ig = String(c.instagram || "").replace(/^@/, "");
@@ -60,17 +61,18 @@ function tarjeta(p, k, d) {
   if (k === "etiquetar" && ok) acts += '<button class="btn ghost sm" data-a="hoyVolver" data-id="' + esc(p.id) + '">Volver a Preparar</button>';
   if (k === "despachar") extra = '<input class="inp hoyTr" inputmode="numeric" autocomplete="off" placeholder="N° de seguimiento Andreani" id="ht-' + esc(p.id) + '" data-in="hoyTr" data-id="' + esc(p.id) + '" value="' + esc(TR[p.id] || "") + '" style="margin-top:8px">';
   if ((k === "camino" || k === "entregado") && p.tracking) extra = '<div class="small" style="margin-top:4px">Seguimiento: <a href="https://www.andreani.com/envio/' + esc(p.tracking) + '" target="_blank" rel="noopener">' + esc(p.tracking) + '</a></div>';
-  if (k === "camino" && conEntrega(d)) {
+  if (k === "camino" && p.entrega === "mano") extra += '<div class="small">Lista para entregar en mano. Cuando se la des, marcala como entregada.</div>';
+  else if (k === "camino" && conEntrega(d)) {
     if (p.estado === "entregado") extra += '<div class="small">Figuraba entregado el ' + esc(p.entregado_el) + '.</div>';
     else if (p.consulta_el) extra += '<div class="small muted">Le preguntamos si le llegó el ' + esc(p.consulta_el) + '.</div>';
     else if (p.despachado_el && String(c0(d).consulta_entrega_dias ?? "5").trim()) extra += '<div class="small muted">Le vamos a preguntar si le llegó a los ' + esc(String(c0(d).consulta_entrega_dias ?? "5")) + ' días de despachado.</div>';
     if (p.problema_el) acts += '<button class="btn main sm" data-a="hoyResuelto" data-id="' + esc(p.id) + '">Problema resuelto</button>';
   }
-  if (k === "entregado") { extra += '<div class="small">Llegó el ' + esc(p.entregado_el) + '.</div>'; if (ok) acts += '<button class="btn ghost sm" data-a="hoyNoEntregado" data-id="' + esc(p.id) + '">Volver a En camino</button>'; }
+  if (k === "entregado") { extra += '<div class="small">' + (p.entrega === "mano" ? "Entregada en mano el " + esc(p.entregado_el) + ". " + (p.consulta_el ? "Le pedimos la foto el " + esc(p.consulta_el) + "." : "A los 2 días le pedimos la foto de su mascota.") : "Llegó el " + esc(p.entregado_el) + ".") + '</div>'; if (ok) acts += '<button class="btn ghost sm" data-a="hoyNoEntregado" data-id="' + esc(p.id) + '">Volver a En camino</button>'; }
   return '<div class="hoyp' + (al ? " " + al.nivel : "") + '">'
     + (sel ? '<input type="checkbox" id="hc-' + k + '-' + esc(p.id) + '" data-ch="hoySel" data-k="' + k + '" data-id="' + esc(p.id) + '"' + (sel[p.id] ? " checked" : "") + ' aria-label="Elegir ' + esc(p.id) + '">' : "")
     + '<div class="hoyb"><div class="hoyh"><b>' + esc(p.nombre + " " + p.apellido) + '</b><b>' + money(p.total) + '</b></div>'
-    + '<div class="muted small">' + esc(p.id) + ' · ' + esc(p._items || (p.cantidad + " u.")) + ' · ' + (p.pago === "tarjeta" ? "Tarjeta" : "Transferencia") + '</div>'
+    + '<div class="muted small">' + esc(p.id) + ' · ' + esc(p._items || (p.cantidad + " u.")) + ' · ' + ({efectivo: "Efectivo", transferencia: "Transferencia", tarjeta: "Tarjeta", otro: "Otro medio"}[p.medio] || (p.pago === "tarjeta" ? "Tarjeta" : "Transferencia")) + (p.origen === "fuera" ? " · Fuera de la web" + (p.canal ? " (" + esc(p.canal) + ")" : "") : "") + '</div>'
     + (k !== "confirmar" ? '<div class="muted small">' + esc(destino(p)) + '</div>' : (p.estado === "reserva" && p.vence ? '<div class="muted small">Reserva hasta el ' + esc(p.vence) + '</div>' : ""))
     + (p.observaciones ? '<div class="small">Observaciones: ' + esc(p.observaciones) + '</div>' : "")
     + (p.notas ? '<div class="small">Nota: ' + esc(p.notas) + '</div>' : "")
