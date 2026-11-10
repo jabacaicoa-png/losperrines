@@ -84,6 +84,11 @@ td input{width:70px;font:600 1rem "Bricolage Grotesque",sans-serif;color:var(--i
   #print .top b{color:#D9E15A}
   #print svg{max-width:100%;height:auto;break-inside:avoid}
   #print .plano svg{max-height:160mm;width:auto;max-width:100%}
+  #print .rollo-grid{display:grid;grid-template-columns:1fr 78mm;gap:8mm;align-items:start}
+  #print .rollo-svg svg{display:block;width:100%;height:auto;max-height:252mm;margin:0 auto}
+  #print .rollo-side h1{font-size:18pt;margin:0 0 6px} #print .rollo-side .sigue{font-size:12pt;color:#5E6656;font-weight:600}
+  #print .rollo-side table.big td,#print .rollo-side table.big th{font-size:10.5pt;padding:4px 6px}
+  #print .rollo-side td.medida{font-size:13pt}
   #print .desp svg{max-height:120mm;width:auto;max-width:100%}
   #print .fig{text-align:center;break-inside:avoid}
   #print .ley{font-size:9pt;color:#5E6656}
@@ -218,12 +223,12 @@ function porRollo(A,RLcm){
 }
 
 /* ---------- dibujo ---------- */
-function dibujar(b,RW){
+function dibujar(b,RW,grande){
   if(!b) return '';
-  var S=2.2, W=RW*S, H=b.len*S, pad=30, svg=['<svg viewBox="0 0 '+(W+pad*2+70)+' '+(H+pad*2)+'" role="img" aria-label="Plano de corte de un bloque">'];
+  var F=grande?1.45:1, S=2.2, W=RW*S, H=b.len*S, pad=30, svg=['<svg viewBox="0 0 '+(W+pad*2+70*F)+' '+(H+pad*2)+'" role="img" aria-label="Plano de corte de un bloque">'];
   function rect(x,y,w,h,fill,stroke,txt,txt2){ svg.push('<rect x="'+(pad+x*S)+'" y="'+(pad+y*S)+'" width="'+(w*S)+'" height="'+(h*S)+'" rx="3" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1"/>');
-    if(txt) svg.push('<text x="'+(pad+(x+w/2)*S)+'" y="'+(pad+(y+h/2)*S-(txt2?6:0))+'" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="'+stroke+'">'+txt+'</text>');
-    if(txt2) svg.push('<text x="'+(pad+(x+w/2)*S)+'" y="'+(pad+(y+h/2)*S+9)+'" text-anchor="middle" dominant-baseline="central" font-size="11" fill="'+stroke+'">'+txt2+'</text>'); }
+    if(txt) svg.push('<text x="'+(pad+(x+w/2)*S)+'" y="'+(pad+(y+h/2)*S-(txt2?6*F:0))+'" text-anchor="middle" dominant-baseline="central" font-size="'+(12*F)+'" font-weight="700" fill="'+stroke+'">'+txt+'</text>');
+    if(txt2) svg.push('<text x="'+(pad+(x+w/2)*S)+'" y="'+(pad+(y+h/2)*S+9*F)+'" text-anchor="middle" dominant-baseline="central" font-size="'+(11*F)+'" fill="'+stroke+'">'+txt2+'</text>'); }
   var SP='sb'+Math.random().toString(36).slice(2,7);
   svg.push('<defs><pattern id="'+SP+'" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#fff"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9AA090" stroke-width="1"/></pattern></defs>');
   rect(0,0,RW,b.len,"url(#"+SP+")","#5E6656");
@@ -232,13 +237,13 @@ function dibujar(b,RW){
     for(var i=0;i<f.m;i++){ cnum++; rect(i*b.cA,y,b.cA,b.cL,"var(--teal)","var(--teal-s)","Cuerpo "+cnum,Math.round(b.cA)+" × "+Math.round(b.cL)); }
     if(f.lat>0){ var x0=f.m*b.cA, cols=Math.floor((RW-x0)/f.fx), k=0;
       for(var r=0;k<f.lat;r++){ for(var c=0;c<cols&&k<f.lat;c++){ rect(x0+c*f.fx,y+r*f.fy,f.fx,f.fy,"var(--amber)","var(--amber-s)","Lat."); k++; } } }
-    svg.push('<text x="'+(pad+W+6)+'" y="'+(pad+(y+b.cL/2)*S)+'" font-size="12" fill="var(--muted)" dominant-baseline="central">'+Math.round(b.cL)+' cm</text>');
+    svg.push('<text x="'+(pad+W+6)+'" y="'+(pad+(y+b.cL/2)*S)+'" font-size="'+(12*F)+'" fill="var(--muted)" dominant-baseline="central">'+Math.round(b.cL)+' cm</text>');
     y+=b.cL;
   });
   var left=b.rem;
   for(var j=0;j<b.nfr;j++){ for(var c2=0;c2<b.fr.per&&left>0;c2++){ rect(c2*b.fr.x,y,b.fr.x,b.fr.y,"var(--amber)","var(--amber-s)","Lateral"); left--; }
-    svg.push('<text x="'+(pad+W+6)+'" y="'+(pad+(y+b.fr.y/2)*S)+'" font-size="12" fill="var(--muted)" dominant-baseline="central">'+Math.round(b.fr.y)+' cm</text>'); y+=b.fr.y; }
-  svg.push('<text x="'+(pad+W/2)+'" y="18" text-anchor="middle" font-size="12" fill="var(--muted)">Ancho del rollo: '+RW+' cm</text>');
+    svg.push('<text x="'+(pad+W+6)+'" y="'+(pad+(y+b.fr.y/2)*S)+'" font-size="'+(12*F)+'" fill="var(--muted)" dominant-baseline="central">'+Math.round(b.fr.y)+' cm</text>'); y+=b.fr.y; }
+  svg.push('<text x="'+(pad+W/2)+'" y="18" text-anchor="middle" font-size="'+(12*F)+'" fill="var(--muted)">Ancho del rollo: '+RW+' cm</text>');
   svg.push('</svg>'); return svg.join("");
 }
 
@@ -478,10 +483,21 @@ function fichaHTML(){
     +'<li>'+box+' Las tiras llegan a los apoyacabezas y a la manija o la puerta.</li><li>'+box+' Las aberturas coinciden con los cinturones.</li>'
     +'<li>'+box+' Prueba de agua: un vaso con peso arriba, 30 minutos.</li></ul><h3>Notas</h3><div class="note-lines">'+'<div></div>'.repeat(5)+'</div>');
   // ---------- CORTE DEL ROLLO (al final) ----------
-  h.push('<div class="pg"></div>'+top+'<h1>Cómo cortar el rollo</h1><p class="nota">Rollo de '+RW+' cm de ancho. Se corta en bloques, en este orden. Las piezas están rotuladas; lo rayado es sobrante.</p>');
+  // Una hoja por bloque: el dibujo del rollo bien grande a la izquierda y el texto en una columna a la derecha
   var seq=[], pos=0; lista.forEach(function(m){ var A=analizar(m,RW,mg); bloquesPara(m.q||1,A).forEach(function(x){ seq.push({m:m,b:x.b,veces:x.veces,desde:pos}); pos+=x.b.len*x.veces; }); });
-  h.push('<table class="big"><tr><th>#</th><th>Modelo</th><th>Bloque</th><th>Veces</th><th>Desde</th><th>Hasta</th></tr>'+seq.map(function(q,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(q.m.nom)+'</td><td>'+q.b.n+' unidad'+(q.b.n>1?'es':'')+' ('+m2(q.b.len)+' m)</td><td>'+q.veces+'</td><td>'+m2(q.desde)+' m</td><td>'+m2(q.desde+q.b.len*q.veces)+' m</td></tr>'; }).join("")+'</table>');
-  seq.forEach(function(q,i){ h.push((i?'<div class="pg"></div>':'')+'<h2>Bloque '+(i+1)+' · '+esc(q.m.nom)+' · '+q.b.n+' unidad'+(q.b.n>1?'es':'')+(q.veces>1?' · cortar '+q.veces+' veces':'')+'</h2><div class="fig plano">'+dibujar(q.b,RW)+'</div>'); });
+  var orden='<table class="big"><tr><th>#</th><th>Bloque</th><th>Veces</th><th>Desde</th><th>Hasta</th></tr>'+seq.map(function(q,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(q.m.nom)+' · '+q.b.n+' u. ('+m2(q.b.len)+' m)</td><td>'+q.veces+'</td><td>'+m2(q.desde)+' m</td><td>'+m2(q.desde+q.b.len*q.veces)+' m</td></tr>'; }).join("")+'</table>';
+  seq.forEach(function(q,i){ var P=analizar(q.m,RW,mg).P;
+    h.push('<div class="pg"></div>'+top+'<div class="rollo-grid"><div class="rollo-svg">'+dibujar(q.b,RW,true)+'</div><div class="rollo-side">'
+      +'<h1>Cómo cortar el rollo'+(i?' <span class="sigue">(sigue)</span>':'')+'</h1>'
+      +(i?'':'<p class="nota">Rollo de '+RW+' cm de ancho. Se corta en bloques, en este orden. Las piezas están rotuladas; lo rayado es sobrante.</p>'+(seq.length>1?orden:''))
+      +'<h2>Bloque '+(i+1)+(seq.length>1?' de '+seq.length:'')+'</h2>'
+      +'<p class="lead"><b>'+esc(q.m.nom)+'</b> · '+q.b.n+' unidad'+(q.b.n>1?'es':'')+(q.veces>1?' · <b>cortar '+q.veces+' veces</b>':'')+'</p>'
+      +'<table class="big"><tr><th>Pieza</th><th>Corte</th><th>Cant.</th></tr>'
+      +'<tr><td>Cuerpo</td><td class="medida">'+P.CW+' × '+P.CL+'</td><td><b>'+q.b.n+'</b></td></tr>'
+      +'<tr><td>Lateral</td><td class="medida">'+P.LA+' × '+P.LB+'</td><td><b>'+q.b.n*P.nl+'</b></td></tr></table>'
+      +'<p class="nota">Largo del bloque: <b>'+m2(q.b.len)+' m</b>'+(q.veces>1?' (cada vez)':'')+'.<br>Del metro <b>'+m2(q.desde)+'</b> al <b>'+m2(q.desde+q.b.len*q.veces)+'</b> del rollo.</p>'
+      +'<p class="nota">Las medidas ya incluyen las costuras. El forro (tracker común) se corta con el mismo plano.</p>'
+      +'</div></div>'); });
   return h.join("");
 }
 document.addEventListener("input",function(e){
