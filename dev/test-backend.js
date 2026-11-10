@@ -25,6 +25,16 @@ d=A('taller'); assert.equal(d.tandas[0].estado,'en_confeccion'); assert.equal(d.
 A('tandaRecibir',{id:t,recibido:{doble:4,individual:3},consumos:[{insumo:'tela',cantidad:8}],confeccion:{proveedor:'PV2',total:70000}});
 d=A('taller'); assert.equal(d.tandas[0].estado,'recibida'); assert.equal(d.stockTienda.individual.ingresado,3); assert.equal(d.compras.filter(x=>x.tipo==='confeccion').length,2);
 bad({accion:'tandaRecibir',token:tok,id:t,recibido:{doble:1}},/en confección/);
+// editar tanda: pidió 12, entrega 8
+const t2=A('tandaCrear',{items:[{producto:'doble',cantidad:9},{producto:'individual',cantidad:3}],proveedor:'PV2'}).id;
+A('tandaEditar',{id:t2,items:[{producto:'doble',cantidad:6},{producto:'individual',cantidad:2}],proveedor:'PV1',notas:'Entrega 8'});
+let tt=A('taller').tandas.find(x=>x.id===t2); assert.deepEqual(tt.items,[{producto:'doble',cantidad:6},{producto:'individual',cantidad:2}]); assert.equal(tt.proveedor,'PV1'); assert.equal(tt.notas,'Entrega 8'); assert.equal(tt.estado,'en_confeccion');
+A('tandaRecibir',{id:t2,recibido:{doble:4},consumos:[],confeccion:{}});
+bad({accion:'tandaEditar',token:tok,id:t2,items:[{producto:'doble',cantidad:3},{producto:'individual',cantidad:2}]},/Ya recibiste 4/);
+bad({accion:'tandaEditar',token:tok,id:t2,items:[]},/cuántas fundas/);
+assert.equal(A('tandaEditar',{id:t2,items:[{producto:'doble',cantidad:4}]}).cerrada,true,'si baja a lo ya recibido, se cierra');
+assert.equal(A('taller').tandas.find(x=>x.id===t2).estado,'recibida');
+bad({accion:'tandaEditar',token:tok,id:t2,items:[{producto:'doble',cantidad:9}]},/planificadas o en confección/);
 // ajuste, borrar insumo usado -> archiva
 A('stockAjuste',{insumo:'tela',cantidad:-1,detalle:'falla'}); assert.equal(A('taller').insumos.find(i=>i.id==='tela').stock,43.35);
 assert(A('tallerBorrar',{tipo:'insumo',id:'heb'}).archivado);

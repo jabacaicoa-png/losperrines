@@ -36,7 +36,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 - Corte del cuerpo: largo de corte = tramos terminados + **2 cm por cada pliegue** (2 pliegues); los extremos llevan bies. El largo del cuerpo va **a lo ancho de la tela** (150 cm). La tela se cobra por **metro lineal de rollo** (el sobrante del ancho ya está incluido).
 - Bolsa de guardado: una pieza doblada; corte = (2 × alto + 2 × costura) × (ancho + 2 × costura). Insumos editables (tela "sale del corte", cierre "largo de la abertura", resto "cantidad fija").
 - Compras: el envío se puede repartir en el precio de los insumos (opción marcada por defecto). Una compra suma stock y genera deuda con el proveedor; "Otro gasto" genera deuda **sin** sumar stock.
-- Tandas: mientras están "en confección" reservan insumos; al **recibir** se descuentan insumos, se suman fundas a la tienda y se anota la confección a pagar.
+- Tandas: mientras están "en confección" reservan insumos; al **recibir** se descuentan insumos, se suman fundas a la tienda y se anota la confección a pagar. Se pueden **editar** (acción `tandaEditar`, botón "Editar" en Tandas: cantidades, quién la cose, notas) mientras estén planificadas o en confección; no deja bajar de lo ya recibido y, si queda igual a lo recibido, la cierra. Recibir parcial + "Es la última entrega" también cierra con menos de lo pedido.
 - Las transferencias de los clientes llegan a **Mercado Pago**.
 
 ## Convenciones de código (importante)

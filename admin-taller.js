@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "10/11 · 1";
+window.PANEL_VERSION = "10/11 · 2";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -273,6 +273,7 @@ function vTandas() {
     return '<div class="block"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><b style="font-size:1.08rem">Tanda ' + esc(t.id) + '</b> <span class="pill ' + e[1] + '">' + e[0] + '</span><div class="muted small">' + fFecha(t.fecha) + (t.proveedor ? " · " + esc(provNombre(t.proveedor)) : "") + (t.notas ? " · " + esc(t.notas) : "") + "</div></div>"
       + '<div class="acts">' + (t.estado === "planificada" ? '<button class="btn main sm" data-a="tdEstado" data-id="' + esc(t.id) + '" data-v="en_confeccion">Ya se la pedí al taller</button>' : "")
       + (t.estado === "en_confeccion" ? '<button class="btn main sm" data-a="tdRecibir" data-id="' + esc(t.id) + '">Recibir fundas</button>' : "")
+      + (t.estado === "planificada" || t.estado === "en_confeccion" ? '<button class="btn ghost sm" data-a="tdEditar" data-id="' + esc(t.id) + '">Editar</button>' : "")
       + (t.estado === "planificada" || (t.estado === "en_confeccion" && !Object.keys(rec).length) ? '<button class="btn ghost sm" data-a="tdEstado" data-id="' + esc(t.id) + '" data-v="cancelada">Cancelar</button>' : "")
       + (t.estado === "en_confeccion" && Object.keys(rec).length ? '<button class="btn ghost sm" data-a="tdEstado" data-id="' + esc(t.id) + '" data-v="recibida">Cerrar sin recibir el resto</button>' : "") + "</div></div>"
       + '<div class="g2" style="margin-top:10px">' + (t.items || []).map(it => { const r = rec[it.producto] || 0, pc = Math.min(100, r / it.cantidad * 100);
@@ -669,6 +670,26 @@ C.plCrear = () => { const items = PRODS.map(p => ({producto: p, cantidad: Math.f
   C.tdCrearOk = b => pedir("tandaCrear", {items: items, proveedor: $("#td-p").value, estado: $("#td-e").value, notas: $("#td-n").value}, "Tanda creada", b).then(r => { if (r) { L.cerrarDlg(); PL.q = {doble: "", individual: ""}; L.ir("tandas"); } }); };
 // tandas
 C.tdEstado = t => { const v = t.dataset.v, txt = {en_confeccion: "¿Pasar la tanda a confección? Sus insumos quedan reservados.", cancelada: "¿Cancelar la tanda?", recibida: "¿Cerrar la tanda sin recibir lo que falta?"}[v]; if (confirm(txt)) pedir("tandaEstado", {id: t.dataset.id, estado: v}, "Tanda actualizada", t); };
+let TED = null; // tanda que se está editando
+function editarTandaDlg() {
+  const t = T().tandas.find(x => x.id === TED.id), rec = t.recibido || {};
+  redlg('<div class="row"><h3>Editar tanda ' + esc(t.id) + '</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
+    + '<p class="muted small" style="margin:0 0 10px">Cambiá cuántas fundas te va a entregar. Los insumos reservados se recalculan solos. Si te entrega menos de lo pedido, también podés poner la cantidad real al recibir y tildar “Es la última entrega”.</p>'
+    + '<div class="g2">' + PRODS.map(p => '<label class="f">' + esc(nombreP(p)) + (rec[p] ? ' <span class="muted">(ya recibiste ' + rec[p] + ')</span>' : "") + '<input id="ted-' + p + '" data-in="tedQ" data-p="' + p + '" inputmode="numeric" value="' + esc(TED.q[p]) + '"></label>').join("") + "</div>"
+    + "<label class='f'>Quién la cose<select id='ted-prov' data-ch='tedProv'>" + opts(activos(T().proveedores), TED.prov, "Elegí…") + "</select></label>"
+    + "<label class='f'>Notas<input id='ted-notas' data-in='tedNotas' value='" + esc(TED.notas) + "'></label>"
+    + '<p class="err" id="tedErr"></p><div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="tedOk">Guardar cambios</button></div>');
+}
+C.tdEditar = t => { const td = T().tandas.find(x => x.id === t.dataset.id), q = {}; PRODS.forEach(p => { const it = (td.items || []).find(x => x.producto === p); q[p] = it ? String(it.cantidad) : ""; });
+  TED = {id: td.id, q: q, prov: td.proveedor || "", notas: td.notas || ""}; editarTandaDlg(); };
+I.tedQ = t => { TED.q[t.dataset.p] = t.value; };
+I["tedProv:change"] = t => { TED.prov = t.value; };
+I.tedNotas = t => { TED.notas = t.value; };
+C.tedOk = b => {
+  const items = PRODS.map(p => ({producto: p, cantidad: Math.max(0, Math.floor(nd(TED.q[p])))})).filter(x => x.cantidad > 0);
+  if (!items.length) { const e = $("#tedErr"); if (e) e.textContent = "Poné al menos una funda. Si ya no va, cancelá la tanda."; return; }
+  pedir("tandaEditar", {id: TED.id, items: items, proveedor: TED.prov, notas: TED.notas}, null, b).then(r => { if (!r) return; L.cerrarDlg(); L.toast(r.cerrada ? "Tanda actualizada: ya recibiste todo, quedó cerrada" : "Tanda actualizada"); });
+};
 C.tdRecibir = t => { const td = T().tandas.find(x => x.id === t.dataset.id), pend = pendienteTanda(td); RCB = {id: td.id, q: {}, prov: td.proveedor, conf: null, confAuto: true, cerrar: true}; PRODS.forEach(p => { if (pend[p]) RCB.q[p] = String(pend[p]); }); recibirDlg(); };
 I.rcbQ = t => { RCB.q[t.dataset.p] = t.value; const td = T().tandas.find(x => x.id === RCB.id), pend = pendienteTanda(td); RCB.cerrar = PRODS.every(p => Math.floor(nd(RCB.q[p])) >= (pend[p] || 0)); recibirDlg(); };
 I.rcbConf = t => { RCB.conf = t.value; RCB.confAuto = false; recibirDlg(); };

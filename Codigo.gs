@@ -198,6 +198,7 @@ function rutear(r) {
     case 'pagoBorrar': return conLock(function () { return pagoBorrar(r); });
     case 'tandaCrear': return conLock(function () { return tandaCrear(r); });
     case 'tandaEstado': return conLock(function () { return tandaEstado(r); });
+    case 'tandaEditar': return conLock(function () { return tandaEditar(r); });
     case 'tandaRecibir': var tr = conLock(function () { return tandaRecibir(r); }); avisarStockAuto(); return tr;
     case 'tallerMigrar': return conLock(function () { return tallerMigrar(r); });
   }
@@ -1903,6 +1904,24 @@ function tandaEstado(r) {
   if (r.notas != null) cambios.notas = limpiar(r.notas, 300);
   setear(T.tandas, t._fila, cambios);
   return {};
+}
+/* Editar una tanda planificada o en confección: cantidades, quién la cose y notas.
+   No deja bajar una cantidad por debajo de lo que ya recibiste. Las reservas de insumos se recalculan solas. */
+function tandaEditar(r) {
+  var t = tanda(r.id);
+  if (['planificada', 'en_confeccion'].indexOf(String(t.estado)) < 0) throw new Error('Solo se editan tandas planificadas o en confección.');
+  var items = sanItems(r.items), rec = jsonDe(t.recibido, {});
+  Object.keys(rec).forEach(function (p) {
+    var it = items.filter(function (x) { return x.producto === p; })[0], q = it ? it.cantidad : 0;
+    if (q < num(rec[p])) throw new Error('Ya recibiste ' + rec[p] + ' ' + (p === 'individual' ? 'individual' : 'doble') + (num(rec[p]) > 1 ? 's' : '') + ': no podés poner menos que eso.');
+  });
+  var cambios = {items: JSON.stringify(items), actualizado: ahora()};
+  if (r.proveedor != null) cambios.proveedor = limpiar(r.proveedor, 40);
+  if (r.notas != null) cambios.notas = limpiar(r.notas, 300);
+  var completa = Object.keys(rec).length && items.every(function (it) { return num(rec[it.producto]) >= it.cantidad; });
+  if (completa && t.estado === 'en_confeccion') cambios.estado = 'recibida';   // bajaste justo a lo que ya te entregó: queda cerrada
+  setear(T.tandas, t._fila, cambios);
+  return {cerrada: !!cambios.estado};
 }
 function tandaRecibir(r) {
   var t = tanda(r.id);
