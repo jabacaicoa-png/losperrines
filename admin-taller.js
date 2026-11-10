@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "10/11 · 3";
+window.PANEL_VERSION = "10/11 · 4";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -74,8 +74,8 @@ function bolsaFila(b) { const P = bolsaCorte(b), t = bolsaTela(b); return t.porF
 function bolsasDe(b, metros) { const f = bolsaFila(b); return f ? Math.floor(metros * 100 / f.cm + 1e-9) * f.k : 0; }
 function metrosPara(b, n) { const f = bolsaFila(b); return f && n > 0 ? Math.ceil(n / f.k - 1e-9) * f.cm / 100 : 0; }
 function bolsaUso(b, x) { if (x.calc === "tela") return bolsaTela(b).m; if (x.calc === "abertura") return nd(b.ancho) / 100; return nd(x.uso); }
-function bolsaCosto(f) {
-  if (!bolsaActiva(f)) return {mat: 0, conf: 0, serv: 0, total: 0};
+function bolsaCosto(f, verIgual) {   // verIgual: el costo para mostrar aunque no se sume a la funda
+  if (!f.bolsa || (!verIgual && !bolsaActiva(f))) return {mat: 0, conf: 0, serv: 0, total: 0};
   const b = f.bolsa, mat = (b.items || []).reduce((a, x) => a + bolsaUso(b, x) * precioU(ins(x.insumo)), 0);
   const cf = nm(b.confeccion), sv = (b.servicios || []).reduce((a, x) => a + nm(x.monto), 0);
   return {mat: mat, conf: cf, serv: sv, total: mat + cf + sv};
@@ -364,7 +364,7 @@ function vBolsa(f, cat) {
     + (f.bolsa ? '<label class="check small"><input type="checkbox" id="bo-act" data-ch="pdBolsaAct"' + (f.bolsa.activa !== false ? " checked" : "") + "> Sumarla al costo de la funda</label>" : "") + "</div>";
   if (sinBackend) h += '<div class="note warn">Para guardar la bolsa hace falta el <b>Codigo.gs nuevo</b> (versión 3). Pegalo en Apps Script y publicá una nueva versión.</div>';
   if (!f.bolsa) return h + '<p class="muted" style="margin:8px 0 10px">La bolsa con cierre en la que va la funda. Se corta de una pieza doblada y su costo se suma al de la funda, a las compras de la tanda y a lo que se descuenta del stock.</p><button class="btn ghost" data-a="pdBolsaAdd">＋ Agregar bolsa</button></div>';
-  const b = f.bolsa, P = bolsaCorte(b), tl = bolsaTela(b), bc = bolsaCosto(f), off = b.activa === false;
+  const b = f.bolsa, P = bolsaCorte(b), tl = bolsaTela(b), bc = bolsaCosto(f, true), off = b.activa === false;
   h += '<p class="muted small" style="margin:6px 0 10px">Una pieza doblada. El <b>ancho</b> es el lado de la abertura (cierre); el <b>alto</b> se duplica al doblar. Medidas terminadas, en cm.</p>'
     + '<div class="g3" style="grid-template-columns:repeat(4,minmax(0,1fr))">'
     + '<label class="f">Ancho terminado<input id="bo-an" data-in="pdBolsa" data-k="ancho" inputmode="decimal" value="' + esc(b.ancho) + '"></label>'
@@ -384,7 +384,7 @@ function vBolsa(f, cat) {
     + '<div class="acts" style="margin-top:8px"><button class="btn ghost sm" data-a="pdBolsaItemAdd">＋ Agregar insumo a la bolsa</button></div>'
     + '<div class="g2" style="margin-top:14px"><label class="f">Confección de la bolsa (Susana, por bolsa)<input id="bo-cf" data-in="pdBolsa" data-k="confeccion" inputmode="numeric" value="' + esc(b.confeccion) + '"></label><div></div></div>'
     + (b.servicios || []).map((x, ix) => '<div class="g2" style="align-items:end"><label class="f">Agregado o servicio<input id="bs-c-' + ix + '" data-in="pdBolsaServ" data-ix="' + ix + '" data-k="concepto" value="' + esc(x.concepto) + '"></label><div class="acts" style="flex-wrap:nowrap;margin-bottom:12px"><input class="inp" id="bs-m-' + ix + '" data-in="pdBolsaServ" data-ix="' + ix + '" data-k="monto" inputmode="numeric" value="' + esc(x.monto) + '" aria-label="Costo por bolsa"><button class="x" data-a="pdBolsaServDel" data-ix="' + ix + '" aria-label="Quitar">×</button></div></div>').join("")
-    + '<div class="acts" style="justify-content:space-between"><button class="btn ghost sm" data-a="pdBolsaServAdd">＋ Agregado (sublimación, etiqueta…)</button><b>Total bolsa: ' + money(bc.total) + (off ? ' <span class="pill mute">no se suma</span>' : "") + "</b></div>"
+    + '<div class="acts" style="justify-content:space-between"><button class="btn ghost sm" data-a="pdBolsaServAdd">＋ Agregado (sublimación, etiqueta…)</button><b>Total bolsa: ' + money(bc.total) + (off ? ' <span class="pill mute">no se suma a la funda</span>' : "") + "</b></div>"
     + '<div class="acts" style="margin-top:10px"><button class="linkb small" data-a="pdBolsaQuitar">Quitar la bolsa de este producto</button></div></div>';
   return h;
 }
