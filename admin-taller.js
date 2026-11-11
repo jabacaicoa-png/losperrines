@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "11/11 · 1";
+window.PANEL_VERSION = "11/11 · 2";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -486,12 +486,13 @@ function vProveedores() {
     '<button class="btn ghost" data-a="provNuevo">＋ Proveedor</button><button class="btn ghost" data-a="cargoNuevo">Otro gasto</button><button class="btn main" data-a="compraNueva">Registrar compra</button>') + bannerMigrar();
   h += '<div class="cards" style="margin-top:0"><div class="kpi' + (deuda ? " warn" : " ok") + '"><small>Debés en total</small><b>' + money(deuda) + '</b></div><div class="kpi"><small>Comprado este mes</small><b>' + money(T().compras.filter(c => c.fecha.slice(0, 7) === hoyISO().slice(0, 7)).reduce((a, c) => a + c.total, 0)) + '</b></div><div class="kpi"><small>Pagado este mes</small><b>' + money(T().pagos.filter(c => c.fecha.slice(0, 7) === hoyISO().slice(0, 7)).reduce((a, c) => a + c.monto, 0)) + '</b></div><div class="kpi"><small>Proveedores</small><b>' + lista.length + "</b></div></div>";
   if (!lista.length) return h + '<div class="empty" style="margin-top:14px">Todavía no cargaste proveedores.</div>';
-  h += '<div class="cols2" style="margin-top:14px">' + lista.map(p => { const s = sal[p.id] || {saldo: 0, cargos: 0, pagos: 0}, tel = String(p.telefono || "").replace(/\D/g, ""), cosas = T().insumos.filter(i => i.proveedor === p.id && i.activo !== false).map(i => i.nombre);
-    return '<div class="block" style="margin-top:0"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="min-width:0"><b style="font-size:1.06rem">' + esc(p.nombre) + '</b><div class="muted small">' + esc([p.lugar, p.telefono].filter(Boolean).join(" · ") || "Sin contacto") + "</div>" + (cosas.length ? '<div class="small" style="margin-top:4px">' + esc(cosas.join(", ")) + "</div>" : "") + "</div>"
-      + '<div style="text-align:right;white-space:nowrap">' + (s.saldo > 0 ? '<b class="neg" style="font-size:1.15rem">' + money(s.saldo) + '</b><br><span class="muted small">le debés</span>' : s.saldo < 0 ? '<b style="color:var(--info);font-size:1.15rem">' + money(-s.saldo) + '</b><br><span class="muted small">pagado sin compra cargada</span>' : '<span class="pill ok">Al día</span>') + "</div></div>"
-      + (s.saldo < 0 ? '<div class="note info" style="margin-top:10px">Le pagaste ' + money(s.pagos) + " pero solo figuran " + money(s.cargos) + " en compras. Falta cargar la compra que corresponde a ese pago." + '<div class="acts" style="margin-top:8px"><button class="btn main sm" data-a="cargoFalta" data-prov="' + esc(p.id) + '" data-monto="' + Math.round(-s.saldo) + '">Cargar la compra (' + money(-s.saldo) + ')</button></div></div>' : "")
-      + '<div class="acts" style="margin-top:12px">' + (s.saldo > 0 ? '<button class="btn main sm" data-a="pagoNuevo" data-prov="' + esc(p.id) + '">Registrar pago</button>' : "") + '<button class="btn ghost sm" data-a="compraNueva" data-prov="' + esc(p.id) + '">Compra</button><button class="btn ghost sm" data-a="provCuenta" data-prov="' + esc(p.id) + '">Ver cuenta</button><button class="btn ghost sm" data-a="provEditar" data-prov="' + esc(p.id) + '">Editar</button>'
-      + (tel ? '<a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel.length <= 10 ? "549" + tel : tel) + '">WhatsApp</a>' : "") + "</div></div>"; }).join("") + "</div>";
+  // una lista simple, un renglón por proveedor (lo pidió el dueño: "no me gusta ver cuadros"); primero a los que les debés
+  const orden = lista.slice().sort((x, y) => ((sal[y.id] || {}).saldo || 0) - ((sal[x.id] || {}).saldo || 0));
+  h += '<div class="gl pl" style="margin-top:14px"><div class="r h"><span>Proveedor</span></div>' + orden.map(p => { const s = sal[p.id] || {saldo: 0, cargos: 0, pagos: 0}, tel = String(p.telefono || "").replace(/\D/g, "");
+    return '<div class="r"><span class="pl-n"><b>' + esc(p.nombre) + "</b> " + (s.saldo > 0 ? '<span class="pill bad">Debés ' + money(s.saldo) + "</span>" : s.saldo < 0 ? '<span class="pill info">Pagado sin compra: ' + money(-s.saldo) + "</span>" : '<span class="pill ok">Al día</span>') + "</span>"
+      + '<span class="acts pl-a">' + (s.saldo > 0 ? '<button class="btn main sm" data-a="pagoNuevo" data-prov="' + esc(p.id) + '">Pagar</button>' : "") + (s.saldo < 0 ? '<button class="btn main sm" data-a="cargoFalta" data-prov="' + esc(p.id) + '" data-monto="' + Math.round(-s.saldo) + '" title="Le pagaste ' + money(s.pagos) + " pero solo figuran " + money(s.cargos) + ' en compras">Cargar la compra</button>' : "")
+      + '<button class="btn ghost sm" data-a="compraNueva" data-prov="' + esc(p.id) + '">Compra</button><button class="btn ghost sm" data-a="provCuenta" data-prov="' + esc(p.id) + '">Ver cuenta</button><button class="btn ghost sm" data-a="provEditar" data-prov="' + esc(p.id) + '">Editar</button>'
+      + (tel ? '<a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel.length <= 10 ? "549" + tel : tel) + '">WhatsApp</a>' : "") + "</span></div>"; }).join("") + "</div>";
   return h;
 }
 /* ================= GASTOS (lista simple) ================= */

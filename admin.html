@@ -160,6 +160,13 @@ h3{font-size:1.06rem;margin:0 0 10px}
 .gl .h{background:var(--olive);color:var(--on-olive);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-top:0}
 .gl .n{text-align:right;white-space:nowrap}
 .gl .t{font-weight:800;border-top:2px solid var(--ink)}
+/* Proveedores: lista de renglones (nombre y saldo a la izquierda, botones a la derecha) */
+.gl.pl .r{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.gl.pl .pl-n{flex:1 1 220px;min-width:0}
+.gl.pl .pl-n .pill{margin-left:4px}
+.gl.pl .pl-a{margin:0;justify-content:flex-end;flex-wrap:wrap;gap:6px}
+.gl.pl .h .pl-a{flex:0 0 auto}
+@media(max-width:759px){.gl.pl .pl-a{justify-content:flex-start;flex:1 1 100%}.gl.pl .pl-a{gap:5px}.gl.pl .pl-a .btn{padding:5px 8px;font-size:.8rem}}
 /* tablas */
 .tw{overflow-x:auto;min-width:0}
 table{width:100%;border-collapse:collapse;font-size:.92rem}
