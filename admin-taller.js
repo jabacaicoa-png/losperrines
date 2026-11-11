@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "11/11 · 9";
+window.PANEL_VERSION = "11/11 · 10";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -297,6 +297,7 @@ function recibirDlg() {
   PRODS.forEach(p => { const n = Math.max(0, Math.floor(nd(RCB.q[p]))); if (n) { consumos(fichaGuardada(p), n, cons); confTot += n * confU(fichaGuardada(p)); } });
   if (RCB.conf == null) RCB.confAuto = true;
   const montoConf = RCB.confAuto ? confTot : nm(RCB.conf);
+  const adel = RCB.prov ? Math.max(0, -((saldos()[RCB.prov] || {}).saldo || 0)) : 0;   // lo que ya le pagó por adelantado
   const res = reservado();
   redlg('<div class="row"><h3>Recibir fundas · tanda ' + esc(t.id) + '</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
     + '<p class="muted small" style="margin:0 0 10px">Poné cuántas te entregaron ahora. Si te entrega en partes, registrá cada entrega por separado.</p>'
@@ -306,8 +307,9 @@ function recibirDlg() {
     + "<h3 style='margin-top:12px'>Confección a pagar</h3><div class='g2'><label class='f'>Quién la hizo<select id='rcbProv' data-ch='rcbProv'>" + opts(activos(T().proveedores), RCB.prov, "Elegí…") + "</select></label>"
     + "<label class='f'>Monto<input id='rcbConf' data-in='rcbConf' inputmode='numeric' value='" + esc(RCB.confAuto ? Math.round(confTot) : RCB.conf) + "'></label></div>"
     + (RCB.confAuto ? "" : "<p class='muted small' style='margin:-6px 0 8px'>Según la ficha serían " + money(confTot) + ". <button class='linkb' data-a='rcbConfAuto'>Usar ese monto</button></p>")
-    + "<div class='g2'><label class='f'>Ya le pagué<input id='rcbPag' data-in='rcbPag' inputmode='numeric' value='" + esc(RCB.pagado || "") + "' placeholder='0 = queda como deuda'></label><label class='f'>Medio de pago<select id='rcbMedio' data-ch='rcbMedio'>" + ["Transferencia", "Efectivo", "Mercado Pago"].map(m => "<option" + (RCB.medio === m ? " selected" : "") + ">" + m + "</option>").join("") + "</select></label></div>"
-    + (montoConf > 0 && nm(RCB.pagado) !== Math.round(montoConf) ? "<p class='small' style='margin:-6px 0 8px'><button class='linkb' data-a='rcbPagTodo'>Le pagué todo (" + money(montoConf) + ")</button></p>" : "")
+    + (adel > 0 ? "<div class='note info' style='margin:0 0 10px'>Ya le adelantaste <b>" + money(adel) + "</b> a " + esc(provNombre(RCB.prov)) + ": se descuenta solo de esta confección. <b>Dejá “Ya le pagué” vacío</b>" + (montoConf > adel ? " (o poné solo lo que le pagues ahora de los " + money(montoConf - adel) + " que faltan)" : "") + ".</div>" : "")
+    + "<div class='g2'><label class='f'>Ya le pagué" + (adel > 0 ? " ahora" : "") + "<input id='rcbPag' data-in='rcbPag' inputmode='numeric' value='" + esc(RCB.pagado || "") + "' placeholder='" + (adel > 0 ? "vacío = ya está pago con el adelanto" : "vacío = queda como deuda") + "'></label><label class='f'>Medio de pago<select id='rcbMedio' data-ch='rcbMedio'>" + ["Transferencia", "Efectivo", "Mercado Pago"].map(m => "<option" + (RCB.medio === m ? " selected" : "") + ">" + m + "</option>").join("") + "</select></label></div>"
+    + (montoConf > 0 && !(adel > 0) && nm(RCB.pagado) !== Math.round(montoConf) ? "<p class='small' style='margin:-6px 0 8px'><button class='linkb' data-a='rcbPagTodo'>Le pagué todo (" + money(montoConf) + ")</button></p>" : "")
     + "<label class='check'><input type='checkbox' id='rcbCerrar' data-ch='rcbCerrar'" + (RCB.cerrar ? " checked" : "") + "> Es la última entrega: cerrar la tanda</label>"
     + '<p class="err" id="rcbErr"></p><div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="rcbOk">Confirmar: ' + money(montoConf) + " de confección" + (nm(RCB.pagado) > 0 ? " · pagás " + money(nm(RCB.pagado)) : "") + "</button></div>");
   void res;
