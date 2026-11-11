@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "11/11 · 4";
+window.PANEL_VERSION = "11/11 · 5";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -481,25 +481,15 @@ function stockDlg() {
     + '<p class="err" id="scErr"></p><div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="scOk">Guardar stock</button></div>', true);
 }
 /* ================= PROVEEDORES Y PAGOS ================= */
-function vProveedores() {
-  const g = guard(); if (g) return cabecera("Proveedores y pagos") + g;
-  const sal = saldos(), lista = T().proveedores.filter(p => p.activo !== false), deuda = Object.keys(sal).reduce((a, k) => a + Math.max(0, sal[k].saldo), 0);
-  let h = cabecera("Proveedores y pagos", "Cada compra queda como deuda con el proveedor hasta que registrás el pago. La confección de cada tanda se anota sola al recibir las fundas.",
-    '<button class="btn ghost" data-a="provNuevo">＋ Proveedor</button><button class="btn ghost" data-a="cargoNuevo">Otro gasto</button><button class="btn main" data-a="compraNueva">Registrar compra</button>') + bannerMigrar();
-  h += '<div class="cards" style="margin-top:0"><div class="kpi' + (deuda ? " warn" : " ok") + '"><small>Debés en total</small><b>' + money(deuda) + '</b></div><div class="kpi"><small>Comprado este mes</small><b>' + money(T().compras.filter(c => c.fecha.slice(0, 7) === hoyISO().slice(0, 7)).reduce((a, c) => a + c.total, 0)) + '</b></div><div class="kpi"><small>Pagado este mes</small><b>' + money(T().pagos.filter(c => c.fecha.slice(0, 7) === hoyISO().slice(0, 7)).reduce((a, c) => a + c.monto, 0)) + '</b></div><div class="kpi"><small>Proveedores</small><b>' + lista.length + "</b></div></div>";
-  if (!lista.length) return h + '<div class="empty" style="margin-top:14px">Todavía no cargaste proveedores.</div>';
-  // una lista simple, un renglón por proveedor (lo pidió el dueño: "no me gusta ver cuadros"); primero a los que les debés
-  const orden = lista.slice().sort((x, y) => ((sal[y.id] || {}).saldo || 0) - ((sal[x.id] || {}).saldo || 0));
-  h += '<div class="gl pl" style="margin-top:14px"><div class="r h"><span>Proveedor</span></div>' + orden.map(p => { const s = sal[p.id] || {saldo: 0, cargos: 0, pagos: 0}, tel = String(p.telefono || "").replace(/\D/g, "");
-    return '<div class="r"><span class="pl-n"><b>' + esc(p.nombre) + "</b> " + (s.saldo > 0 ? '<span class="pill bad">Debés ' + money(s.saldo) + "</span>" : s.saldo < 0 ? '<span class="pill info">Pagado sin compra: ' + money(-s.saldo) + "</span>" : '<span class="pill ok">Al día</span>') + "</span>"
-      + '<span class="acts pl-a">' + (s.saldo > 0 ? '<button class="btn main sm" data-a="pagoNuevo" data-prov="' + esc(p.id) + '">Pagar</button>' : "") + (s.saldo < 0 ? '<button class="btn main sm" data-a="cargoFalta" data-prov="' + esc(p.id) + '" data-monto="' + Math.round(-s.saldo) + '" title="Le pagaste ' + money(s.pagos) + " pero solo figuran " + money(s.cargos) + ' en compras">Cargar la compra</button>' : "")
-      + '<button class="btn ghost sm" data-a="compraNueva" data-prov="' + esc(p.id) + '">Compra</button><button class="btn ghost sm" data-a="provCuenta" data-prov="' + esc(p.id) + '">Ver cuenta</button><button class="btn ghost sm" data-a="provEditar" data-prov="' + esc(p.id) + '">Editar</button>'
-      + (tel ? '<a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel.length <= 10 ? "549" + tel : tel) + '">WhatsApp</a>' : "") + "</span></div>"; }).join("") + "</div>";
-  return h;
-}
-/* ================= GASTOS (lista simple) ================= */
-const GS = {per: "todo", prov: ""};
+/* ================= PROVEEDORES Y GASTOS (estilo app del banco) =================
+   Una sola pantalla con dos pestañas (Proveedores | Gastos). Tocar un proveedor abre su ficha
+   (cuánto le debés, Pagar/Compra/WhatsApp e historial por mes). Lo pidió el dueño el 11/11/2026. */
+const PV = {tab: "prov", sel: ""};
 const GS_TIPO = {insumos: "Insumos", confeccion: "Mano de obra", otro: "Otro gasto"};
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+function mesNombre(ym) { const p = String(ym).split("-"); const n = MESES[+p[1] - 1] || ym; return n.charAt(0).toUpperCase() + n.slice(1) + (p[0] !== hoyISO().slice(0, 4) ? " " + p[0] : ""); }
+function inicial(n) { return esc((String(n || "?").trim().charAt(0) || "?").toUpperCase()); }
+function ddmm(f) { const s = fFecha(f); return String(f).slice(0, 4) === hoyISO().slice(0, 4) ? s.slice(0, 5) : s; }
 // cuánto falta pagar de cada compra: los pagos de cada proveedor cubren primero las compras más viejas
 function deudaPorCompra() {
   const pagado = {}, falta = {};
@@ -510,29 +500,57 @@ function deudaPorCompra() {
   });
   return falta;
 }
-function vGastos() {
-  const g = guard(); if (g) return cabecera("Gastos") + g;
-  const hoy = hoyISO(), d = new Date(), pas = new Date(d.getFullYear(), d.getMonth() - 1, 1);
-  const mesPas = pas.getFullYear() + "-" + String(pas.getMonth() + 1).padStart(2, "0");
-  const enPer = f => GS.per === "mes" ? f.slice(0, 7) === hoy.slice(0, 7) : GS.per === "pasado" ? f.slice(0, 7) === mesPas : true;
-  const falta = deudaPorCompra();
-  const lista = T().compras.filter(c => enPer(String(c.fecha || "")) && (!GS.prov || c.proveedor === GS.prov))
-    .sort((a, b) => a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0);
-  const provs = T().proveedores.filter(p => p.activo !== false || T().compras.some(c => c.proveedor === p.id));
-  const sub = {}; let total = 0, debe = 0;
-  lista.forEach(c => { const t = GS_TIPO[c.tipo] || "Otro gasto"; sub[t] = (sub[t] || 0) + c.total; total += c.total; debe += falta[c.id] || 0; });
-  let h = cabecera("Gastos", "Todo lo que gastaste en el taller, en una lista: compras de insumos, confección y otros gastos.");
-  h += '<div class="filters">' + [["todo", "Todo"], ["mes", "Este mes"], ["pasado", "Mes pasado"]].map(x => '<button class="chip" data-a="gsPer" data-p="' + x[0] + '" aria-pressed="' + (GS.per === x[0]) + '">' + x[1] + "</button>").join("")
-    + '<select class="inp" id="gsProv" data-ch="gsProv" aria-label="Proveedor" style="width:auto;max-width:100%">' + opts(provs, GS.prov, "Todos los proveedores") + "</select></div>";
-  if (!lista.length) return h + '<div class="block"><p class="muted" style="margin:0">No hay gastos ' + (GS.per === "mes" ? "este mes" : GS.per === "pasado" ? "el mes pasado" : "cargados") + (GS.prov ? " de " + esc(provNombre(GS.prov)) : "") + ".</p></div>";
-  h += '<div class="gsub"><span class="tt">Total <b>' + money(total) + "</b></span>" + Object.keys(sub).map(k => "<span>" + esc(k) + " <b>" + money(sub[k]) + "</b></span>").join("")
-    + "<span>Debés <b" + (debe > 0 ? ' class="neg"' : "") + ">" + money(debe) + "</b></span></div>";
-  h += '<div class="gl"><div class="r h"><span>Proveedor</span><span>Fecha</span><span>Gasto</span><span class="n">Costo</span></div>'
-    + lista.map(c => { const f = falta[c.id] || 0;
-      return '<div class="r"><span><b>' + esc(provNombre(c.proveedor)) + "</b><br>" + (f <= 0 ? '<span class="pill ok">Pagado</span>' : '<span class="pill bad">Debés' + (f < c.total ? " " + money(f) : "") + "</span>") + "</span>"
-        + "<span>" + (String(c.fecha).slice(0, 4) === hoy.slice(0, 4) ? fFecha(c.fecha).slice(0, 5) : fFecha(c.fecha).replace(/\/\d\d(\d\d)$/, "/$1")) + "</span><span>" + esc(GS_TIPO[c.tipo] || "Otro gasto") + '</span><span class="n">' + money(c.total) + "</span></div>"; }).join("")
-    + '<div class="r t"><span>Total</span><span></span><span></span><span class="n">' + money(total) + "</span></div></div>";
+const porFecha = (a, b) => a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0;
+function porMes(lista, fila, total) { // agrupa por mes (más nuevo primero) con el total del mes en el título
+  const g = {}; lista.forEach(x => { const k = String(x.fecha || "").slice(0, 7); (g[k] = g[k] || []).push(x); });
+  return Object.keys(g).sort().reverse().map(k => '<div class="bk-mes"><span>' + esc(mesNombre(k)) + "</span><span>" + money(g[k].reduce((a, x) => a + total(x), 0)) + '</span></div><div class="bk-list">' + g[k].map(fila).join("") + "</div>").join("");
+}
+function notaPago(n) { return String(n || "").replace(/Pago de la compra C-[\w-]+/, "").trim(); } // el código interno de la compra no le dice nada al dueño
+function estadoTxt(f, total) { return f <= 0 ? '<span class="ok">pagado</span>' : '<span class="neg">debés' + (f < total ? " " + money(f) : "") + "</span>"; }
+function vProveedores() {
+  const g = guard(); if (g) return cabecera("Proveedores y gastos") + g;
+  if (PV.sel && !T().proveedores.some(p => p.id === PV.sel && p.activo !== false)) PV.sel = "";
+  if (PV.sel) return fichaProv(PV.sel);
+  const sal = saldos(), mes = hoyISO().slice(0, 7), deuda = Object.keys(sal).reduce((a, k) => a + Math.max(0, sal[k].saldo), 0);
+  const delMes = T().compras.filter(c => String(c.fecha).slice(0, 7) === mes), gastoMes = delMes.reduce((a, c) => a + c.total, 0);
+  let h = '<div class="bk">' + cabecera("Proveedores y gastos") + bannerMigrar()
+    + '<div class="bk-tabs" role="tablist"><button data-a="pvTab" data-t="prov" aria-pressed="' + (PV.tab === "prov") + '">Proveedores</button><button data-a="pvTab" data-t="gastos" aria-pressed="' + (PV.tab === "gastos") + '">Gastos</button></div>';
+  if (PV.tab === "gastos") {
+    const falta = deudaPorCompra(), sub = {};
+    delMes.forEach(c => { const t = GS_TIPO[c.tipo] || "Otro gasto"; sub[t] = (sub[t] || 0) + c.total; });
+    h += '<div class="bk-hero"><small>Gastaste en ' + esc(MESES[+mes.slice(5) - 1]) + "</small><b>" + money(gastoMes) + '</b><div class="s">' + Object.keys(sub).map(k => "<span>" + esc(k) + " <b>" + money(sub[k]) + "</b></span>").join("") + (deuda > 0 ? "<span>Debés <b>" + money(deuda) + "</b></span>" : "") + "</div></div>";
+    if (!T().compras.length) return h + '<div class="empty">Todavía no cargaste gastos.</div></div>';
+    return h + porMes(T().compras.slice().sort(porFecha), c => '<button class="bk-it" data-a="pvVer" data-prov="' + esc(c.proveedor) + '"><span class="bk-av">' + inicial(provNombre(c.proveedor)) + '</span><span class="bk-tx"><b>' + esc(provNombre(c.proveedor)) + "</b><span>" + ddmm(c.fecha) + " · " + esc(GS_TIPO[c.tipo] || "Otro gasto") + '</span></span><span class="bk-rt"><b>' + money(c.total) + "</b>" + estadoTxt(falta[c.id] || 0, c.total) + "</span></button>", c => c.total) + "</div>";
+  }
+  h += '<div class="bk-hero' + (deuda > 0 ? "" : " al") + '"><small>Debés en total</small><b>' + money(deuda) + '</b><div class="s"><span>Este mes gastaste <b>' + money(gastoMes) + "</b></span><span>Pagaste <b>" + money(T().pagos.filter(x => String(x.fecha).slice(0, 7) === mes).reduce((a, x) => a + x.monto, 0)) + "</b></span></div></div>"
+    + '<div class="bk-acts"><button class="btn main" data-a="compraNueva">＋ Compra</button><button class="btn ghost" data-a="cargoNuevo">＋ Otro gasto</button></div>';
+  const lista = T().proveedores.filter(p => p.activo !== false).sort((x, y) => ((sal[y.id] || {}).saldo || 0) - ((sal[x.id] || {}).saldo || 0));
+  if (!lista.length) return h + '<div class="empty">Todavía no cargaste proveedores.</div><p class="bk-c"><button class="btn ghost sm" data-a="provNuevo">＋ Nuevo proveedor</button></p></div>';
+  const ultima = {}; T().compras.forEach(c => { if (!ultima[c.proveedor] || c.fecha > ultima[c.proveedor]) ultima[c.proveedor] = c.fecha; });
+  h += '<div class="bk-list">' + lista.map(p => { const sl = (sal[p.id] || {}).saldo || 0;
+    return '<button class="bk-it" data-a="pvVer" data-prov="' + esc(p.id) + '"><span class="bk-av">' + inicial(p.nombre) + '</span><span class="bk-tx"><b>' + esc(p.nombre) + "</b><span>" + (ultima[p.id] ? "Último gasto " + ddmm(ultima[p.id]) : esc(p.lugar || "Sin gastos todavía")) + '</span></span><span class="bk-rt"><b>' + money(Math.abs(sl)) + "</b>" + (sl > 0 ? '<span class="neg">debés</span>' : sl < 0 ? '<span class="info">pagado de más</span>' : '<span class="ok">al día</span>') + '</span><span class="bk-chev">›</span></button>'; }).join("") + "</div>"
+    + '<p class="bk-c"><button class="btn ghost sm" data-a="provNuevo">＋ Nuevo proveedor</button></p></div>';
   return h;
+}
+function fichaProv(id) {
+  const p = prov(id), s = saldos()[id] || {saldo: 0, cargos: 0, pagos: 0}, tel = String(p.telefono || "").replace(/\D/g, ""), falta = deudaPorCompra();
+  let h = '<div class="bk"><button class="bk-back" data-a="pvVolver">‹ Proveedores</button>'
+    + '<div class="bk-head"><span class="bk-av big">' + inicial(p.nombre) + "</span><div><h2>" + esc(p.nombre) + '</h2><span class="muted small">' + esc([p.lugar, p.telefono].filter(Boolean).join(" · ") || "Sin contacto") + "</span></div></div>"
+    + (s.saldo > 0 ? '<div class="bk-hero rojo"><small>Le debés</small><b>' + money(s.saldo) + "</b></div>"
+      : s.saldo < 0 ? '<div class="bk-hero azul"><small>Le pagaste de más (o falta cargar una compra)</small><b>' + money(-s.saldo) + '</b><div class="s"><span>Pagaste ' + money(s.pagos) + " y figuran " + money(s.cargos) + " en compras.</span></div></div>"
+      : '<div class="bk-hero al"><small>Estás al día</small><b>' + money(0) + "</b></div>")
+    + '<div class="bk-acts">' + (s.saldo > 0 ? '<button class="btn main" data-a="pagoNuevo" data-prov="' + esc(id) + '">Pagar</button>' : "")
+    + (s.saldo < 0 ? '<button class="btn main" data-a="cargoFalta" data-prov="' + esc(id) + '" data-monto="' + Math.round(-s.saldo) + '">Cargar la compra</button>' : "")
+    + '<button class="btn ' + (s.saldo > 0 || s.saldo < 0 ? "ghost" : "main") + '" data-a="compraNueva" data-prov="' + esc(id) + '">Compra</button>'
+    + (s.saldo <= 0 ? '<button class="btn ghost" data-a="pagoNuevo" data-prov="' + esc(id) + '">Pago</button>' : "")
+    + (tel ? '<a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel.length <= 10 ? "549" + tel : tel) + '">WhatsApp</a>' : "") + "</div>";
+  const mov = T().compras.filter(c => c.proveedor === id).map(c => ({fecha: c.fecha, c: c})).concat(T().pagos.filter(x => x.proveedor === id).map(x => ({fecha: x.fecha, p: x})))
+    .sort((a, b) => a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : (a.p ? -1 : 1));
+  h += mov.length ? porMes(mov, m => m.c
+      ? '<div class="bk-it"><span class="bk-tx"><b>' + esc(m.c.detalle || GS_TIPO[m.c.tipo] || "Gasto") + "</b><span>" + ddmm(m.c.fecha) + " · " + esc(GS_TIPO[m.c.tipo] || "Otro gasto") + '</span></span><span class="bk-rt"><b>' + money(m.c.total) + "</b>" + estadoTxt(falta[m.c.id] || 0, m.c.total) + "</span><button class='x' data-a='cpAnular' data-id='" + esc(m.c.id) + "' aria-label='Anular compra' title='Anular'>×</button></div>"
+      : '<div class="bk-it"><span class="bk-tx"><b>Pago</b><span>' + ddmm(m.p.fecha) + (m.p.medio ? " · " + esc(m.p.medio) : "") + (notaPago(m.p.nota) ? " · " + esc(notaPago(m.p.nota)) : "") + '</span></span><span class="bk-rt"><b class="pos">− ' + money(m.p.monto) + "</b></span><button class='x' data-a='pgBorrar' data-id='" + esc(m.p.id) + "' aria-label='Borrar pago' title='Borrar'>×</button></div>",
+    m => m.c ? m.c.total : 0) : '<div class="empty">Todavía no hay compras ni pagos con este proveedor.</div>';
+  return h + '<p class="bk-c"><button class="btn ghost sm" data-a="provEditar" data-prov="' + esc(id) + '">Editar datos del proveedor</button></p></div>';
 }
 let CD = null; // compra en curso
 function compraDlg() {
@@ -820,8 +838,6 @@ C.insNuevo = () => { ID = nuevoIns(); insDlg(); };
 C.insVer = t => { const i = ins(t.dataset.id); ID = Object.assign({}, i, {contenido: String(i.contenido), precio: String(i.precio), minimo: i.minimo ? String(i.minimo) : ""}); insDlg(); };
 I.insF = t => { ID[t.dataset.k] = t.value; if (["envase", "unidad", "precio", "contenido"].indexOf(t.dataset.k) >= 0) insDlg(); };
 I["insProv:change"] = t => { ID.proveedor = t.value; };
-C.gsPer = b => { GS.per = b.dataset.p; soloMain(); };
-I["gsProv:change"] = t => { GS.prov = t.value; soloMain(); };
 I["insArch:change"] = t => { IV.archivados = t.checked; soloMain(); };
 C.insGuardar = b => { if (!String(ID.nombre).trim()) { errEn("inErr", "Poné el nombre."); return; }
   pedir("tallerGuardar", {tipo: "insumo", data: {id: ID.id, nombre: ID.nombre, descripcion: ID.descripcion, proveedor: ID.proveedor, envase: ID.envase, contenido: nd(ID.contenido), unidad: ID.unidad, precio: nm(ID.precio), minimo: nd(ID.minimo), activo: ID.activo !== false}}, "Insumo guardado", b).then(r => { if (r) { if (!ID.id) L.cerrarDlg(); else { ID.id = r.id; insDlg(); } } }); };
@@ -898,8 +914,11 @@ C.pagoNuevo = t => pagoDlg(t.dataset.prov);
 C.pgOk = b => { const m = nm($("#pg-m").value); if (!(m > 0)) { errEn("pgErr", "Poné el monto."); return; }
   pedir("pagoRegistrar", {proveedor: b.dataset.prov, monto: m, fecha: $("#pg-f").value, medio: $("#pg-me").value, nota: $("#pg-n").value, compra: $("#pg-c").value}, "Pago registrado", b).then(r => { if (r) L.cerrarDlg(); }); };
 C.provCuenta = t => cuentaDlg(t.dataset.prov);
-C.cpAnular = t => { if (!confirm("¿Anular esta compra? Si sumó stock, se descuenta.")) return; const c = T().compras.find(x => x.id === t.dataset.id); pedir("compraAnular", {id: t.dataset.id}, "Compra anulada", t).then(r => { if (r && c) cuentaDlg(c.proveedor); }); };
-C.pgBorrar = t => { if (!confirm("¿Borrar este pago?")) return; const p = T().pagos.find(x => x.id === t.dataset.id); pedir("pagoBorrar", {id: t.dataset.id}, "Pago borrado", t).then(r => { if (r && p) cuentaDlg(p.proveedor); }); };
+C.pvTab = b => { PV.tab = b.dataset.t; PV.sel = ""; soloMain(); };
+C.pvVer = b => { PV.sel = b.dataset.prov; soloMain(); window.scrollTo(0, 0); };
+C.pvVolver = () => { PV.sel = ""; soloMain(); window.scrollTo(0, 0); };
+C.cpAnular = t => { if (!confirm("¿Anular esta compra? Si sumó stock, se descuenta.")) return; const c = T().compras.find(x => x.id === t.dataset.id); pedir("compraAnular", {id: t.dataset.id}, "Compra anulada", t).then(r => { if (r && c && !PV.sel) cuentaDlg(c.proveedor); }); };
+C.pgBorrar = t => { if (!confirm("¿Borrar este pago?")) return; const p = T().pagos.find(x => x.id === t.dataset.id); pedir("pagoBorrar", {id: t.dataset.id}, "Pago borrado", t).then(r => { if (r && p && !PV.sel) cuentaDlg(p.proveedor); }); };
 C.provNuevo = () => provDlg(null);
 C.provEditar = t => provDlg(prov(t.dataset.prov));
 C.provGuardar = b => { const n = $("#pv-n").value.trim(); if (!n) { errEn("pvErr", "Poné el nombre."); return; }
@@ -959,8 +978,7 @@ L.vista("planificar", "Taller", "Planificar tanda", vPlanificar);
 L.vista("tandas", "Taller", "Tandas", vTandas, () => ({n: T() ? T().tandas.filter(t => t.estado === "en_confeccion").length : 0}));
 L.vista("productos", "Taller", "Productos y recetas", vProductos, () => ({n: PD.dirty ? "•" : 0, bad: true}));
 L.vista("insumos", "Taller", "Insumos", vInsumos, () => ({n: T() ? bajoMinimo().length : 0, bad: true}));
-L.vista("proveedores", "Taller", "Proveedores y pagos", vProveedores);
-L.vista("gastos", "Taller", "Gastos", vGastos);
+L.vista("proveedores", "Taller", "Proveedores y gastos", vProveedores);
 L.vista("rentabilidad", "Números", "Precios y rentabilidad", vRentabilidad);
 // las secciones plegables recuerdan si estaban abiertas al redibujar la pantalla
 document.addEventListener("toggle", e => { if (e.target && e.target.id === "pdRolloDet") PD.rolloAbierto = e.target.open; }, true);

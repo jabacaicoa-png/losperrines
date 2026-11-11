@@ -149,25 +149,32 @@ h3{font-size:1.06rem;margin:0 0 10px}
 .check{display:flex;gap:8px;align-items:center;font-weight:600}
 .err{color:var(--bad);font-weight:600;min-height:1.2em;margin:8px 0 0}
 
-/* Gastos: lista simple que no se desarma en el celular */
-.gsub{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-.gsub span{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.88rem}
-.gsub .tt{background:var(--olive);border-color:var(--olive);color:var(--on-olive);font-size:.95rem}
-.gl{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.94rem}
-.gl .r{display:grid;grid-template-columns:minmax(0,1.3fr) auto minmax(0,1fr) auto;gap:10px;padding:10px 12px;border-top:1px solid var(--line);align-items:start}
-.gl .r>span{overflow-wrap:anywhere}
-@media(min-width:760px){.gl .r{grid-template-columns:minmax(0,1.4fr) 110px minmax(0,1fr) minmax(0,1fr);gap:14px}}
-.gl .r .pill{margin-top:3px}
-.gl .h{background:var(--olive);color:var(--on-olive);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-top:0}
-.gl .n{text-align:right;white-space:nowrap}
-.gl .t{font-weight:800;border-top:2px solid var(--ink)}
-/* Proveedores: lista de renglones (nombre y saldo a la izquierda, botones a la derecha) */
-.gl.pl .r{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
-.gl.pl .pl-n{flex:1 1 220px;min-width:0}
-.gl.pl .pl-n .pill{margin-left:4px}
-.gl.pl .pl-a{margin:0;justify-content:flex-end;flex-wrap:wrap;gap:6px}
-.gl.pl .h .pl-a{flex:0 0 auto}
-@media(max-width:759px){.gl.pl .pl-a{justify-content:flex-start;flex:1 1 100%}.gl.pl .pl-a{gap:5px}.gl.pl .pl-a .btn{padding:5px 8px;font-size:.8rem}}
+/* Proveedores y gastos: estilo app del banco */
+.bk{max-width:780px}
+.bk-tabs{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin:0 0 14px}
+.bk-tabs button{flex:1;border:0;background:none;font:inherit;font-weight:700;color:var(--muted);padding:9px;border-radius:9px;cursor:pointer}
+.bk-tabs button[aria-pressed="true"]{background:var(--olive);color:var(--on-olive)}
+.bk-hero{background:var(--olive);color:var(--on-olive);border-radius:16px;padding:16px 18px;margin-bottom:12px}
+.bk-hero small{opacity:.85;font-size:.85rem}
+.bk-hero>b{display:block;font-size:1.9rem;line-height:1.15;margin:2px 0 4px}
+.bk-hero .s{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.88rem;margin-top:4px}
+.bk-hero.al{background:var(--ok-bg);color:var(--ok)} .bk-hero.rojo{background:var(--bad-bg);color:var(--bad)} .bk-hero.azul{background:var(--info-bg);color:var(--info)}
+.bk-acts{display:flex;gap:8px;margin:0 0 14px}
+.bk-acts .btn{flex:1;justify-content:center;text-align:center}
+.bk-list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.bk-it{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;border-top:1px solid var(--line);background:none;font:inherit;color:inherit;text-align:left}
+.bk-list>.bk-it:first-child{border-top:0}
+button.bk-it{cursor:pointer} button.bk-it:hover{background:var(--field)}
+.bk-av{width:38px;height:38px;border-radius:50%;background:var(--field);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--olive);flex:none}
+.bk-av.big{width:50px;height:50px;font-size:1.25rem}
+.bk-tx{flex:1;min-width:0}.bk-tx b{display:block;overflow-wrap:anywhere}.bk-tx span{display:block;font-size:.82rem;color:var(--muted)}
+.bk-rt{text-align:right;white-space:nowrap}.bk-rt b{display:block}.bk-rt span{display:block;font-size:.78rem;font-weight:700}
+.bk-rt .ok{color:var(--ok)} .bk-rt .info{color:var(--info)}
+.bk-chev{color:var(--muted);font-size:1.3rem;line-height:1}
+.bk-mes{display:flex;justify-content:space-between;font-size:.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 4px 6px}
+.bk-back{border:0;background:none;font:inherit;color:var(--muted);padding:4px 0;margin:0 0 8px;cursor:pointer}
+.bk-head{display:flex;align-items:center;gap:12px;margin:0 0 12px}.bk-head h2{margin:0}
+.bk-c{text-align:center;margin:14px 0 0}
 /* tablas */
 .tw{overflow-x:auto;min-width:0}
 table{width:100%;border-collapse:collapse;font-size:.92rem}
