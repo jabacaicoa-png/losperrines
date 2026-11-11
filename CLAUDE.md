@@ -23,7 +23,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | `ig/index.html` | Link corto para la bio de Instagram (`losperrines.com.ar/ig`): redirige a `/?utm_source=instagram&utm_medium=bio`. |
 | `pet/index.html` | Link corto para los mensajes a veterinarias y pet shops (`losperrines.com.ar/pet`, nombre elegido por el dueño; el dueño pidió no mandar links largos con utm porque parecen sospechosos): redirige a `/?utm_source=comercios&utm_medium=prospeccion`; el Tablero lo muestra como "Mensajes a veterinarias y pet shops". |
 | `costos.html`, `insumos.html`, `pagos.html`, `admin-viejo.html` | Herramientas anteriores, ya reemplazadas. Se conservan como respaldo. |
-| `dev/` | Herramientas de prueba: emulador de Apps Script y helpers de Playwright (ver abajo). `dev/corte-pdf.js` saca en PDF el plano y la ficha como salen impresos. `dev/instagram/` tiene las plantillas de las placas de Instagram (`generar.js`). |
+| `dev/` | Herramientas de prueba: emulador de Apps Script y helpers de Playwright (ver abajo). `dev/corte-pdf.js` saca en PDF el plano y la ficha como salen impresos. `dev/instagram/` tiene las plantillas de las placas de Instagram (`generar.js`; y `lanzamiento.js <salida> [foto.jpg]` para el anuncio de lanzamiento: historia y publicación cuadrada, sin foto usa el dibujo de la web). |
 
 - La API es el `exec` de Apps Script que figura en `index.html` y `admin.html` (variable `API`).
 - Desde el entorno en la nube **no se puede llegar a `script.google.com` ni a la web publicada**: se prueba con el emulador.
