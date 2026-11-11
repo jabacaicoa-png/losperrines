@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "10/11 · 10";
+window.PANEL_VERSION = "11/11 · 1";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -494,6 +494,43 @@ function vProveedores() {
       + (tel ? '<a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel.length <= 10 ? "549" + tel : tel) + '">WhatsApp</a>' : "") + "</div></div>"; }).join("") + "</div>";
   return h;
 }
+/* ================= GASTOS (lista simple) ================= */
+const GS = {per: "todo", prov: ""};
+const GS_TIPO = {insumos: "Insumos", confeccion: "Mano de obra", otro: "Otro gasto"};
+// cuánto falta pagar de cada compra: los pagos de cada proveedor cubren primero las compras más viejas
+function deudaPorCompra() {
+  const pagado = {}, falta = {};
+  T().pagos.forEach(p => { pagado[p.proveedor] = (pagado[p.proveedor] || 0) + p.monto; });
+  T().compras.slice().sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0).forEach(c => {
+    const usa = Math.min(c.total, Math.max(0, pagado[c.proveedor] || 0));
+    pagado[c.proveedor] = (pagado[c.proveedor] || 0) - usa; falta[c.id] = c.total - usa;
+  });
+  return falta;
+}
+function vGastos() {
+  const g = guard(); if (g) return cabecera("Gastos") + g;
+  const hoy = hoyISO(), d = new Date(), pas = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  const mesPas = pas.getFullYear() + "-" + String(pas.getMonth() + 1).padStart(2, "0");
+  const enPer = f => GS.per === "mes" ? f.slice(0, 7) === hoy.slice(0, 7) : GS.per === "pasado" ? f.slice(0, 7) === mesPas : true;
+  const falta = deudaPorCompra();
+  const lista = T().compras.filter(c => enPer(String(c.fecha || "")) && (!GS.prov || c.proveedor === GS.prov))
+    .sort((a, b) => a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0);
+  const provs = T().proveedores.filter(p => p.activo !== false || T().compras.some(c => c.proveedor === p.id));
+  const sub = {}; let total = 0, debe = 0;
+  lista.forEach(c => { const t = GS_TIPO[c.tipo] || "Otro gasto"; sub[t] = (sub[t] || 0) + c.total; total += c.total; debe += falta[c.id] || 0; });
+  let h = cabecera("Gastos", "Todo lo que gastaste en el taller, en una lista: compras de insumos, confección y otros gastos.");
+  h += '<div class="filters">' + [["todo", "Todo"], ["mes", "Este mes"], ["pasado", "Mes pasado"]].map(x => '<button class="chip" data-a="gsPer" data-p="' + x[0] + '" aria-pressed="' + (GS.per === x[0]) + '">' + x[1] + "</button>").join("")
+    + '<select class="inp" id="gsProv" data-ch="gsProv" aria-label="Proveedor" style="width:auto;max-width:100%">' + opts(provs, GS.prov, "Todos los proveedores") + "</select></div>";
+  if (!lista.length) return h + '<div class="block"><p class="muted" style="margin:0">No hay gastos ' + (GS.per === "mes" ? "este mes" : GS.per === "pasado" ? "el mes pasado" : "cargados") + (GS.prov ? " de " + esc(provNombre(GS.prov)) : "") + ".</p></div>";
+  h += '<div class="gsub">' + Object.keys(sub).map(k => "<span>" + esc(k) + " <b>" + money(sub[k]) + "</b></span>").join("")
+    + "<span>Debés <b" + (debe > 0 ? ' class="neg"' : "") + ">" + money(debe) + "</b></span></div>";
+  h += '<div class="gl"><div class="r h"><span>Proveedor</span><span>Fecha</span><span>Gasto</span><span class="n">Costo</span></div>'
+    + lista.map(c => { const f = falta[c.id] || 0;
+      return '<div class="r"><span><b>' + esc(provNombre(c.proveedor)) + "</b><br>" + (f <= 0 ? '<span class="pill ok">Pagado</span>' : '<span class="pill bad">Debés' + (f < c.total ? " " + money(f) : "") + "</span>") + "</span>"
+        + "<span>" + (String(c.fecha).slice(0, 4) === hoy.slice(0, 4) ? fFecha(c.fecha).slice(0, 5) : fFecha(c.fecha).replace(/\/\d\d(\d\d)$/, "/$1")) + "</span><span>" + esc(GS_TIPO[c.tipo] || "Otro gasto") + '</span><span class="n">' + money(c.total) + "</span></div>"; }).join("")
+    + '<div class="r t"><span>Total</span><span></span><span></span><span class="n">' + money(total) + "</span></div></div>";
+  return h;
+}
 let CD = null; // compra en curso
 function compraDlg() {
   const provs = activos(T().proveedores), delProv = activos(T().insumos).filter(i => i.proveedor === CD.proveedor);
@@ -769,6 +806,8 @@ C.insNuevo = () => { ID = nuevoIns(); insDlg(); };
 C.insVer = t => { const i = ins(t.dataset.id); ID = Object.assign({}, i, {contenido: String(i.contenido), precio: String(i.precio), minimo: i.minimo ? String(i.minimo) : ""}); insDlg(); };
 I.insF = t => { ID[t.dataset.k] = t.value; if (["envase", "unidad", "precio", "contenido"].indexOf(t.dataset.k) >= 0) insDlg(); };
 I["insProv:change"] = t => { ID.proveedor = t.value; };
+C.gsPer = b => { GS.per = b.dataset.p; soloMain(); };
+I["gsProv:change"] = t => { GS.prov = t.value; soloMain(); };
 I["insArch:change"] = t => { IV.archivados = t.checked; soloMain(); };
 C.insGuardar = b => { if (!String(ID.nombre).trim()) { errEn("inErr", "Poné el nombre."); return; }
   pedir("tallerGuardar", {tipo: "insumo", data: {id: ID.id, nombre: ID.nombre, descripcion: ID.descripcion, proveedor: ID.proveedor, envase: ID.envase, contenido: nd(ID.contenido), unidad: ID.unidad, precio: nm(ID.precio), minimo: nd(ID.minimo), activo: ID.activo !== false}}, "Insumo guardado", b).then(r => { if (r) { if (!ID.id) L.cerrarDlg(); else { ID.id = r.id; insDlg(); } } }); };
@@ -907,6 +946,7 @@ L.vista("tandas", "Taller", "Tandas", vTandas, () => ({n: T() ? T().tandas.filte
 L.vista("productos", "Taller", "Productos y recetas", vProductos, () => ({n: PD.dirty ? "•" : 0, bad: true}));
 L.vista("insumos", "Taller", "Insumos", vInsumos, () => ({n: T() ? bajoMinimo().length : 0, bad: true}));
 L.vista("proveedores", "Taller", "Proveedores y pagos", vProveedores);
+L.vista("gastos", "Taller", "Gastos", vGastos);
 L.vista("rentabilidad", "Números", "Precios y rentabilidad", vRentabilidad);
 // las secciones plegables recuerdan si estaban abiertas al redibujar la pantalla
 document.addEventListener("toggle", e => { if (e.target && e.target.id === "pdRolloDet") PD.rolloAbierto = e.target.open; }, true);
