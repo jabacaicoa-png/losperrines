@@ -7,7 +7,8 @@
 "use strict";
 const web = v => v.pedidos - (v.fuera || 0);   // las vendidas en la web (las de afuera no pasaron por la página ni por un anuncio)
 const L = window.LP, esc = L.esc, money = L.money;
-const TB = {dias: 7, datos: {}, cargando: false, forzar: false};
+const TB = {dias: 7, datos: {}, cargando: false, forzar: false, abiertos: {}};
+const diasDe = k => k === "mes" ? new Date().getDate() : k;   // "Este mes" = los días que van del mes
 const n0 = v => new Intl.NumberFormat("es-AR").format(Math.round(v || 0));
 const pc = (a, b) => b > 0 ? a / b * 100 : 0;
 const pcTxt = v => String(Math.round(v * 10) / 10).replace(".", ",") + "%";
@@ -33,20 +34,20 @@ const PROV = {"capital federal": "Ciudad de Buenos Aires", "buenos aires": "Prov
 function nombreProv(z) { return PROV[z.clave] || z.clave.replace(/(^|\s)\S/g, x => x.toUpperCase()); }
 const ACENTOS = {"cordoba": "Córdoba", "neuquen": "Neuquén", "tucuman": "Tucumán", "rio cuarto": "Río Cuarto", "san martin": "San Martín", "san nicolas": "San Nicolás", "general roca": "General Roca"};
 function nombreCiudad(x) { const s = String(x.nombre).toLowerCase(); return ACENTOS[s] || s.replace(/(^|\s)\S/g, c => c.toUpperCase()); }
-function tablaZonas(lista, nombre, hayGA) {
+function tablaZonas(lista, nombre, hayGA) {   // Ventas primero: es la columna que manda
   if (!lista.length) return '<p class="muted small" style="margin:0">Sin datos todavía.</p>';
-  return '<div class="tw"><table><thead><tr><th>' + (nombre === nombreProv ? "Provincia" : "Ciudad") + '</th>' + (hayGA ? '<th class="n">Visitas</th>' : '') + '<th class="n">Ventas</th>' + (hayGA ? '<th class="n">De cada 100 compran</th>' : '<th class="n">Cobrado</th>') + '</tr></thead><tbody>'
+  return '<div class="tw"><table><thead><tr><th>' + (nombre === nombreProv ? "Provincia" : "Ciudad") + '</th><th class="n">Ventas</th>' + (hayGA ? '<th class="n">Visitas</th><th class="n">% compra</th>' : '<th class="n">Cobrado</th>') + '</tr></thead><tbody>'
     + lista.map(z => { const conv = z.visitas >= 20 ? pc(z.ventas, z.visitas) : null;
-      return '<tr><td>' + esc(nombre(z)) + '</td>' + (hayGA ? '<td class="n">' + n0(z.visitas) + '</td>' : '') + '<td class="n"><b>' + z.ventas + '</b></td>'
-        + (hayGA ? '<td class="n">' + (conv == null ? '<span class="muted small">pocas visitas</span>' : String(Math.round(conv * 10) / 10).replace(".", ",")) + '</td>' : '<td class="n">' + money(z.cobrado) + '</td>') + '</tr>'; }).join("")
+      return '<tr><td>' + esc(nombre(z)) + '</td><td class="n"><b>' + z.ventas + '</b></td>'
+        + (hayGA ? '<td class="n">' + n0(z.visitas) + '</td><td class="n">' + (conv == null ? '<span class="muted small">—</span>' : pcTxt(conv)) + '</td>' : '<td class="n">' + money(z.cobrado) + '</td>') + '</tr>'; }).join("")
     + '</tbody></table></div>';
 }
 
 function cargar() {
   if (TB.cargando || TB.datos[TB.dias]) return;
-  const forzar = TB.forzar; TB.cargando = true; TB.forzar = false;
-  L.api("tablero", {dias: TB.dias, forzar: forzar}).then(r => { TB.datos[r.dias] = r; })
-    .catch(e => { TB.datos[TB.dias] = {error: /desconocida/i.test(e.message) ? "backend" : e.message}; })
+  const forzar = TB.forzar, k = TB.dias, pide = diasDe(k); TB.cargando = true; TB.forzar = false;
+  L.api("tablero", {dias: pide, forzar: forzar}).then(r => { TB.datos[k] = r.dias === pide ? r : {error: "backendMes"}; })
+    .catch(e => { TB.datos[k] = {error: /desconocida/i.test(e.message) ? "backend" : e.message}; })
     .then(() => { TB.cargando = false; L.render(); });
 }
 function delta(a, b) {
@@ -59,36 +60,29 @@ function lista(items, total, nombre) {
   if (!items || !items.length) return '<p class="muted small" style="margin:0">Sin datos todavía.</p>';
   return '<div class="embudo">' + items.map(x => '<div class="paso"><span>' + esc(nombre(x.nombre)) + '</span><div class="barra"><i style="width:' + Math.max(1, pc(x.sesiones, total)) + '%"></i></div><b>' + pcTxt(pc(x.sesiones, total)) + '</b></div>').join("") + '</div>';
 }
+// "Qué mirar": solo lo que pide hacer algo (lo que ya se ve en un número de abajo no se repite). Máximo 4, lo más urgente primero.
 function conclusiones(d, ctx) {
-  const out = [], v = d.ventas, a = d.anterior, g = d.ga && d.ga.total ? d.ga : null, per = TB.dias === 1 ? "hoy" : "en estos " + TB.dias + " días";
+  const out = [], v = d.ventas, g = d.ga && d.ga.total ? d.ga : null;
   Object.keys(d.stock || {}).forEach(id => { const s = d.stock[id];
     if (s.disponible <= 0) out.push(["bad", "No hay stock de " + s.nombre + ": en la web aparece “Avisame cuando vuelva”. Recibí la próxima tanda o cargá las fundas en Stock."]);
-    else if (s.dias != null && s.dias < 14) out.push([s.dias < 7 ? "bad" : "warn", "De " + s.nombre + " quedan " + s.disponible + ": al ritmo del último mes alcanzan para unos " + s.dias + " días. Planificá la próxima tanda ya."]); });
-  if (v.pedidos || a.pedidos) {
-    if (v.pedidos > a.pedidos) out.push(["ok", "Vendiste " + v.pedidos + " " + per + ", " + (v.pedidos - a.pedidos) + " más que en el período anterior."]);
-    else if (v.pedidos < a.pedidos) out.push(["warn", "Vendiste " + v.pedidos + " " + per + ", " + (a.pedidos - v.pedidos) + " menos que en el período anterior."]);
-  } else out.push(["info", "Todavía no hay ventas " + per + "."]);
+    else if (s.dias != null && s.dias < 14) out.push([s.dias < 7 ? "bad" : "warn", "De " + s.nombre + " quedan " + s.disponible + ": alcanzan para unos " + s.dias + " días. Planificá la próxima tanda ya."]); });
   if (ctx.queda != null && v.pedidos && ctx.queda < 0) out.push(["bad", "En este período perdiste plata: lo invertido en anuncios supera lo que dejaron las ventas."]);
   if (d.meta && d.meta.inversion && v.pedidos && ctx.gan > 0) { const cpv = d.meta.inversion / Math.max(1, web(v));
-    out.push(cpv < ctx.gan ? ["ok", "Cada venta te costó " + money(cpv) + " de anuncios y una funda te deja " + money(ctx.gan) + ": los anuncios rinden."] : ["bad", "Cada venta te costó " + money(cpv) + " de anuncios, más de lo que te deja una funda (" + money(ctx.gan) + "): revisá las campañas en Publicidad."]); }
-  const R = d.reservas; if (R.total >= 3 && R.pagadas / R.total < 0.6) out.push(["warn", "De " + R.total + " compras por transferencia se pagaron " + R.pagadas + ". Escribiles por WhatsApp desde Hoy apenas reservan: es plata que se pierde."]);
+    if (cpv >= ctx.gan) out.push(["bad", "Cada venta te costó " + money(cpv) + " de anuncios, más de lo que te deja una funda (" + money(ctx.gan) + "): revisá las campañas en Publicidad."]); }
+  const R = d.reservas; if (R.esperando > 0) out.push(["warn", R.esperando + (R.esperando === 1 ? " transferencia está esperando el pago" : " transferencias están esperando el pago") + ": escribiles por WhatsApp desde Hoy → Confirmar pago."]);
   if (g) {
-    const ses = g.total.actual.sesiones;
-    if (ses >= 100) { const conv = pc(web(v), ses);
-      if (conv < 0.5) out.push(["warn", "De cada 100 visitas compra menos de 1 (" + pcTxt(conv) + "). Revisá fotos, precio y medidas en la web."]);
-      else out.push(["ok", "De cada 100 visitas compran " + String(Math.round(conv * 10) / 10).replace(".", ",") + ": está muy bien para una tienda online (lo común es 1 a 2)."]); }
-    const F = fuentes(g), top = F ? F[0] : (g.canales || [])[0];
-    if (top && ses >= 30) out.push(["info", "La mayoría llega por " + (F ? top.nombre.split(" (")[0] + (/sin anuncio/.test(top.nombre) ? " sin anuncio" : /anuncio/.test(top.nombre) ? " (anuncios)" : "") : (CANAL[top.nombre] || top.nombre).split(" (")[0].toLowerCase()) + " (" + pcTxt(pc(top.sesiones, ses)) + " de las visitas)."]);
-    const Z = (d.zonas && d.zonas.provincias || []).filter(z => z.visitas >= 50), convT = pc(web(v), ses);
+    const ses = g.total.actual.sesiones, convT = pc(web(v), ses);
+    if (ses >= 100 && convT < 0.5) out.push(["warn", "De cada 100 visitas compra menos de 1 (" + pcTxt(convT) + "). Revisá fotos, precio y medidas en la web."]);
+    const Z = (d.zonas && d.zonas.provincias || []).filter(z => z.visitas >= 50);
     if (convT > 0) {
       const mejor = Z.filter(z => z.ventas >= 2).map(z => Object.assign({c: pc(z.ventas, z.visitas)}, z)).sort((a, b) => b.c - a.c)[0];
-      if (mejor && mejor.c >= convT * 1.5) out.push(["ok", nombreProv(mejor) + " compra " + String(Math.round(mejor.c / convT * 10) / 10).replace(".", ",") + " veces más que el promedio (" + mejor.ventas + " ventas de " + n0(mejor.visitas) + " visitas): probá una campaña apuntada ahí."]);
+      if (mejor && mejor.c >= convT * 1.5) out.push(["ok", nombreProv(mejor) + " compra " + String(Math.round(mejor.c / convT * 10) / 10).replace(".", ",") + " veces más que el promedio: probá una campaña apuntada ahí."]);
     }
     const fria = Z.filter(z => z.visitas >= 100 && z.ventas === 0 && z.clave !== "capital federal").sort((a, b) => b.visitas - a.visitas)[0];
-    if (fria) out.push(["warn", "De " + nombreProv(fria) + " entraron " + n0(fria.visitas) + " visitas y ninguna compró. Si tenés anuncios apuntados ahí, revisalos: atraen curiosos."]);
-    const cel = (g.dispositivos || []).find(x => x.nombre === "mobile"); if (cel && ses >= 30 && pc(cel.sesiones, ses) >= 75) out.push(["info", "El " + pcTxt(pc(cel.sesiones, ses)) + " entra desde el celular: lo que más importa es cómo se ve la web en el teléfono."]);
+    if (fria) out.push(["warn", "De " + nombreProv(fria) + " entraron " + n0(fria.visitas) + " visitas y ninguna compró. Si tenés anuncios apuntados ahí, revisalos."]);
   }
-  return out;
+  const orden = {bad: 0, warn: 1, ok: 2, info: 3};
+  return out.sort((x, y) => orden[x[0]] - orden[y[0]]).slice(0, 4);
 }
 function setupGA(f) {
   return '<div class="block"><h3>Conectar Google Analytics</h3>'
@@ -99,65 +93,66 @@ function setupGA(f) {
     + '<li>Ejecutá <b>instalar</b>: Google te va a pedir permiso para leer Analytics → aceptá. Después <b>Implementar → Administrar implementaciones → Editar → Nueva versión</b>.</li>'
     + '<li>Pegá el ID en <button class="linkb" data-go="config">Configuración → Medición (Google Analytics)</button>, guardá y volvé acá.</li></ol></div>';
 }
+function plegable(id, titulo, cuerpo) {   // recuerda si estaba abierto al redibujar
+  return '<details class="tb-pl" id="' + id + '"' + (TB.abiertos[id] ? " open" : "") + '><summary>' + titulo + '</summary><div class="tb-pl-in">' + cuerpo + '</div></details>';
+}
 function vTablero() {
   cargar();
   const d = TB.datos[TB.dias], T = window.TALLER;
-  let h = '<div class="ph"><div><h2>Tablero</h2><p class="sub">Lo que importa para decidir, en una sola pantalla: ventas, ganancia, stock, anuncios y visitas.</p></div>'
-    + '<button class="btn ghost sm" data-a="tbRecargar">↻ Actualizar</button></div>'
-    + '<div class="filters">' + [[1, "Hoy"], [7, "Últimos 7 días"], [30, "Últimos 30 días"]].map(x => '<button class="chip" data-a="tbDias" data-d="' + x[0] + '" aria-pressed="' + (TB.dias === x[0]) + '">' + x[1] + '</button>').join("") + '</div>';
+  let h = '<div class="ph"><div><h2>Tablero</h2></div><button class="btn ghost sm" data-a="tbRecargar">↻ Actualizar</button></div>'
+    + '<div class="filters">' + [[1, "Hoy"], [7, "7 días"], ["mes", "Este mes"], [30, "30 días"]].map(x => '<button class="chip" data-a="tbDias" data-d="' + x[0] + '" aria-pressed="' + (TB.dias === x[0]) + '">' + x[1] + '</button>').join("") + '</div>';
   if (!d) return h + '<p class="muted"><span class="spinner"></span> Juntando los números…</p>';
   if (d.error === "backend") return h + '<div class="note bad"><b>Falta actualizar el backend.</b> Pegá el nuevo <code>Codigo.gs</code> en Apps Script y publicá una nueva versión. Después tocá ↻.</div>';
+  if (d.error === "backendMes") return h + '<div class="note info"><b>Para ver “Este mes” falta actualizar el backend.</b> Pegá el nuevo <code>Codigo.gs</code> en Apps Script, ejecutá <code>instalar()</code> y publicá una nueva versión. Mientras tanto usá 7 o 30 días.</div>';
   if (d.error) return h + '<div class="note bad">' + esc(d.error) + '</div>';
   const v = d.ventas, a = d.anterior, inv = d.meta && d.meta.inversion || 0, g = d.ga && d.ga.total ? d.ga : null;
   const costoU = id => (T && T.costoFunda ? T.costoFunda(id) : 0), gan = T && T.gananciaFunda ? T.gananciaFunda("doble") : 0;
   const envU = id => (T && T.envioFunda ? T.envioFunda(id) : 0), sinEnv = v.sinEnvio || {doble: 0, individual: 0};   // entregadas en mano: no pagaste el envío
   const hayCostos = costoU("doble") > 0, queda = hayCostos ? v.neto - v.porProducto.doble * costoU("doble") - v.porProducto.individual * costoU("individual") + sinEnv.doble * envU("doble") + sinEnv.individual * envU("individual") - inv : null;
-  const C = conclusiones(d, {gan: gan, queda: queda}), compTxt = TB.dias === 1 ? "vs ayer" : "vs los " + TB.dias + " días anteriores";
-  h += '<div class="block" style="margin-top:0"><h3>Qué mirar</h3><ul class="todo">' + C.map(x => '<li class="' + x[0] + '"><span>' + esc(x[1]) + '</span></li>').join("") + '</ul></div>';
+  const C = conclusiones(d, {gan: gan, queda: queda}), nd = diasDe(TB.dias), compTxt = TB.dias === 1 ? "vs ayer" : "vs los " + nd + " días anteriores";
+  // 1 · Qué mirar
+  h += '<div class="block" style="margin-top:0"><h3>Qué mirar</h3>' + (C.length ? '<ul class="todo">' + C.map(x => '<li class="' + x[0] + '"><span>' + esc(x[1]) + '</span></li>').join("") + '</ul>' : '<p class="muted" style="margin:0">Nada urgente: todo en orden.</p>') + '</div>';
+  // 2 · La plata
+  const R = d.reservas;
   h += '<h3 style="margin:18px 0 0">La plata</h3><div class="cards">'
     + '<div class="kpi"><small>Ventas</small><b>' + v.pedidos + '</b><span class="k2">' + v.unidades + ' funda' + (v.unidades === 1 ? "" : "s") + ' · ' + delta(v.pedidos, a.pedidos) + ' ' + compTxt + (v.fuera ? '<br>' + (v.pedidos - v.fuera) + ' en la web · ' + v.fuera + ' por fuera' : '') + '</span></div>'
-    + '<div class="kpi"><small>Cobrado</small><b>' + money(v.facturado) + '</b><span class="k2">' + delta(v.facturado, a.facturado) + ' · ' + v.tarjeta + ' tarjeta, ' + v.transferencia + ' transf.</span></div>'
+    + '<div class="kpi"><small>Cobrado</small><b>' + money(v.facturado) + '</b><span class="k2">' + delta(v.facturado, a.facturado) + ' · ' + v.tarjeta + ' tarjeta, ' + v.transferencia + ' transf.' + (v.pedidos ? '<br>' + money(v.facturado / v.pedidos) + ' por pedido' : '') + '</span></div>'
     + '<div class="kpi' + (queda == null || !v.pedidos ? "" : queda >= 0 ? " ok" : " bad") + '"><small>Te quedó</small><b>' + (queda == null ? "—" : money(queda)) + '</b><span class="k2">' + (queda == null ? "faltan costos del taller" : "después de comisión, fundas" + (inv ? " y " + money(inv) + " de anuncios" : "")) + '</span></div>'
-    + '<div class="kpi"><small>Venta promedio</small><b>' + (v.pedidos ? money(v.facturado / v.pedidos) : "—") + '</b><span class="k2">por pedido</span></div></div>';
+    + '<div class="kpi' + (R.total && R.pagadas / R.total < 0.6 ? " warn" : "") + '"><small>Transferencias pagadas</small><b>' + (R.total ? R.pagadas + ' de ' + R.total : "—") + '</b><span class="k2">' + (R.total ? (R.esperando ? R.esperando + ' esperando pago' : 'ninguna esperando') + (R.vencidas ? ' · ' + R.vencidas + ' vencidas' : '') : 'ninguna en el período') + '</span></div></div>';
+  // 3 · Stock (una línea por funda)
   const S = d.stock || {};
-  h += '<div class="cols2" style="margin-top:14px"><div class="block"><h3>¿Hasta cuándo te alcanza el stock?</h3><p class="muted small" style="margin:-4px 0 10px">Al ritmo de ventas de los últimos 30 días.</p>'
-    + Object.keys(S).map(id => { const s = S[id], cl = s.disponible <= 0 ? "bad" : s.dias == null ? "mute" : s.dias < 7 ? "bad" : s.dias != null && s.dias < 14 ? "warn" : "ok";
-      return '<div class="cfg-row" style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span><b>' + esc(s.nombre) + '</b><br><span class="muted small">' + s.disponible + ' disponibles · ' + (s.porDia ? String(s.porDia).replace(".", ",") + ' por día' : 'sin ventas en 30 días') + '</span></span><span class="pill ' + cl + '">' + (s.disponible <= 0 ? "Sin stock" : s.dias == null ? "—" : "~" + s.dias + " días") + '</span></div>'; }).join("") + '</div>'
-    + '<div class="block"><h3>Compras por transferencia</h3><p class="muted small" style="margin:-4px 0 10px">De las que se hicieron en este período, cuántas se pagaron.</p>'
-    + (d.reservas.total ? '<div style="font-size:1.6rem;font-weight:800">' + d.reservas.pagadas + ' de ' + d.reservas.total + ' <span class="muted" style="font-size:1rem;font-weight:600">(' + pcTxt(pc(d.reservas.pagadas, d.reservas.total)) + ')</span></div><p class="muted small" style="margin:6px 0 0">' + d.reservas.esperando + ' esperando pago · ' + d.reservas.vencidas + ' vencidas o canceladas</p>' : '<p class="muted" style="margin:0">Ninguna en este período.</p>')
-    + '</div></div>';
+  h += '<div class="block"><h3>Stock <span class="muted small" style="font-weight:600">· al ritmo de los últimos 30 días</span></h3>'
+    + Object.keys(S).map(id => { const s = S[id], cl = s.disponible <= 0 ? "bad" : s.dias == null ? "mute" : s.dias < 7 ? "bad" : s.dias < 14 ? "warn" : "ok";
+      return '<div class="tb-st"><span><b>' + esc(s.nombre) + '</b> <span class="muted small">' + s.disponible + ' disponibles' + (s.porDia ? ' · ' + String(s.porDia).replace(".", ",") + ' por día' : '') + '</span></span><span class="pill ' + cl + '">' + (s.disponible <= 0 ? "Sin stock" : s.dias == null ? "sin ventas" : "~" + s.dias + " días") + '</span></div>'; }).join("") + '</div>';
+  // 4 · Visitas: un número + el embudo (con la conversión al final)
   h += '<h3 style="margin:18px 0 0">Las visitas <span class="muted small" style="font-weight:600">· Google Analytics</span></h3>';
   if (!g) h += setupGA(d.ga && (d.ga.falta || d.ga.error));
   else {
     const t = g.total.actual, tp = g.total.anterior, ev = g.eventos || {};
-    h += '<div class="cards">'
-      + '<div class="kpi"><small>Visitas</small><b>' + n0(t.sesiones) + '</b><span class="k2">' + delta(t.sesiones, tp.sesiones) + ' ' + compTxt + '</span></div>'
-      + '<div class="kpi"><small>Personas</small><b>' + n0(t.personas) + '</b><span class="k2">' + n0(t.nuevas) + ' nuevas</span></div>'
-      + '<div class="kpi"><small>De cada 100 visitas compran</small><b>' + (t.sesiones ? String(Math.round(pc(web(v), t.sesiones) * 10) / 10).replace(".", ",") : "—") + '</b><span class="k2">lo común: 1 a 2</span></div>'
-      + '<div class="kpi"><small>Agregaron al carrito</small><b>' + n0(ev.add_to_cart) + '</b><span class="k2">' + (t.sesiones ? pcTxt(pc(ev.add_to_cart || 0, t.sesiones)) + ' de las visitas' : "") + '</span></div></div>';
-    const P = [["Entraron a la web", t.sesiones], ["Vieron las fundas", ev.view_item_list || 0], ["Agregaron al carrito", ev.add_to_cart || 0], ["Empezaron a comprar", ev.begin_checkout || 0], ["Compraron (planilla)", web(v)]].filter((x, i) => i !== 1 || x[1] > 0);
+    const P = [["Entraron a la web", t.sesiones], ["Vieron las fundas", ev.view_item_list || 0], ["Agregaron al carrito", ev.add_to_cart || 0], ["Empezaron a comprar", ev.begin_checkout || 0], ["Compraron", web(v)]].filter((x, i) => i !== 1 || x[1] > 0);
     let peor = -1, caida = -1; P.forEach((x, i) => { if (i && P[i - 1][1] > 0) { const c = 1 - x[1] / P[i - 1][1]; if (c > caida) { caida = c; peor = i; } } });
-    h += '<div class="block"><h3>Dónde abandona la gente</h3><p class="muted small" style="margin:-4px 0 10px">Todas las visitas, vengan de donde vengan. En naranja, el paso donde más se pierde.</p><div class="embudo">'
+    h += '<div class="block" style="margin-top:10px"><div class="tb-vis"><b>' + n0(t.sesiones) + '</b> visitas <span class="small">' + delta(t.sesiones, tp.sesiones) + ' ' + compTxt + '</span>'
+      + (t.sesiones ? '<span class="tb-conv">Compran <b>' + String(Math.round(pc(web(v), t.sesiones) * 10) / 10).replace(".", ",") + '</b> de cada 100 <span class="muted small">(lo común: 1 a 2)</span></span>' : '') + '</div>'
+      + '<p class="muted small" style="margin:8px 0 10px">Dónde abandona la gente: en naranja, el paso donde más se pierde.</p><div class="embudo">'
       + P.map((x, i) => '<div class="paso' + (i === peor ? " peor" : "") + '"><span>' + esc(x[0]) + '</span><div class="barra"><i style="width:' + Math.max(1, pc(x[1], P[0][1] || 1)) + '%"></i></div><b>' + n0(x[1]) + (i && P[i - 1][1] ? ' <span class="muted small">(' + pcTxt(pc(x[1], P[i - 1][1])) + ')</span>' : "") + '</b></div>').join("") + '</div></div>';
     const F = fuentes(g);
-    h += '<div class="cols2" style="margin-top:14px"><div class="block"><h3>¿De dónde llegan?</h3>' + (F ? lista(F, t.sesiones, x => x) : lista(g.canales, t.sesiones, x => CANAL[x] || x))
-      + '<p class="muted small" style="margin:10px 0 0">Los links que se mandan por WhatsApp casi siempre figuran como “Directo”. Para que los anuncios de Meta aparezcan separados, en cada anuncio poné en <b>Parámetros de URL</b>: <code>utm_source={{site_source_name}}&amp;utm_medium=paid</code> <button class="btn ghost sm" data-a="copiar" data-txt="utm_source={{site_source_name}}&amp;utm_medium=paid">Copiar</button></p></div>'
+    h += '<div class="cols2" style="margin-top:14px"><div class="block"><h3>¿De dónde llegan?</h3>' + (F ? lista(F, t.sesiones, x => x) : lista(g.canales, t.sesiones, x => CANAL[x] || x)) + '</div>'
       + '<div class="block"><h3>¿Desde qué aparato?</h3>' + lista(g.dispositivos, t.sesiones, x => DISP[x] || x) + '</div></div>';
   }
-  const Z = d.zonas || {provincias: [], ciudades: []}, hayGA = !!g;
-  h += '<h3 style="margin:18px 0 0">¿Dónde vendés? <span class="muted small" style="font-weight:600">· para elegir a quién apuntar los anuncios</span></h3>'
-    + '<div class="cols2" style="margin-top:10px"><div class="block" style="margin-top:0"><h3>Provincias</h3>' + tablaZonas(Z.provincias.slice(0, 12), nombreProv, hayGA) + '</div>'
-    + '<div class="block" style="margin-top:0"><h3>Ciudades</h3>' + tablaZonas(Z.ciudades.slice(0, 10), nombreCiudad, hayGA) + '</div></div>'
-    + '<p class="muted small" style="margin:8px 0 0">Las <b>ventas</b> salen de la dirección de envío de cada pedido: son exactas. Las <b>visitas</b> son de Google Analytics, <b>solo desde Argentina</b> (las de afuera son robots de Meta y Google revisando la web), y la ubicación es aproximada: sale de la conexión a internet, no del GPS. <b>En celulares con datos móviles suele ubicar a la gente en Buenos Aires</b> aunque esté en otra provincia, así que esa fila tiene visitas de más. Para decidir, mirá sobre todo la columna Ventas. Con pocas visitas el porcentaje engaña, por eso no se muestra.</p>';
-  h += '<h3 style="margin:18px 0 0">Los anuncios <span class="muted small" style="font-weight:600">· Meta</span></h3>'
-    + '<div class="block" style="margin-top:10px">' + (d.meta && d.meta.inversion != null && !d.meta.falta
-      ? '<div style="display:flex;gap:24px;flex-wrap:wrap"><span><span class="muted small">Invertido</span><br><b style="font-size:1.3rem">' + money(inv) + '</b></span><span><span class="muted small">Costo por venta</span><br><b style="font-size:1.3rem">' + (inv && web(v) ? money(inv / web(v)) : "—") + '</b></span><span><span class="muted small">Tocaron el anuncio</span><br><b style="font-size:1.3rem">' + n0(d.meta.clics) + '</b></span></div>'
-      : '<p class="muted" style="margin:0">' + (d.meta && d.meta.falta === "token" ? "Falta conectar Meta." : "Sin datos de anuncios en este período.") + '</p>')
-    + '<p style="margin:10px 0 0"><button class="linkb" data-go="publicidad">Ver el detalle por campaña en Publicidad →</button></p></div>';
-  h += '<p class="muted small" style="margin:14px 0 0">Período: ' + esc(d.periodo.since.split("-").reverse().join("/") + " al " + d.periodo.until.split("-").reverse().join("/")) + '. Ventas y stock, al momento; Meta se actualiza cada 10 minutos y Google Analytics cada 30 (y Google tarda unas horas en procesar las visitas).</p>';
+  // 5 · Dónde vendés: manda la columna Ventas; ciudades y la explicación, plegadas
+  const Z = d.zonas || {provincias: [], ciudades: []}, hayGA = !!g, porVentas = (x, y) => y.ventas - x.ventas || (y.visitas || 0) - (x.visitas || 0);
+  h += '<h3 style="margin:18px 0 0">¿Dónde vendés?</h3><div class="block" style="margin-top:10px">' + tablaZonas(Z.provincias.slice().sort(porVentas).slice(0, 12), nombreProv, hayGA)
+    + plegable("tbCiudades", "Ver por ciudad", tablaZonas(Z.ciudades.slice().sort(porVentas).slice(0, 10), nombreCiudad, hayGA))
+    + plegable("tbZonasAyuda", "¿Cómo leer esta tabla?", '<p class="muted small" style="margin:0">Las <b>ventas</b> salen de la dirección de envío de cada pedido: son exactas. Las <b>visitas</b> son de Google Analytics, solo desde Argentina (las de afuera son robots de Meta y Google), y la ubicación es aproximada: en celulares con datos móviles suele ubicar a la gente en Buenos Aires aunque esté en otra provincia. Para decidir, mirá sobre todo la columna Ventas. “% compra” es de cada 100 visitas cuántas compraron; con menos de 20 visitas engaña, por eso sale “—”.</p>')
+    + '</div>';
+  // 6 · Anuncios: un renglón (el detalle está en Publicidad)
+  const hayMeta = d.meta && d.meta.inversion != null && !d.meta.falta;
+  h += '<div class="block tb-ads"><span><b>Anuncios</b> · ' + (hayMeta ? 'invertiste <b>' + money(inv) + '</b>' + (inv && web(v) ? ' · cada venta te costó <b>' + money(inv / web(v)) + '</b>' : '') : (d.meta && d.meta.falta === "token" ? "falta conectar Meta" : "sin anuncios en este período")) + '</span><button class="linkb" data-go="publicidad">Ver Publicidad →</button></div>';
+  h += plegable("tbAyuda", "¿De dónde salen estos números?", '<p class="muted small" style="margin:0">Período: ' + esc(d.periodo.since.split("-").reverse().join("/") + " al " + d.periodo.until.split("-").reverse().join("/")) + '. Ventas y stock, al momento; Meta se actualiza cada 10 minutos y Google Analytics cada 30 (Google tarda unas horas en procesar las visitas). Los links que se mandan por WhatsApp casi siempre figuran como “Directo”. Para que los anuncios de Meta salgan separados en “¿De dónde llegan?”, poné los Parámetros de URL que te da la pantalla Publicidad.</p>');
   return h;
 }
-L.CLICK.tbDias = t => { TB.dias = +t.dataset.d; L.render(); };
+document.addEventListener("toggle", e => { const t = e.target; if (t && t.classList && t.classList.contains("tb-pl")) TB.abiertos[t.id] = t.open; }, true);
+L.CLICK.tbDias = t => { TB.dias = t.dataset.d === "mes" ? "mes" : +t.dataset.d; L.render(); };
 L.CLICK.tbRecargar = () => { delete TB.datos[TB.dias]; TB.forzar = true; L.render(); };
 L.vista("tablero", "Números", "Tablero", vTablero, null, "publicidad");
 })();

@@ -1321,7 +1321,7 @@ function zonasEntre(per, P, ga) {
   return {provincias: Object.keys(prov).map(function (k) { return prov[k]; }).sort(orden), ciudades: Object.keys(ciu).map(function (k) { return ciu[k]; }).sort(orden).slice(0, 15)};
 }
 function tablero(r) {
-  var c = cfg(), dias = [1, 7, 30].indexOf(num(r.dias)) >= 0 ? num(r.dias) : 7, P = filas(H.pedidos), s = stock();
+  var c = cfg(), dias = Math.round(num(r.dias)) >= 1 && Math.round(num(r.dias)) <= 31 ? Math.round(num(r.dias)) : 7, P = filas(H.pedidos), s = stock();   // 1, 7, 30 o los días que van del mes ("Este mes")
   var cur = periodoAtras(dias, 0), prev = periodoAtras(dias, 1), ult30 = ventasEntre(c, periodoAtras(30, 0), P);
   var stk = {};
   productos(c).filter(function (p) { return p.activo || s[p.id].ingresado > 0; }).forEach(function (p) {
