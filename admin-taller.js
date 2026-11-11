@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "11/11 · 3";
+window.PANEL_VERSION = "11/11 · 4";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -306,8 +306,10 @@ function recibirDlg() {
     + "<h3 style='margin-top:12px'>Confección a pagar</h3><div class='g2'><label class='f'>Quién la hizo<select id='rcbProv' data-ch='rcbProv'>" + opts(activos(T().proveedores), RCB.prov, "Elegí…") + "</select></label>"
     + "<label class='f'>Monto<input id='rcbConf' data-in='rcbConf' inputmode='numeric' value='" + esc(RCB.confAuto ? Math.round(confTot) : RCB.conf) + "'></label></div>"
     + (RCB.confAuto ? "" : "<p class='muted small' style='margin:-6px 0 8px'>Según la ficha serían " + money(confTot) + ". <button class='linkb' data-a='rcbConfAuto'>Usar ese monto</button></p>")
+    + "<div class='g2'><label class='f'>Ya le pagué<input id='rcbPag' data-in='rcbPag' inputmode='numeric' value='" + esc(RCB.pagado || "") + "' placeholder='0 = queda como deuda'></label><label class='f'>Medio de pago<select id='rcbMedio' data-ch='rcbMedio'>" + ["Transferencia", "Efectivo", "Mercado Pago"].map(m => "<option" + (RCB.medio === m ? " selected" : "") + ">" + m + "</option>").join("") + "</select></label></div>"
+    + (montoConf > 0 && nm(RCB.pagado) !== Math.round(montoConf) ? "<p class='small' style='margin:-6px 0 8px'><button class='linkb' data-a='rcbPagTodo'>Le pagué todo (" + money(montoConf) + ")</button></p>" : "")
     + "<label class='check'><input type='checkbox' id='rcbCerrar' data-ch='rcbCerrar'" + (RCB.cerrar ? " checked" : "") + "> Es la última entrega: cerrar la tanda</label>"
-    + '<p class="err" id="rcbErr"></p><div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="rcbOk">Confirmar: ' + money(montoConf) + " de confección</button></div>");
+    + '<p class="err" id="rcbErr"></p><div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="rcbOk">Confirmar: ' + money(montoConf) + " de confección" + (nm(RCB.pagado) > 0 ? " · pagás " + money(nm(RCB.pagado)) : "") + "</button></div>");
   void res;
 }
 
@@ -741,7 +743,7 @@ C.tedOk = b => {
   if (!items.length) { const e = $("#tedErr"); if (e) e.textContent = "Poné al menos una funda. Si ya no va, cancelá la tanda."; return; }
   pedir("tandaEditar", {id: TED.id, items: items, proveedor: TED.prov, notas: TED.notas}, null, b).then(r => { if (!r) return; L.cerrarDlg(); L.toast(r.cerrada ? "Tanda actualizada: ya recibiste todo, quedó cerrada" : "Tanda actualizada"); });
 };
-C.tdRecibir = t => { const td = T().tandas.find(x => x.id === t.dataset.id), pend = pendienteTanda(td); RCB = {id: td.id, q: {}, prov: td.proveedor, conf: null, confAuto: true, cerrar: true}; PRODS.forEach(p => { if (pend[p]) RCB.q[p] = String(pend[p]); }); recibirDlg(); };
+C.tdRecibir = t => { const td = T().tandas.find(x => x.id === t.dataset.id), pend = pendienteTanda(td); RCB = {id: td.id, q: {}, prov: td.proveedor, conf: null, confAuto: true, cerrar: true, pagado: "", medio: "Transferencia"}; PRODS.forEach(p => { if (pend[p]) RCB.q[p] = String(pend[p]); }); recibirDlg(); };
 I.rcbQ = t => { RCB.q[t.dataset.p] = t.value; const td = T().tandas.find(x => x.id === RCB.id), pend = pendienteTanda(td); RCB.cerrar = PRODS.every(p => Math.floor(nd(RCB.q[p])) >= (pend[p] || 0)); recibirDlg(); };
 I.rcbConf = t => { RCB.conf = t.value; RCB.confAuto = false; recibirDlg(); };
 I["rcbProv:change"] = t => { RCB.prov = t.value; };
@@ -751,7 +753,18 @@ C.rcbOk = b => { const rec = {}, cons = {}; let conf = 0;
   PRODS.forEach(p => { const n = Math.max(0, Math.floor(nd(RCB.q[p]))); if (n) { rec[p] = n; consumos(fichaGuardada(p), n, cons); conf += n * confU(fichaGuardada(p)); } });
   const monto = RCB.confAuto ? Math.round(conf) : Math.round(nm(RCB.conf));
   if (monto > 0 && !RCB.prov) { errEn("rcbErr", "Elegí quién hizo la confección."); return; }
-  pedir("tandaRecibir", {id: RCB.id, recibido: rec, consumos: Object.keys(cons).map(k => ({insumo: k, cantidad: Math.round(cons[k] * 1000) / 1000})), confeccion: {proveedor: RCB.prov, total: monto}, cerrar: RCB.cerrar}, "Recibidas: ya están a la venta", b).then(r => { if (r) L.cerrarDlg(); }); };
+  const pag = Math.round(nm(RCB.pagado));
+  if (pag > 0 && !RCB.prov) { errEn("rcbErr", "Elegí a quién le pagaste."); return; }
+  const datos = {id: RCB.id, recibido: rec, consumos: Object.keys(cons).map(k => ({insumo: k, cantidad: Math.round(cons[k] * 1000) / 1000})), confeccion: {proveedor: RCB.prov, total: monto}, cerrar: RCB.cerrar};
+  if (!(pag > 0)) { pedir("tandaRecibir", datos, "Recibidas: ya están a la venta", b).then(r => { if (r) L.cerrarDlg(); }); return; }
+  // recibe y registra el pago de una sola vez (lo pidió el dueño: menos pasos)
+  b.disabled = true;
+  L.api("tandaRecibir", datos).then(() => pedir("pagoRegistrar", {proveedor: RCB.prov, monto: pag, fecha: hoyISO(), medio: RCB.medio || "Transferencia", nota: "Confección tanda " + RCB.id, compra: ""}, "Recibidas y pago registrado", b)
+    .then(r => { if (r) L.cerrarDlg(); else { L.cerrarDlg(); L.toast("Las fundas quedaron recibidas, pero el pago no se guardó: cargalo en Proveedores y pagos.", 8000); } }))
+    .catch(e => { L.toast(e.message, 4500); b.disabled = false; }); };
+I.rcbPag = t => { RCB.pagado = t.value; recibirDlg(); };
+I["rcbMedio:change"] = t => { RCB.medio = t.value; };
+C.rcbPagTodo = () => { const td = T().tandas.find(x => x.id === RCB.id); let conf = 0; PRODS.forEach(p => { const n = Math.max(0, Math.floor(nd(RCB.q[p]))); conf += n * confU(fichaGuardada(p)); }); RCB.pagado = String(RCB.confAuto ? Math.round(conf) : Math.round(nm(RCB.conf))); void td; recibirDlg(); };
 // productos
 C.pdTab = t => { PD.tab = t.dataset.p; soloMain(); };
 I.pdMed = t => { const f = draft(PD.tab); f.medidas = f.medidas || {}; f.medidas[t.dataset.k] = t.value; sucio(); soloMain(); };
