@@ -1,0 +1,110 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=block" rel="stylesheet">
+<style>
+:root{--olive:#4E5B3A;--dark:#1E2418;--yel:#D9E15A;--cream:#F2F3EC;--muted:#5E6656}
+*{box-sizing:border-box;margin:0}
+body{background:#888;font-family:"Bricolage Grotesque",Inter,sans-serif}
+.s{width:1080px;height:1350px;position:relative;overflow:hidden;margin:0 0 20px}
+.logo{position:absolute;width:118px;height:118px;border-radius:50%}
+.handle{position:absolute;font-size:30px;font-weight:700;letter-spacing:.02em}
+.paw{position:absolute;opacity:.09}
+/* tapa */
+.tapa{background:var(--olive)}
+.tapa img.f{position:absolute;left:0;right:0;top:0;width:100%;height:900px;object-fit:cover;object-position:50% 30%}
+.tapa .grad{position:absolute;left:0;right:0;top:0;height:260px;background:linear-gradient(180deg,rgba(20,24,16,.55),rgba(20,24,16,0))}
+.tapa .curva{position:absolute;left:-40px;right:-40px;top:850px;height:110px;background:var(--olive);border-radius:50% 50% 0 0/100% 100% 0 0}
+.tapa h1{position:absolute;left:72px;right:72px;top:930px;color:#fff;font-size:104px;line-height:.98;font-weight:800;letter-spacing:-.02em}
+.tapa h1 em{font-style:normal;color:var(--yel)}
+.tapa p{position:absolute;left:72px;right:330px;top:1150px;color:#F2F3EC;font-size:38px;line-height:1.25;font-weight:500}
+.chip{position:absolute;right:72px;bottom:80px;background:var(--yel);color:var(--dark);font-weight:800;font-size:36px;padding:18px 34px;border-radius:999px}
+/* consejos */
+.tip{background:var(--cream);color:var(--dark)}
+.tip .num{position:absolute;left:72px;top:130px;width:230px;height:230px;border-radius:50%;background:var(--yel);display:grid;place-items:center;font-size:150px;font-weight:800;color:var(--olive)}
+.tip .ico{position:absolute;right:60px;top:100px;width:300px;height:300px}
+.tip h2{position:absolute;left:72px;right:72px;top:450px;font-size:118px;line-height:1;font-weight:800;color:var(--olive);letter-spacing:-.02em}
+.tip p{position:absolute;left:72px;right:80px;top:780px;font-size:60px;line-height:1.3;font-weight:500;color:var(--dark)}
+.tip .bar{position:absolute;left:0;right:0;bottom:0;height:150px;background:var(--olive)}
+.tip .bar .logo{left:56px;top:16px}
+.tip .bar .handle{left:196px;top:56px;color:var(--cream)}
+.tip .bar .pg{position:absolute;right:72px;top:52px;color:var(--yel);font-size:36px;font-weight:700}
+.tip.cinco{background:var(--olive);color:#fff}
+.tip.cinco h2{color:var(--yel)} .tip.cinco p{color:var(--cream)} .tip.cinco .bar{background:var(--dark)}
+/* cierre */
+.cierre{background:var(--olive);color:#fff}
+.cierre img.f{position:absolute;left:0;right:0;top:0;width:100%;height:640px;object-fit:cover;object-position:50% 34%}
+.cierre .curva{position:absolute;left:-40px;right:-40px;top:590px;height:120px;background:var(--olive);border-radius:50% 50% 0 0/100% 100% 0 0}
+.cierre .logo{left:50%;top:560px;transform:translateX(-50%);width:150px;height:150px;border:8px solid var(--olive)}
+.cierre h2{position:absolute;left:72px;right:72px;top:740px;text-align:center;font-size:76px;line-height:1.02;font-weight:800;color:var(--yel);letter-spacing:-.01em}
+.cierre .lst{position:absolute;left:72px;right:72px;top:925px;text-align:center;font-size:40px;font-weight:600;color:var(--cream)}
+.cierre .cta{position:absolute;left:110px;right:110px;top:1015px;text-align:center;background:var(--yel);color:var(--dark);border-radius:30px;padding:26px 30px;font-size:40px;line-height:1.2;font-weight:800}
+.cierre .cta small{display:block;font-size:31px;font-weight:600;margin-top:6px}
+.cierre .guarda{position:absolute;left:72px;right:72px;bottom:56px;text-align:center;font-size:32px;font-weight:600;color:var(--cream);opacity:.9}
+</style><style>
+.s{height:1080px}
+.logo{width:104px;height:104px}
+.tapa img.f{height:640px;object-position:50% 32%}
+.tapa .grad{height:220px}
+.tapa .curva{top:600px;height:100px}
+.tapa h1{top:672px;font-size:96px}
+.tapa p{top:868px;right:340px;font-size:34px}
+.chip{bottom:64px;font-size:34px;padding:16px 30px}
+.tip .num{top:80px;width:190px;height:190px;font-size:124px}
+.tip .ico{top:60px;width:240px;height:240px}
+.tip h2{top:320px;font-size:96px}
+.tip p{top:560px;font-size:47px;line-height:1.28}
+.tip .bar{height:120px}
+.tip .bar .logo{top:8px;width:104px;height:104px}
+.tip .bar .handle{left:180px;top:42px}
+.tip .bar .pg{top:40px}
+.cierre img.f{height:470px;object-position:50% 30%}
+.cierre .curva{top:430px;height:100px}
+.cierre .logo{top:395px;width:130px;height:130px}
+.cierre h2{top:545px;font-size:70px}
+.cierre .lst{top:640px;font-size:36px}
+.cierre .cta{top:715px;left:100px;right:100px;padding:22px 28px;font-size:38px}
+.cierre .cta small{font-size:29px}
+.cierre .guarda{bottom:44px;font-size:30px}
+</style></head><body>
+
+<!-- 1 tapa -->
+<section class="s tapa" id="s1"><img class="f" src="golden.jpg"><div class="grad"></div><div class="curva"></div>
+<img class="logo" src="../../logo.png" style="left:56px;top:56px"><div class="handle" style="left:196px;top:96px;color:#fff">@losperrines_</div>
+<h1>¿Viajás con tu <em>perro</em>?</h1>
+<p>5 consejos para que el viaje sea seguro y tranquilo (para los dos)</p>
+<div class="chip">Deslizá →</div></section>
+
+<!-- consejos -->
+<template id="t"><section class="s tip"><div class="num"></div><svg class="ico" viewBox="0 0 100 100"></svg><h2></h2><p></p>
+<div class="bar"><img class="logo" src="../../logo.png"><div class="handle">@losperrines_</div><div class="pg"></div></div></section></template>
+
+<!-- 7 cierre -->
+<section class="s cierre" id="s7"><img class="f" src="golden.jpg"><div class="curva"></div><img class="logo" src="../../logo.png">
+<h2>Nuestra funda tipo canasto</h2>
+<div class="lst">Impermeable · Acolchada · Hecha en San Luis</div>
+<div class="cta">Primera tanda en camino<small>Dejá tu mail en losperrines.com.ar y te avisamos antes que a nadie</small></div>
+<div class="guarda">Guardá este post y compartilo con alguien que viaja con su perro</div></section>
+
+<script>
+const paw='<g fill="currentColor"><ellipse cx="50" cy="64" rx="17" ry="14"/><circle cx="30" cy="42" r="8"/><circle cx="44" cy="31" r="8"/><circle cx="58" cy="31" r="8"/><circle cx="71" cy="42" r="8"/></g>';
+const IC={
+ auto:'<g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 62 L22 40 Q25 33 33 33 H67 Q75 33 78 40 L86 62 V74 H14 Z"/><circle cx="30" cy="74" r="8" fill="currentColor"/><circle cx="70" cy="74" r="8" fill="currentColor"/><path d="M27 48 H73"/></g>',
+ reloj:'<g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><circle cx="50" cy="52" r="32"/><path d="M50 32 V52 L64 60"/><path d="M40 14 H60"/></g>',
+ plato:'<g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 56 H88 Q84 80 50 80 Q16 80 12 56 Z"/><path d="M30 46 Q32 36 40 40 Q46 30 54 38 Q62 32 66 42 Q72 42 72 48"/></g>',
+ vent:'<g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 78 V40 Q18 22 40 22 H82 V78 Z"/><path d="M18 56 H82"/><path d="M30 44 Q40 38 50 44 T70 44" /></g>',
+ escudo:'<g fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"><path d="M50 12 L82 24 V48 Q82 72 50 88 Q18 72 18 48 V24 Z"/></g><g transform="translate(25 28) scale(.5)">'+paw+'</g>'
+};
+const T=[
+ ['Siempre atrás y sujeto','auto','Nunca suelto ni en el asiento de adelante. Con un arnés enganchado al cinturón, o en una funda tipo canasto en el asiento trasero.'],
+ ['Paradas cada 2 horas','reloj','Agua fresca, una vueltita y a hacer sus cosas. Llega más tranquilo… y vos también.'],
+ ['Comida liviana y con tiempo','plato','Que coma 2 o 3 horas antes de salir y no justo antes: así se marea menos.'],
+ ['Ventanilla apenas abierta','vent','Que entre aire, pero que no saque la cabeza: insectos y piedritas le pueden lastimar ojos y oídos.'],
+ ['Protegé el asiento','escudo','Pelos, barro y uñas arruinan el tapizado. Una funda impermeable se limpia en minutos y el auto queda impecable.']
+];
+const tpl=document.getElementById('t'), cierre=document.getElementById('s7');
+T.forEach((x,i)=>{ const n=tpl.content.cloneNode(true), s=n.querySelector('section'); s.id='s'+(i+2); if(i===4) s.classList.add('cinco');
+  s.querySelector('.num').textContent=i+1; s.querySelector('h2').textContent=x[0]; s.querySelector('p').textContent=x[2];
+  const ic=s.querySelector('.ico'); ic.innerHTML=IC[x[1]]; ic.style.color=i===4?'#D9E15A':'#4E5B3A';
+  s.querySelector('.pg').textContent=(i+2)+' / 7';
+  s.insertAdjacentHTML('beforeend','<svg class="paw" viewBox="0 0 100 100" style="width:240px;left:820px;top:760px;color:'+(i===4?'#D9E15A':'#4E5B3A')+';transform:rotate(18deg)">'+paw+'</svg>');
+  cierre.parentNode.insertBefore(n,cierre); });
+</script></body></html>
