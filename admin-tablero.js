@@ -126,7 +126,9 @@ function vTablero() {
       return '<div class="tb-st"><span><b>' + esc(s.nombre) + '</b> <span class="muted small">' + s.disponible + ' disponibles' + (s.porDia ? ' · ' + String(s.porDia).replace(".", ",") + ' por día' : '') + '</span></span><span class="pill ' + cl + '">' + (s.disponible <= 0 ? "Sin stock" : s.dias == null ? "sin ventas" : "~" + s.dias + " días") + '</span></div>'; }).join("") + '</div>';
   // 4 · Visitas: un número + el embudo (con la conversión al final)
   h += '<h3 style="margin:18px 0 0">Las visitas <span class="muted small" style="font-weight:600">· Google Analytics</span></h3>';
-  if (!g) h += setupGA(d.ga && (d.ga.falta || d.ga.error));
+  const gaTemporal = d.ga && (d.ga.error === "temporal" || /\b5\d\d\b|Server Error|Internal error|Service unavailable/i.test(d.ga.error || ""));
+  if (!g && gaTemporal) h += '<div class="note info" style="margin-top:10px"><b>Google Analytics no respondió esta vez.</b> Es una falla momentánea de Google, no de tu configuración: está todo bien conectado. Tocá <b>↻ Actualizar</b> en un rato y vuelven a aparecer las visitas.</div>';
+  else if (!g) h += setupGA(d.ga && (d.ga.falta || d.ga.error));
   else {
     const t = g.total.actual, tp = g.total.anterior, ev = g.eventos || {};
     const P = [["Entraron a la web", t.sesiones], ["Vieron las fundas", ev.view_item_list || 0], ["Agregaron al carrito", ev.add_to_cart || 0], ["Empezaron a comprar", ev.begin_checkout || 0], ["Compraron", web(v)]].filter((x, i) => i !== 1 || x[1] > 0);

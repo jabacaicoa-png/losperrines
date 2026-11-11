@@ -1260,18 +1260,21 @@ function leerGA(c, dias, forzar) {
   var rango = [{startDate: cur.since, endDate: cur.until}], dos = [{startDate: cur.since, endDate: cur.until, name: 'actual'}, {startDate: prev.since, endDate: prev.until, name: 'anterior'}];
   var soloAR = {filter: {fieldName: 'countryId', stringFilter: {value: 'AR'}}};   // provincias y ciudades: solo Argentina (afuera son robots de Meta/Google revisando la web)
   function dim(n, lim, f) { var q = {dateRanges: rango, dimensions: [{name: n}], metrics: [{name: 'sessions'}], orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: lim || 6}; if (f) q.dimensionFilter = f; return q; }
-  var res;
-  try {
+  var res, intento = 0;
+  while (true) try {   // si Google falla un momento (502, 503, "Internal error"), reintenta una vez antes de rendirse
     res = AnalyticsData.Properties.batchRunReports({requests: [
       {dateRanges: dos, metrics: [{name: 'sessions'}, {name: 'totalUsers'}, {name: 'newUsers'}]},
       dim('sessionDefaultChannelGroup'), dim('deviceCategory', 3), dim('region', 6, soloAR),
       {dateRanges: rango, dimensions: [{name: 'eventName'}], metrics: [{name: 'eventCount'}],
         dimensionFilter: {filter: {fieldName: 'eventName', inListFilter: {values: ['view_item_list', 'add_to_cart', 'begin_checkout', 'add_payment_info', 'purchase']}}}}
     ]}, 'properties/' + prop);
+    break;
   } catch (e) {
-    var m = String(e.message || e);
+    var m = String(e.message || e), momentanea = /\b5\d\d\b|Server Error|Internal error|Service unavailable|timed? ?out|Backend Error/i.test(m);
+    if (momentanea && intento++ < 1) { Utilities.sleep(2000); continue; }
+    if (momentanea) return {error: 'temporal'};
     if (/permission|403|not have/i.test(m)) m = 'Tu usuario de Google no tiene acceso a esa propiedad de Analytics, o el número no es el correcto.';
-    return {error: m.slice(0, 220)};
+    return {error: m.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 220)};
   }
   var R = res.reports || [];
   function filasDe(r) { return ((r && r.rows) || []).map(function (x) { return {d: x.dimensionValues ? x.dimensionValues.map(function (v) { return v.value; }) : [], m: x.metricValues.map(function (v) { return num(v.value); })}; }); }
