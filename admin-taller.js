@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "11/11 · 2";
+window.PANEL_VERSION = "11/11 · 3";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -523,7 +523,7 @@ function vGastos() {
   h += '<div class="filters">' + [["todo", "Todo"], ["mes", "Este mes"], ["pasado", "Mes pasado"]].map(x => '<button class="chip" data-a="gsPer" data-p="' + x[0] + '" aria-pressed="' + (GS.per === x[0]) + '">' + x[1] + "</button>").join("")
     + '<select class="inp" id="gsProv" data-ch="gsProv" aria-label="Proveedor" style="width:auto;max-width:100%">' + opts(provs, GS.prov, "Todos los proveedores") + "</select></div>";
   if (!lista.length) return h + '<div class="block"><p class="muted" style="margin:0">No hay gastos ' + (GS.per === "mes" ? "este mes" : GS.per === "pasado" ? "el mes pasado" : "cargados") + (GS.prov ? " de " + esc(provNombre(GS.prov)) : "") + ".</p></div>";
-  h += '<div class="gsub">' + Object.keys(sub).map(k => "<span>" + esc(k) + " <b>" + money(sub[k]) + "</b></span>").join("")
+  h += '<div class="gsub"><span class="tt">Total <b>' + money(total) + "</b></span>" + Object.keys(sub).map(k => "<span>" + esc(k) + " <b>" + money(sub[k]) + "</b></span>").join("")
     + "<span>Debés <b" + (debe > 0 ? ' class="neg"' : "") + ">" + money(debe) + "</b></span></div>";
   h += '<div class="gl"><div class="r h"><span>Proveedor</span><span>Fecha</span><span>Gasto</span><span class="n">Costo</span></div>'
     + lista.map(c => { const f = falta[c.id] || 0;
