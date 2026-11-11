@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "11/11 · 5";
+window.PANEL_VERSION = "11/11 · 6";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -506,6 +506,12 @@ function porMes(lista, fila, total) { // agrupa por mes (más nuevo primero) con
   return Object.keys(g).sort().reverse().map(k => '<div class="bk-mes"><span>' + esc(mesNombre(k)) + "</span><span>" + money(g[k].reduce((a, x) => a + total(x), 0)) + '</span></div><div class="bk-list">' + g[k].map(fila).join("") + "</div>").join("");
 }
 function notaPago(n) { return String(n || "").replace(/Pago de la compra C-[\w-]+/, "").trim(); } // el código interno de la compra no le dice nada al dueño
+// una compra con varios insumos se ve como lista (uno debajo del otro), no todo en un renglón con comas
+function detalleCompra(c) {
+  const partes = String(c.detalle || "").split(/,\s+/).map(x => x.trim()).filter(Boolean);
+  if (partes.length < 2) return "<b>" + esc(c.detalle || GS_TIPO[c.tipo] || "Gasto") + "</b>";
+  return "<b>" + (c.tipo === "insumos" ? "Compra de insumos" : "Gasto") + ' <span class="bk-n">(' + partes.length + ")</span></b><ul class=\"bk-ul\">" + partes.map(x => "<li>" + esc(x) + "</li>").join("") + "</ul>";
+}
 function estadoTxt(f, total) { return f <= 0 ? '<span class="ok">pagado</span>' : '<span class="neg">debés' + (f < total ? " " + money(f) : "") + "</span>"; }
 function vProveedores() {
   const g = guard(); if (g) return cabecera("Proveedores y gastos") + g;
@@ -547,7 +553,7 @@ function fichaProv(id) {
   const mov = T().compras.filter(c => c.proveedor === id).map(c => ({fecha: c.fecha, c: c})).concat(T().pagos.filter(x => x.proveedor === id).map(x => ({fecha: x.fecha, p: x})))
     .sort((a, b) => a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : (a.p ? -1 : 1));
   h += mov.length ? porMes(mov, m => m.c
-      ? '<div class="bk-it"><span class="bk-tx"><b>' + esc(m.c.detalle || GS_TIPO[m.c.tipo] || "Gasto") + "</b><span>" + ddmm(m.c.fecha) + " · " + esc(GS_TIPO[m.c.tipo] || "Otro gasto") + '</span></span><span class="bk-rt"><b>' + money(m.c.total) + "</b>" + estadoTxt(falta[m.c.id] || 0, m.c.total) + "</span><button class='x' data-a='cpAnular' data-id='" + esc(m.c.id) + "' aria-label='Anular compra' title='Anular'>×</button></div>"
+      ? '<div class="bk-it"><span class="bk-tx">' + detalleCompra(m.c) + "<span>" + ddmm(m.c.fecha) + " · " + esc(GS_TIPO[m.c.tipo] || "Otro gasto") + '</span></span><span class="bk-rt"><b>' + money(m.c.total) + "</b>" + estadoTxt(falta[m.c.id] || 0, m.c.total) + "</span><button class='x' data-a='cpAnular' data-id='" + esc(m.c.id) + "' aria-label='Anular compra' title='Anular'>×</button></div>"
       : '<div class="bk-it"><span class="bk-tx"><b>Pago</b><span>' + ddmm(m.p.fecha) + (m.p.medio ? " · " + esc(m.p.medio) : "") + (notaPago(m.p.nota) ? " · " + esc(notaPago(m.p.nota)) : "") + '</span></span><span class="bk-rt"><b class="pos">− ' + money(m.p.monto) + "</b></span><button class='x' data-a='pgBorrar' data-id='" + esc(m.p.id) + "' aria-label='Borrar pago' title='Borrar'>×</button></div>",
     m => m.c ? m.c.total : 0) : '<div class="empty">Todavía no hay compras ni pagos con este proveedor.</div>';
   return h + '<p class="bk-c"><button class="btn ghost sm" data-a="provEditar" data-prov="' + esc(id) + '">Editar datos del proveedor</button></p></div>';
