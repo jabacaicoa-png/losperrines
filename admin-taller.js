@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "11/11 · 8";
+window.PANEL_VERSION = "11/11 · 9";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -534,20 +534,21 @@ function vProveedores() {
   if (!lista.length) return h + '<div class="empty">Todavía no cargaste proveedores.</div><p class="bk-c"><button class="btn ghost sm" data-a="provNuevo">＋ Nuevo proveedor</button></p></div>';
   const ultima = {}; T().compras.forEach(c => { if (!ultima[c.proveedor] || c.fecha > ultima[c.proveedor]) ultima[c.proveedor] = c.fecha; });
   h += '<div class="bk-list">' + lista.map(p => { const sl = (sal[p.id] || {}).saldo || 0;
-    return '<button class="bk-it" data-a="pvVer" data-prov="' + esc(p.id) + '"><span class="bk-av">' + inicial(p.nombre) + '</span><span class="bk-tx"><b>' + esc(p.nombre) + "</b><span>" + (ultima[p.id] ? "Último gasto " + ddmm(ultima[p.id]) : esc(p.lugar || "Sin gastos todavía")) + '</span></span><span class="bk-rt"><b>' + money(Math.abs(sl)) + "</b>" + (sl > 0 ? '<span class="neg">debés</span>' : sl < 0 ? '<span class="info">pagado de más</span>' : '<span class="ok">al día</span>') + '</span><span class="bk-chev">›</span></button>'; }).join("") + "</div>"
+    return '<button class="bk-it" data-a="pvVer" data-prov="' + esc(p.id) + '"><span class="bk-av">' + inicial(p.nombre) + '</span><span class="bk-tx"><b>' + esc(p.nombre) + "</b><span>" + (ultima[p.id] ? "Último gasto " + ddmm(ultima[p.id]) : esc(p.lugar || "Sin gastos todavía")) + '</span></span><span class="bk-rt"><b>' + money(Math.abs(sl)) + "</b>" + (sl > 0 ? '<span class="neg">debés</span>' : sl < 0 ? '<span class="info">adelanto</span>' : '<span class="ok">al día</span>') + '</span><span class="bk-chev">›</span></button>'; }).join("") + "</div>"
     + '<p class="bk-c"><button class="btn ghost sm" data-a="provNuevo">＋ Nuevo proveedor</button></p></div>';
   return h;
 }
 function fichaProv(id) {
-  const p = prov(id), s = saldos()[id] || {saldo: 0, cargos: 0, pagos: 0}, tel = String(p.telefono || "").replace(/\D/g, ""), falta = deudaPorCompra();
+  const p = prov(id), s = saldos()[id] || {saldo: 0, cargos: 0, pagos: 0}, tandaAbierta = T().tandas.some(t => t.proveedor === id && t.estado === "en_confeccion"), tel = String(p.telefono || "").replace(/\D/g, ""), falta = deudaPorCompra();
   let h = '<div class="bk"><button class="bk-back" data-a="pvVolver">‹ Proveedores</button>'
     + '<div class="bk-head"><span class="bk-av big">' + inicial(p.nombre) + "</span><div><h2>" + esc(p.nombre) + '</h2><span class="muted small">' + esc([p.lugar, p.telefono].filter(Boolean).join(" · ") || "Sin contacto") + "</span></div></div>"
     + (s.saldo > 0 ? '<div class="bk-hero rojo"><small>Le debés</small><b>' + money(s.saldo) + "</b></div>"
-      : s.saldo < 0 ? '<div class="bk-hero azul"><small>Le pagaste de más (o falta cargar una compra)</small><b>' + money(-s.saldo) + '</b><div class="s"><span>Pagaste ' + money(s.pagos) + " y figuran " + money(s.cargos) + " en compras.</span></div></div>"
+      : s.saldo < 0 ? (tandaAbierta ? '<div class="bk-hero azul"><small>Adelanto a cuenta de la tanda en confección</small><b>' + money(-s.saldo) + '</b><div class="s"><span>Se descuenta solo cuando recibas las fundas en Tandas → Recibir fundas (ahí dejá “Ya le pagué” vacío). No hace falta cargar nada más.</span></div></div>'
+        : '<div class="bk-hero azul"><small>Adelanto (pagaste antes de cargar la compra)</small><b>' + money(-s.saldo) + '</b><div class="s"><span>Pagaste ' + money(s.pagos) + " y figuran " + money(s.cargos) + " en compras. Se descuenta cuando cargues la compra.</span></div></div>")
       : '<div class="bk-hero al"><small>Estás al día</small><b>' + money(0) + "</b></div>")
     + '<div class="bk-acts">' + (s.saldo > 0 ? '<button class="btn main" data-a="pagoNuevo" data-prov="' + esc(id) + '">Pagar</button>' : "")
-    + (s.saldo < 0 ? '<button class="btn main" data-a="cargoFalta" data-prov="' + esc(id) + '" data-monto="' + Math.round(-s.saldo) + '">Cargar la compra</button>' : "")
-    + '<button class="btn ' + (s.saldo > 0 || s.saldo < 0 ? "ghost" : "main") + '" data-a="compraNueva" data-prov="' + esc(id) + '">Compra</button>'
+    + (s.saldo < 0 && !tandaAbierta ? '<button class="btn main" data-a="cargoFalta" data-prov="' + esc(id) + '" data-monto="' + Math.round(-s.saldo) + '">Cargar la compra</button>' : "")
+    + '<button class="btn ' + (s.saldo > 0 || (s.saldo < 0 && !tandaAbierta) ? "ghost" : "main") + '" data-a="compraNueva" data-prov="' + esc(id) + '">Compra</button>'
     + (s.saldo <= 0 ? '<button class="btn ghost" data-a="pagoNuevo" data-prov="' + esc(id) + '">Pago</button>' : "")
     + (tel ? '<a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel.length <= 10 ? "549" + tel : tel) + '">WhatsApp</a>' : "") + "</div>";
   const mov = T().compras.filter(c => c.proveedor === id).map(c => ({fecha: c.fecha, c: c})).concat(T().pagos.filter(x => x.proveedor === id).map(x => ({fecha: x.fecha, p: x})))
