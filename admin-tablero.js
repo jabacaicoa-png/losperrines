@@ -20,6 +20,7 @@ function fuenteDe(f) {   // "l.instagram.com / referral" → "Instagram (sin anu
   const s = String(f.fuente || "").toLowerCase(), m = String(f.medio || "").toLowerCase(), pago = PAGO.test(m);
   if (/instagram|^ig$/.test(s)) return pago ? "Instagram (anuncio)" : "Instagram (sin anuncio)";
   if (/facebook|^fb$|^an$|^msg$|messenger/.test(s)) return pago ? "Facebook (anuncio)" : "Facebook (sin anuncio)";
+  if (s === "comercios" || m === "prospeccion") return "Mensajes a veterinarias y pet shops";   // link corto losperrines.com.ar/comercios
   if (/whatsapp|wa\.me/.test(s)) return "WhatsApp";
   if (/google/.test(s)) return pago ? "Google (anuncio)" : "Búsqueda en Google";
   if (s === "(direct)" || m === "(none)") return "Directo o WhatsApp (link guardado, escrito o compartido)";
