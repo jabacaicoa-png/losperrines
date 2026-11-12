@@ -1,0 +1,109 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- Paquete semanal de Instagram (semana del 16 al 22/11/2026): 3 publicaciones cuadradas (1080 × 1080) y 4 historias (1080 × 1920).
+     Las fotos se pasan al generar (node dev/instagram/semana.js <salida> <golden> <dos-perros> <funda-vacia>); no se guardan en el repo. -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=block" rel="stylesheet">
+<style>
+:root{--olive:#4E5B3A;--dark:#1E2418;--yel:#D9E15A;--cream:#F2F3EC;--deep:#3A4529;--muted:#5E6656}
+*{box-sizing:border-box;margin:0}
+body{background:#888;font-family:"Bricolage Grotesque",Inter,sans-serif}
+section{position:relative;overflow:hidden;margin-bottom:20px}
+.sq{width:1080px;height:1080px}.st{width:1080px;height:1920px}
+.ab{position:absolute}
+.logo{border-radius:50%}
+.marca{position:absolute;display:flex;align-items:center;gap:18px}
+.marca span{font-weight:700}
+.foto{position:absolute;object-fit:cover;display:block}
+.t{font-weight:800;letter-spacing:-.02em;line-height:1}
+.yel{color:var(--yel)}
+.chips{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.chip{background:var(--cream);color:var(--olive);border-radius:999px;font-weight:700;padding:12px 26px;white-space:nowrap}
+.lista{display:grid;gap:26px}
+.item{display:grid;grid-template-columns:96px 1fr;gap:24px;align-items:start}
+.num{width:96px;height:96px;border-radius:50%;background:var(--yel);color:var(--dark);display:grid;place-items:center;font-weight:800;font-size:54px}
+.item b{display:block;font-size:46px;line-height:1.05}
+.item span{display:block;font-size:34px;font-weight:500;line-height:1.25;margin-top:6px;opacity:.9}
+.hueco{position:absolute;border:4px dashed rgba(255,255,255,.35);border-radius:40px;display:grid;place-items:center;color:rgba(255,255,255,.55);font-weight:700;font-size:34px;text-align:center}
+.hueco.osc{border-color:rgba(78,91,58,.35);color:rgba(78,91,58,.55)}
+.paw{position:absolute;opacity:.1}
+</style></head><body>
+
+<!-- 1 · LUNES · publicación: por qué tipo canasto (foto de la funda vacía) -->
+<section class="sq" id="s1" style="background:var(--olive)">
+ <img class="foto" data-f="vacia" style="left:0;top:0;width:470px;height:1080px;object-position:50% 60%">
+ <div class="ab" style="left:510px;right:50px;top:70px;color:#fff">
+  <div class="t yel" style="font-size:40px;letter-spacing:.06em">LOS PERRINES</div>
+  <div class="t" style="font-size:76px;margin-top:14px">¿Por qué tipo canasto?</div>
+  <div class="lista" style="margin-top:44px">
+   <div class="item" style="grid-template-columns:70px 1fr;gap:18px"><div class="num" style="width:70px;height:70px;font-size:38px">1</div><div><b style="font-size:38px">Cerrada por los 4 lados</b><span style="font-size:28px">Tu perro no se pasa adelante ni se cae entre los asientos.</span></div></div>
+   <div class="item" style="grid-template-columns:70px 1fr;gap:18px"><div class="num" style="width:70px;height:70px;font-size:38px">2</div><div><b style="font-size:38px">Impermeable</b><span style="font-size:28px">Barro, agua y pelos no llegan al tapizado.</span></div></div>
+   <div class="item" style="grid-template-columns:70px 1fr;gap:18px"><div class="num" style="width:70px;height:70px;font-size:38px">3</div><div><b style="font-size:38px">Abertura para el cinturón</b><span style="font-size:28px">Viaja enganchado con su arnés, sin sacar la funda.</span></div></div>
+  </div>
+  <div style="margin-top:46px;font-weight:700;font-size:30px;color:var(--cream)">Hecha en San Luis · <span class="yel">Envío gratis</span></div>
+ </div>
+</section>
+
+<!-- 2 · MARTES · historia: encuesta -->
+<section class="st" id="s2" style="background:var(--olive)">
+ <div class="marca" style="top:120px;left:0;right:0;justify-content:center"><img class="logo" src="../../logo.png" style="width:110px;height:110px"><span style="color:var(--cream);font-size:42px">Los Perrines</span></div>
+ <div class="ab t" style="top:330px;left:80px;right:80px;text-align:center;color:#fff;font-size:110px">¿Qué te deja tu perro en el auto?</div>
+ <div class="ab" style="top:760px;left:0;right:0;text-align:center;font-size:200px">🐕💨</div>
+ <!-- espacio libre para el sticker (encuesta / preguntas): queda vacío a propósito --><div class="ab" style="top:1080px;left:140px;right:140px;height:330px"></div>
+ <div class="ab" style="bottom:200px;left:0;right:0;text-align:center;color:var(--cream);font-weight:700;font-size:36px;opacity:.85">@losperrines_</div>
+</section>
+
+<!-- 3 · MIÉRCOLES · publicación: consejos (sin vender) -->
+<section class="sq" id="s3" style="background:var(--cream)">
+ <svg class="paw" viewBox="0 0 100 100" style="width:330px;right:-60px;top:-40px;color:#4E5B3A;transform:rotate(25deg)"><g fill="currentColor"><ellipse cx="50" cy="64" rx="17" ry="14"/><circle cx="30" cy="42" r="8"/><circle cx="44" cy="31" r="8"/><circle cx="58" cy="31" r="8"/><circle cx="71" cy="42" r="8"/></g></svg>
+ <div class="ab" style="left:80px;right:80px;top:80px;color:var(--dark)">
+  <div class="t" style="font-size:40px;color:var(--olive);letter-spacing:.06em">CONSEJOS</div>
+  <div class="t" style="font-size:74px;margin-top:12px">3 claves para viajes largos con tu perro</div>
+  <div class="lista" style="margin-top:50px">
+   <div class="item"><div class="num" style="background:var(--olive);color:var(--yel)">1</div><div><b>Pará cada 2 horas</b><span>Agua, pis y estirar las patas. Llega más tranquilo.</span></div></div>
+   <div class="item"><div class="num" style="background:var(--olive);color:var(--yel)">2</div><div><b>Nunca solo en el auto al sol</b><span>Aunque sean cinco minutos: adentro la temperatura sube rapidísimo.</span></div></div>
+   <div class="item"><div class="num" style="background:var(--olive);color:var(--yel)">3</div><div><b>Atrás y enganchado</b><span>Con arnés al cinturón: no distrae y va más seguro.</span></div></div>
+  </div>
+ </div>
+ <div class="marca" style="bottom:50px;left:80px"><img class="logo" src="../../logo.png" style="width:64px;height:64px"><span style="color:var(--olive);font-size:30px">@losperrines_</span></div>
+</section>
+
+<!-- 4 · JUEVES · historia: cómo se pone -->
+<section class="st" id="s4" style="background:var(--deep)">
+ <div class="marca" style="top:120px;left:0;right:0;justify-content:center"><img class="logo" src="../../logo.png" style="width:110px;height:110px"><span style="color:var(--cream);font-size:42px">Los Perrines</span></div>
+ <div class="ab t" style="top:320px;left:70px;right:70px;text-align:center;color:#fff;font-size:104px">Se pone en <span class="yel">2 minutos</span></div>
+ <div class="ab lista" style="top:640px;left:90px;right:90px;color:#fff;gap:60px">
+  <div class="item"><div class="num">1</div><div><b>Enganchá las correas</b><span>Las de atrás a los apoyacabezas traseros y las de adelante a los delanteros.</span></div></div>
+  <div class="item"><div class="num">2</div><div><b>Acomodá el asiento</b><span>Pasá el cinturón por la abertura y meté los anclajes entre respaldo y asiento.</span></div></div>
+  <div class="item"><div class="num">3</div><div><b>Subí a tu perro</b><span>Abrí el cierre de un lateral, que baja y le hace de escalón.</span></div></div>
+ </div>
+ <div class="ab" style="top:1560px;left:0;right:0;text-align:center;color:var(--cream);font-weight:700;font-size:40px">losperrines.com.ar</div>
+</section>
+
+<!-- 5 · VIERNES · publicación: fin de semana (foto de los dos perros) -->
+<section class="sq" id="s5" style="background:var(--olive)">
+ <img class="foto" data-f="dos" style="left:0;top:0;width:1080px;height:660px;object-position:50% 50%">
+ <div class="ab" style="top:600px;left:50px;background:var(--yel);color:var(--dark);font-weight:800;font-size:44px;padding:14px 32px;border-radius:999px;transform:rotate(-3deg)">¿Salís el finde?</div>
+ <div class="ab" style="top:700px;left:60px;right:60px;text-align:center">
+  <div class="t" style="color:#fff;font-size:70px">Que tu perro disfrute y el auto vuelva limpio</div>
+  <div class="chips" style="margin-top:28px;font-size:30px"><span class="chip">💧 Impermeable</span><span class="chip">Acolchada</span><span class="chip">Envío gratis</span></div>
+  <div style="margin-top:26px;color:var(--cream);font-weight:700;font-size:32px">Hecha en San Luis · losperrines.com.ar</div>
+ </div>
+</section>
+
+<!-- 6 · SÁBADO · historia: preguntas -->
+<section class="st" id="s6" style="background:var(--cream)">
+ <div class="marca" style="top:120px;left:0;right:0;justify-content:center"><img class="logo" src="../../logo.png" style="width:110px;height:110px"><span style="color:var(--olive);font-size:42px">Los Perrines</span></div>
+ <div class="ab t" style="top:330px;left:80px;right:80px;text-align:center;color:var(--olive);font-size:118px">Preguntanos lo que quieras</div>
+ <div class="ab" style="top:640px;left:110px;right:110px;text-align:center;color:var(--dark);font-weight:600;font-size:50px;line-height:1.25">Medidas, si entra en tu auto, cómo se lava, envíos… ¡te respondemos todo!</div>
+ <!-- espacio libre para el sticker (encuesta / preguntas): queda vacío a propósito --><div class="ab" style="top:1000px;left:140px;right:140px;height:380px"></div>
+ <svg class="paw" viewBox="0 0 100 100" style="width:380px;left:-60px;top:1560px;color:#4E5B3A;transform:rotate(-20deg)"><g fill="currentColor"><ellipse cx="50" cy="64" rx="17" ry="14"/><circle cx="30" cy="42" r="8"/><circle cx="44" cy="31" r="8"/><circle cx="58" cy="31" r="8"/><circle cx="71" cy="42" r="8"/></g></svg>
+</section>
+
+<!-- 7 · DOMINGO · historia: hecha en San Luis + enlace (foto del golden a pantalla completa) -->
+<section class="st" id="s7" style="background:var(--olive)">
+ <img class="foto" data-f="golden" style="left:0;top:0;width:1080px;height:1300px;object-position:50% 35%">
+ <div class="ab" style="left:-60px;right:-60px;top:1220px;height:160px;background:var(--olive);border-radius:50% 50% 0 0/100% 100% 0 0"></div>
+ <img class="logo ab" src="../../logo.png" style="width:150px;height:150px;left:465px;top:1170px">
+ <div class="ab t" style="top:1350px;left:70px;right:70px;text-align:center;color:#fff;font-size:92px">Hecha en San Luis <span class="yel">para toda Argentina</span></div>
+ <div class="ab" style="top:1590px;left:0;right:0;text-align:center;color:var(--cream);font-weight:700;font-size:40px">Pedila en losperrines.com.ar 👇</div>
+</section>
+</body></html>
