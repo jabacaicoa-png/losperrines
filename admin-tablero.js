@@ -46,7 +46,8 @@ function tablaZonas(lista, nombre, hayGA) {   // Ventas primero: es la columna q
 
 function cargar() {
   if (TB.cargando || TB.datos[TB.dias]) return;
-  const forzar = TB.forzar, k = TB.dias, pide = diasDe(k); TB.cargando = true; TB.forzar = false;
+  const forzar = TB.forzar, k = TB.dias, pide = diasDe(k); TB.cargando = true; TB.forzar = false; TB.desde = Date.now();
+  setTimeout(() => { if (TB.cargando) L.render(); }, 15500);   // si tarda, avisar que sigue trabajando
   L.api("tablero", {dias: pide, forzar: forzar}).then(r => { TB.datos[k] = r.dias === pide ? r : {error: "backendMes"}; })
     .catch(e => { TB.datos[k] = {error: /desconocida/i.test(e.message) ? "backend" : e.message}; })
     .then(() => { TB.cargando = false; L.render(); });
@@ -102,7 +103,8 @@ function vTablero() {
   const d = TB.datos[TB.dias], T = window.TALLER;
   let h = '<div class="ph"><div><h2>Tablero</h2></div><button class="btn ghost sm" data-a="tbRecargar">↻ Actualizar</button></div>'
     + '<div class="filters">' + [[1, "Hoy"], [7, "7 días"], ["mes", "Este mes"], [30, "30 días"]].map(x => '<button class="chip" data-a="tbDias" data-d="' + x[0] + '" aria-pressed="' + (TB.dias === x[0]) + '">' + x[1] + '</button>').join("") + '</div>';
-  if (!d) return h + '<p class="muted"><span class="spinner"></span> Juntando los números…</p>';
+  if (!d) return h + '<p class="muted"><span class="spinner"></span> Juntando los números…</p>'
+    + (TB.cargando && Date.now() - (TB.desde || 0) > 15000 ? '<div class="note info">Está tardando más de lo normal: casi siempre es Google Analytics, que a veces responde lento (la planilla le vuelve a preguntar sola). Esperá hasta un minuto. Si sigue igual, salí del panel y volvé a entrar.</div>' : '');
   if (d.error === "backend") return h + '<div class="note bad"><b>Falta actualizar el backend.</b> Pegá el nuevo <code>Codigo.gs</code> en Apps Script y publicá una nueva versión. Después tocá ↻.</div>';
   if (d.error === "backendMes") return h + '<div class="note info"><b>Para ver “Este mes” falta actualizar el backend.</b> Pegá el nuevo <code>Codigo.gs</code> en Apps Script, ejecutá <code>instalar()</code> y publicá una nueva versión. Mientras tanto usá 7 o 30 días.</div>';
   if (d.error) return h + '<div class="note bad">' + esc(d.error) + '</div>';
