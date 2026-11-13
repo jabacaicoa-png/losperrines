@@ -1272,7 +1272,7 @@ function leerGA(c, dias, forzar) {
   } catch (e) {
     var m = String(e.message || e), momentanea = /\b5\d\d\b|Server Error|Internal error|Service unavailable|timed? ?out|Backend Error/i.test(m);
     if (momentanea && intento++ < 1) { Utilities.sleep(2000); continue; }
-    if (momentanea) return {error: 'temporal'};
+    if (momentanea) return {error: 'temporal', detalle: m.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 220)};
     if (/permission|403|not have/i.test(m)) m = 'Tu usuario de Google no tiene acceso a esa propiedad de Analytics, o el número no es el correcto.';
     return {error: m.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 220)};
   }
@@ -1295,6 +1295,16 @@ function leerGA(c, dias, forzar) {
   } catch (e) { console.error(e); }
   cache.put(clave, JSON.stringify(out), 1800);
   return out;
+}
+/* Para revisar Analytics desde el editor: elegí probarGA arriba y tocá Ejecutar. El resultado sale en el Registro de ejecución. */
+function probarGA() {
+  var prop = String(cfg().ga_property_id || '').replace(/\D/g, '');
+  if (!prop) { console.log('Falta el ID de propiedad de Analytics en Configuración.'); return; }
+  if (typeof AnalyticsData === 'undefined') { console.log('Falta agregar el servicio "Google Analytics Data API" (Servicios → +).'); return; }
+  try {
+    var r = AnalyticsData.Properties.runReport({dateRanges: [{startDate: '7daysAgo', endDate: 'today'}], metrics: [{name: 'sessions'}]}, 'properties/' + prop);
+    console.log('ANDA BIEN. Visitas de los últimos 7 días: ' + (((r.rows || [])[0] || {metricValues: [{value: 0}]}).metricValues[0].value) + ' (propiedad ' + prop + ').');
+  } catch (e) { console.log('Google respondió con este error (copialo y pasáselo a Claude): ' + (e.message || e)); }
 }
 /* ---------- zonas: dónde miran (Analytics) y dónde compran (dirección de envío de los pedidos) ---------- */
 function sinAcentos(s) { return String(s || '').toLowerCase().replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i').replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n').trim(); }

@@ -128,7 +128,7 @@ function vTablero() {
   // 4 · Visitas: un número + el embudo (con la conversión al final)
   h += '<h3 style="margin:18px 0 0">Las visitas <span class="muted small" style="font-weight:600">· Google Analytics</span></h3>';
   const gaTemporal = d.ga && (d.ga.error === "temporal" || /\b5\d\d\b|Server Error|Internal error|Service unavailable/i.test(d.ga.error || ""));
-  if (!g && gaTemporal) h += '<div class="note info" style="margin-top:10px"><b>Google Analytics no respondió esta vez.</b> Es una falla momentánea de Google, no de tu configuración: está todo bien conectado. Tocá <b>↻ Actualizar</b> en un rato y vuelven a aparecer las visitas.</div>';
+  if (!g && gaTemporal) h += '<div class="note info" style="margin-top:10px"><b>Google Analytics no respondió esta vez.</b> Es una falla momentánea de Google, no de tu configuración: está todo bien conectado. Tocá <b>↻ Actualizar</b> en un rato y vuelven a aparecer las visitas.' + (d.ga.detalle ? '<br><span class="muted small">Lo que dijo Google: ' + esc(d.ga.detalle) + '</span>' : '') + '</div>';
   else if (!g) h += setupGA(d.ga && (d.ga.falta || d.ga.error));
   else {
     const t = g.total.actual, tp = g.total.anterior, ev = g.eventos || {};
