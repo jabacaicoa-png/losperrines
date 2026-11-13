@@ -1270,9 +1270,13 @@ function leerGA(c, dias, forzar) {
     ]}, 'properties/' + prop);
     break;
   } catch (e) {
-    var m = String(e.message || e), momentanea = /\b5\d\d\b|Server Error|Internal error|Service unavailable|timed? ?out|Backend Error/i.test(m);
-    if (momentanea && intento++ < 1) { Utilities.sleep(2000); continue; }
-    if (momentanea) return {error: 'temporal', detalle: m.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 220)};
+    var m = String(e.message || e), momentanea = /\b5\d\d\b|\b429\b|Server Error|Internal error|Service unavailable|timed? ?out|Backend Error|Exhausted|quota|RESOURCE_EXHAUSTED|rate limit/i.test(m);
+    if (momentanea && intento++ < 2) { Utilities.sleep(intento * 3000); continue; }   // espera 3 s y después 6 s
+    if (momentanea) {   // si Google sigue sin responder, muestra los últimos números buenos (guardados hasta 6 horas)
+      var detalle = m.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 220), ok = cache.get('gaok_' + clave);
+      if (ok) { var viejo = JSON.parse(ok); viejo.viejo = true; viejo.detalle = detalle; return viejo; }
+      return {error: 'temporal', detalle: detalle};
+    }
     if (/permission|403|not have/i.test(m)) m = 'Tu usuario de Google no tiene acceso a esa propiedad de Analytics, o el número no es el correcto.';
     return {error: m.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 220)};
   }
@@ -1293,7 +1297,9 @@ function leerGA(c, dias, forzar) {
     out.regiones = lista(R2[1]);
     out.ciudades = filasDe(R2[2]).map(function (x) { return {nombre: x.d[0], region: x.d[1], sesiones: x.m[0]}; });
   } catch (e) { console.error(e); }
+  out.guardado = ahora().getTime();
   cache.put(clave, JSON.stringify(out), 1800);
+  try { cache.put('gaok_' + clave, JSON.stringify(out), 21600); } catch (e) {}
   return out;
 }
 /* Para revisar Analytics desde el editor: elegí probarGA arriba y tocá Ejecutar. El resultado sale en el Registro de ejecución. */

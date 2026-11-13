@@ -127,13 +127,15 @@ function vTablero() {
       return '<div class="tb-st"><span><b>' + esc(s.nombre) + '</b> <span class="muted small">' + s.disponible + ' disponibles' + (s.porDia ? ' · ' + String(s.porDia).replace(".", ",") + ' por día' : '') + '</span></span><span class="pill ' + cl + '">' + (s.disponible <= 0 ? "Sin stock" : s.dias == null ? "sin ventas" : "~" + s.dias + " días") + '</span></div>'; }).join("") + '</div>';
   // 4 · Visitas: un número + el embudo (con la conversión al final)
   h += '<h3 style="margin:18px 0 0">Las visitas <span class="muted small" style="font-weight:600">· Google Analytics</span></h3>';
-  const gaTemporal = d.ga && (d.ga.error === "temporal" || /\b5\d\d\b|Server Error|Internal error|Service unavailable/i.test(d.ga.error || ""));
+  const gaTemporal = d.ga && (d.ga.error === "temporal" || /\b5\d\d\b|\b429\b|Server Error|Internal error|Service unavailable|Exhausted|quota/i.test(d.ga.error || ""));
   if (!g && gaTemporal) h += '<div class="note info" style="margin-top:10px"><b>Google Analytics no respondió esta vez.</b> Es una falla momentánea de Google, no de tu configuración: está todo bien conectado. Tocá <b>↻ Actualizar</b> en un rato y vuelven a aparecer las visitas.' + (d.ga.detalle ? '<br><span class="muted small">Lo que dijo Google: ' + esc(d.ga.detalle) + '</span>' : '') + '</div>';
   else if (!g) h += setupGA(d.ga && (d.ga.falta || d.ga.error));
   else {
     const t = g.total.actual, tp = g.total.anterior, ev = g.eventos || {};
     const P = [["Entraron a la web", t.sesiones], ["Vieron las fundas", ev.view_item_list || 0], ["Agregaron al carrito", ev.add_to_cart || 0], ["Empezaron a comprar", ev.begin_checkout || 0], ["Compraron", web(v)]].filter((x, i) => i !== 1 || x[1] > 0);
     let peor = -1, caida = -1; P.forEach((x, i) => { if (i && P[i - 1][1] > 0) { const c = 1 - x[1] / P[i - 1][1]; if (c > caida) { caida = c; peor = i; } } });
+    if (g.viejo) { const min = g.guardado ? Math.max(1, Math.round((Date.now() - g.guardado) / 60000)) : null;
+      h += '<div class="note info" style="margin-top:10px">Google Analytics no respondió ahora: estos son los últimos números que sí trajo' + (min ? ' (hace ' + (min < 60 ? min + ' min' : Math.round(min / 60) + ' h') + ')' : '') + '. Tocá <b>↻ Actualizar</b> en un rato.</div>'; }
     h += '<div class="block" style="margin-top:10px"><div class="tb-vis"><b>' + n0(t.sesiones) + '</b> visitas <span class="small">' + delta(t.sesiones, tp.sesiones) + ' ' + compTxt + '</span>'
       + (t.sesiones ? '<span class="tb-conv">Compran <b>' + String(Math.round(pc(web(v), t.sesiones) * 10) / 10).replace(".", ",") + '</b> de cada 100 <span class="muted small">(lo común: 1 a 2)</span></span>' : '') + '</div>'
       + '<p class="muted small" style="margin:8px 0 10px">Dónde abandona la gente: en naranja, el paso donde más se pierde.</p><div class="embudo">'

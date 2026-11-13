@@ -1,7 +1,7 @@
 // Prueba del Tablero: ventas con comparación, transferencias, días de stock y Google Analytics (simulado).
 const {makeEnv}=require('./gas-emu'); const assert=require('assert');
-let llamadasGA=0, gaFalla=false;
-const ga={Properties:{batchRunReports:(req,prop)=>{ llamadasGA++; if(gaFalla) throw new Error('User does not have sufficient permissions for this property');
+let llamadasGA=0, gaFalla=false, gaCupo=0;
+const ga={Properties:{batchRunReports:(req,prop)=>{ llamadasGA++; if(gaCupo){gaCupo--; throw new Error('Exhausted concurrent requests quota. Please send fewer requests concurrently.');} if(gaFalla) throw new Error('User does not have sufficient permissions for this property');
   assert.equal(prop,'properties/471234567');
   const fila=(d,m)=>({dimensionValues:d.map(v=>({value:v})),metricValues:[{value:String(m)}]});
   const soloAR=q=>q.dimensionFilter&&q.dimensionFilter.filter&&q.dimensionFilter.filter.fieldName==='countryId'&&q.dimensionFilter.filter.stringFilter.value==='AR';
@@ -55,4 +55,11 @@ const env2=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs')}); env
 env2.post({accion:'guardarConfig',token:env2.token,valores:{ga_property_id:'1'}}); assert.equal(env2.post({accion:'tablero',token:env2.token,dias:7}).ga.falta,'servicio');
 // sin permiso
 gaFalla=true; t=A('tablero',{dias:30,forzar:1}); assert(/no tiene acceso/.test(t.ga.error)); assert.equal(t.ventas.pedidos,4,'las ventas se ven igual');
+gaFalla=false;
+// Google sin cupo un momento: reintenta y trae los números
+gaCupo=2; t=A('tablero',{dias:30,forzar:1}); assert(t.ga.total&&!t.ga.viejo,'reintenta y anda'); assert(t.ga.guardado);
+// Google sin cupo todo el rato: muestra los últimos números buenos
+gaCupo=99; t=A('tablero',{dias:30,forzar:1}); assert(t.ga.viejo&&t.ga.total,'usa los últimos buenos'); assert(/Exhausted/.test(t.ga.detalle));
+// sin números guardados (otro período): aviso de falla momentánea
+t=A('tablero',{dias:3,forzar:1}); assert.equal(t.ga.error,'temporal'); gaCupo=0;
 console.log('TABLERO OK');
