@@ -313,6 +313,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .big{font-size:2rem;font-weight:800;letter-spacing:-.02em}
 /* ===== celular: menos cosas fijas, menos largo ===== */
 .m-only{display:none}
+.lead-m,.precio-m{display:none}
 .wa-in{display:none}
 #bbCta[hidden]{display:none}
 details.m-det summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
@@ -344,6 +345,16 @@ details.m-det[open] summary::after{content:"−"}
   h1{font-size:clamp(1.9rem,8vw,2.4rem)}
   .lead{font-size:1rem;margin-bottom:16px}
   .illus{padding:10px;border-radius:20px}
+  /* arriba de todo, el producto: foto primero, una línea de texto, precio y botón a la vista */
+  .hero{padding:12px 0 20px}
+  .hero .grid{gap:14px}
+  .hero .grid>.illus{order:-1}
+  .hero .lead,.hero .sello,.hero .ship{display:none}
+  .lead-m{display:block;font-size:1.02rem;margin:8px 0 4px;color:var(--muted)}
+  .precio-m{display:block;font-size:1.05rem;margin:0 0 12px}
+  .hero .price-box{padding:0;background:none;border:0;box-shadow:none}
+  .hero-pagos{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.84rem;margin:0 0 12px}
+  .hero-pagos>span:first-child{display:none}
   .illus svg{max-height:210px;display:block;margin:0 auto}
   .modelo .m-beneficio-desc{display:none}
   .modelo .m-body{padding:16px 16px 18px}
@@ -388,6 +399,8 @@ details.m-det[open] summary::after{content:"−"}
   <div class="wrap grid">
     <div>
       <h1>Salí con tu mascota. El auto queda limpio.</h1>
+      <p class="lead-m">Funda impermeable para el asiento trasero. Hecha en San Luis.</p>
+      <p class="precio-m">Desde <b data-p="desde"></b> · <b>Envío gratis</b></p>
       <p class="lead">Protegé los asientos de tu auto con nuestras fundas <strong>impermeables, acolchadas y resistentes</strong>. Diseñadas para viajar con tu mascota sin preocuparte por el agua, el barro ni los pelos. Disponibles para el asiento trasero completo o para una sola plaza.</p>
       <div class="price-box">
         <div class="hero-pagos"><span>💧 <b>IMPERMEABLE</b> · Protección contra agua, barro y pelos</span><span>💳 Hasta <b><span data-p="ncuotas">3</span> cuotas sin interés</b></span><span>💸 <b><span data-p="desc">10</span>% off</b> por transferencia</span></div>
