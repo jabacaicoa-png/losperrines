@@ -730,7 +730,7 @@ function pintarPrecios(){
   $$('[data-p="cuotastxt"]').forEach(function(e){ e.textContent = 'hasta '+C.cuotas+' cuotas sin interés de '+money(C.precio_tarjeta/Math.max(C.cuotas,1)); });
   $$('[data-p="cuotasmini"]').forEach(function(e){ e.textContent = 'hasta '+C.cuotas+' cuotas sin interés'; });
   var pm=$("#preciosM"); if(pm){ var ord={doble:0,individual:1};   /* celular: el precio de cada funda, sin "desde" (son dos productos distintos) */
-    pm.innerHTML=PRODS().slice().sort(function(a,b){return (ord[a.id]||0)-(ord[b.id]||0);}).map(function(p){ return '<span>'+(p.id==="individual"?"1 plaza":"Asiento completo")+' <b>'+money(p.precio_tarjeta)+'</b></span>'; }).join(""); }
+    pm.innerHTML=PRODS().slice().sort(function(a,b){return (ord[a.id]||0)-(ord[b.id]||0);}).map(function(p){ return '<span>'+esc(p.nombre||(p.id==="individual"?"1 plaza":"2 plazas"))+' <b>'+money(p.precio_tarjeta)+'</b></span>'; }).join(""); }
   $$('[data-p="desde"]').forEach(function(e){ var m=Math.min.apply(null,PRODS().map(function(p){return p.precio_tarjeta;})); e.textContent=money(m); });
   $$('.andreani-slot').forEach(function(e){ e.innerHTML=ANDREANI_LOGO; });
   $$('[data-p="envtach"]').forEach(function(e){ e.innerHTML = C.valor_envio ? '<s>'+money(C.valor_envio)+'</s> ' : ''; });
