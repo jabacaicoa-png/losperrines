@@ -9,7 +9,7 @@
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, $ = L.$, nm = L.nm;
-const CANALES = ["WhatsApp", "Instagram", "Facebook", "Conocido", "Veterinaria", "Feria", "Otro"];
+const CANALES = ["WhatsApp", "Instagram", "Facebook", "Marketplace", "Conocido", "Veterinaria", "Feria", "Otro"];
 const MEDIOS = [["efectivo", "Efectivo"], ["transferencia", "Transferencia"], ["tarjeta", "Tarjeta (Mercado Pago)"], ["otro", "Otro"]];
 let F = null, LOC = null, SUC = null, OPC_LOC = [];
 
