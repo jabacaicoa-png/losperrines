@@ -19,6 +19,7 @@ const PAGO = /^(paid|cpc|ppc|ads?|paidsocial|paid_social|cpm)$/i;
 function fuenteDe(f) {   // "l.instagram.com / referral" → "Instagram (sin anuncio)"; "ig / paid" → "Instagram (anuncio)"
   const s = String(f.fuente || "").toLowerCase(), m = String(f.medio || "").toLowerCase(), pago = PAGO.test(m);
   if (/instagram|^ig$/.test(s)) return pago ? "Instagram (anuncio)" : "Instagram (sin anuncio)";
+  if (s === "marketplace") return "Marketplace y grupos de Facebook";   // link corto losperrines.com.ar/fb
   if (/facebook|^fb$|^an$|^msg$|messenger/.test(s)) return pago ? "Facebook (anuncio)" : "Facebook (sin anuncio)";
   if (s === "comercios" || m === "prospeccion") return "Mensajes a veterinarias y pet shops";   // link corto losperrines.com.ar/pet
   if (/whatsapp|wa\.me/.test(s)) return "WhatsApp";
