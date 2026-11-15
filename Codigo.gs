@@ -87,7 +87,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '15/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '15/11/2026 · 3';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -2066,9 +2066,16 @@ function ghBajar(ruta, crudo) {
   if (r.getResponseCode() !== 200) throw new Error('No pude bajar la versión nueva de GitHub (código ' + r.getResponseCode() + '). Probá de nuevo en un rato.');
   return r.getContentText();
 }
+/* El archivo se baja de raw.githubusercontent.com: la API de GitHub limita a 60 pedidos por hora por dirección,
+   y los servidores de Google son compartidos, así que casi siempre contestaba 403. Si raw falla, prueba con la API. */
+function bajarCodigo() {
+  var r = UrlFetchApp.fetch('https://raw.githubusercontent.com/' + REPO_GH + '/main/Codigo.gs?t=' + Date.now(), {muteHttpExceptions: true, headers: {'Cache-Control': 'no-cache'}});
+  if (r.getResponseCode() === 200) return r.getContentText();
+  return ghBajar('/contents/Codigo.gs?ref=main', true);
+}
 function versionDe(codigo) { var m = String(codigo).match(/var SISTEMA_VERSION = '([^']+)'/); return m ? m[1] : ''; }
 function codigoNuevo() {
-  var c = ghBajar('/contents/Codigo.gs?ref=main', true);
+  var c = bajarCodigo();
   // controles antes de tocar nada: que sea el archivo completo, que se pueda seguir actualizando y que no tenga errores de escritura
   if (c.length < 50000 || c.indexOf('function rutear(') < 0 || c.indexOf('function actualizarSistema(') < 0 || !versionDe(c)) throw new Error('El archivo que bajé de GitHub no parece completo. No cambié nada.');
   try { new Function(c); } catch (e) { if (e instanceof SyntaxError) throw new Error('El archivo nuevo tiene un error (' + e.message + '). No cambié nada.'); }   // si Google no deja usar Function, sigue igual
@@ -2076,11 +2083,11 @@ function codigoNuevo() {
 }
 function sistemaEstado() {
   var o = {version: SISTEMA_VERSION, nueva: '', cambios: '', puede: false, motivo: ''};
-  try {
-    o.nueva = versionDe(ghBajar('/contents/Codigo.gs?ref=main', true));
-    try { var cm = JSON.parse(ghBajar('/commits?path=Codigo.gs&sha=main&per_page=1')); if (cm[0]) { o.cambios = String(cm[0].commit.message).split('\n')[0]; o.fecha = String(cm[0].commit.committer.date); } } catch (e) {}
-  } catch (e) { o.motivo = e.message; return o; }
-  try { gsApi('get', '/deployments'); o.puede = true; } catch (e) { o.motivo = e.message; }
+  var falta = [];
+  try { o.nueva = versionDe(bajarCodigo()); } catch (e) { falta.push(e.message); }
+  try { var cm = JSON.parse(ghBajar('/commits?path=Codigo.gs&sha=main&per_page=1')); if (cm[0]) { o.cambios = String(cm[0].commit.message).split('\n')[0]; o.fecha = String(cm[0].commit.committer.date); } } catch (e) {}   // opcional: si GitHub limita, no muestra el último cambio
+  try { gsApi('get', '/deployments'); } catch (e) { falta.push(e.message); }   // se revisa aunque GitHub falle, para decir todo lo que falta de una vez
+  o.puede = !falta.length; o.motivo = falta.join(' · ');
   return o;
 }
 function actualizarSistema() {
