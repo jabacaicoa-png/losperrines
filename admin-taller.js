@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "15/11 · 3";
+window.PANEL_VERSION = "15/11 · 4";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -106,8 +106,8 @@ function consumos(f, n, out) {
 }
 /* Plata de lo que falta entregar de una tanda: confección a pagar al recibir, lo que entra si se vende todo (mezcla
    tarjeta/transferencia de Precios y rentabilidad), costo total y ganancia. Misma cuenta que Planificar tanda. */
-function plataTanda(t) {
-  initRS(); const pend = pendienteTanda(t), o = {fundas: 0, conf: 0, ingreso: 0, costo: 0, gan: 0};
+function plataTanda(t, cant) {   // cant: {producto: n}; si no se pasa, lo que falta entregar
+  initRS(); const pend = cant || pendienteTanda(t), o = {fundas: 0, conf: 0, ingreso: 0, costo: 0, gan: 0};
   PRODS.forEach(p => { const n = pend[p] || 0; if (!n) return; const f = fichaGuardada(p), r = rent(p);
     o.fundas += n; o.conf += n * confU(f); o.costo += n * costo(f).total; o.ingreso += n * (r.mix * r.recT + (1 - r.mix) * r.px); o.gan += n * r.gMix; });
   return o;
@@ -287,6 +287,8 @@ function vTandas() {
       + (t.estado === "planificada" || (t.estado === "en_confeccion" && !Object.keys(rec).length) ? '<button class="btn ghost sm" data-a="tdEstado" data-id="' + esc(t.id) + '" data-v="cancelada">Cancelar</button>' : "")
       + (t.estado === "en_confeccion" && Object.keys(rec).length ? '<button class="btn ghost sm" data-a="tdEstado" data-id="' + esc(t.id) + '" data-v="recibida">Cerrar sin recibir el resto</button>' : "") + "</div></div>"
       + ((t.estado === "en_confeccion" || t.estado === "planificada") ? (pt => pt.fundas ? '<div class="note" style="margin:10px 0 0"><b>Falta entregar: ' + pt.fundas + ' funda' + (pt.fundas > 1 ? "s" : "") + '</b><br>Confección a pagar al recibir: <b>' + money(pt.conf) + '</b><br>Si las vendés todas, recibís: <b>' + money(pt.ingreso) + '</b><br>Costo total (materiales, confección y envío): ' + money(pt.costo) + '<br>Ganancia: <b>' + money(pt.gan) + '</b></div>' : "")(plataTanda(t)) : "")
+      // lo ya recibido (15/11/2026, lo pidió el dueño): misma cuenta, con las fundas que ya entraron a la tienda
+      + (pr => pr.fundas ? '<div class="note ok" style="margin:10px 0 0"><b>Recibidas: ' + pr.fundas + ' funda' + (pr.fundas > 1 ? "s" : "") + '</b><br>Costo total (materiales, confección y envío): ' + money(pr.costo) + '<br>Si las vendés todas, recibís: <b>' + money(pr.ingreso) + '</b><br>Ganancia: <b>' + money(pr.gan) + '</b> · rentabilidad <b>' + (pr.costo ? Math.round(pr.gan / pr.costo * 100) : 0) + '%</b><br><span class="muted small">Con los precios de hoy y la mezcla tarjeta/transferencia de Precios y rentabilidad. Sin publicidad.</span></div>' : "")(plataTanda(t, rec))
       + '<div class="g2" style="margin-top:10px">' + (t.items || []).map(it => { const r = rec[it.producto] || 0, pc = Math.min(100, r / it.cantidad * 100);
         return '<div><div style="display:flex;justify-content:space-between" class="small"><span>' + esc(nombreP(it.producto)) + "</span><b>" + r + " de " + it.cantidad + ' recibidas</b></div><div style="height:8px;border-radius:6px;background:var(--field);border:1px solid var(--line);overflow:hidden;margin-top:4px"><i style="display:block;height:100%;width:' + pc + '%;background:var(--ok)"></i></div></div>'; }).join("") + "</div></div>";
   }).join("");
