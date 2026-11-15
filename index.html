@@ -256,6 +256,11 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .modelo .m-beneficio-desc{font-size:.9rem;line-height:1.45;margin:8px 0 0;color:var(--muted)}
 .modelo .m-precio strong{display:block;font-size:2rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
 .modelo .m-precio span{display:block;color:var(--ok);font-weight:700;margin-top:6px;font-size:1.04rem}
+.modelo .m-ptr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.modelo .m-ptr strong{color:var(--ok)}
+.modelo .m-ptr .pm-off{display:inline-block;margin:0;color:#1E2418;font-size:.8rem}
+.modelo .m-ptr-l{display:block;color:var(--muted);font-weight:600;font-size:.92rem;margin-top:2px}
+.modelo .m-precio .m-tj{color:var(--ink);font-weight:600;margin-top:10px}
 .modelo .m-transf{margin-top:12px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font-weight:600;background:var(--field)}
 .modelo .m-transf b{color:var(--ok);font-size:1.15rem;white-space:nowrap}
 .price-main{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
@@ -771,9 +776,10 @@ function pintarModelos(){
     return '<article class="modelo">'
       +fotoCard(p,i,ilus)
       +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-beneficio-desc">Funda impermeable para mascotas: protege los asientos del agua, barro y pelos.</p><div class="m-beneficios"><span>💧 IMPERMEABLE</span><span>🛡️ PROTECCIÓN</span><span>ACOLCHADA</span></div><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
-      +'<div class="m-precio"><strong>'+money(p.precio_tarjeta)+'</strong><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
+      /* precio por transferencia primero, con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
+      +'<div class="m-precio"><div class="m-ptr"><strong>'+money(p.precio_transferencia)+'</strong><span class="pm-off">'+d+'% OFF</span></div><small class="m-ptr-l">💚 por transferencia</small>'
+      +'<span class="m-tj">o '+money(p.precio_tarjeta)+' con tarjeta</span><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<p class="m-envio">'+ANDREANI_LOGO+' <b>ENVÍO GRATIS por Andreani a todo el país:</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s>':'')+'</p>'
-      +'<div class="m-transf"><span>💚 Precio por transferencia <small>'+d+'% off</small></span><b>'+money(p.precio_transferencia)+'</b></div>'
       +(sin?'<p class="stockline low">Sin stock por el momento</p>':(p.disponible<=5?'<p class="stockline low">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
       +'<button class="btn btn-main m-cta" style="width:100%;margin-top:16px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'COMPRAR AHORA')+'</button>'
       +'<details class="m-det" id="det-'+p.id+'"'+(DET_ABIERTO[p.id]?' open':'')+'><summary class="m-det-t">Medidas y detalles</summary><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>'
