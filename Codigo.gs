@@ -1701,7 +1701,7 @@ function borrarCupon(codigo) {
 var T = {prov: 'TallerProveedores', ins: 'TallerInsumos', fichas: 'TallerFichas', gastos: 'TallerGastos',
          tandas: 'TallerTandas', stock: 'TallerStock', compras: 'TallerCompras', pagos: 'TallerPagos'};
 var PRODUCTOS_ID = ['doble', 'individual'];
-var MEDIDAS_KEYS = ['an','t1','t2','t3','la','lb','nl','nc','tf','tr','sr','sl','re'];
+var MEDIDAS_KEYS = ['an','t1','t2','t3','la','lb','nl','nc','tf','tr','sr','sl','re','bt','ab','ad'];   // bt: cintas desde el borde · ab/ad: abertura del cinturón (largo y desde el borde), 15/11/2026
 var AUTOS = ['tela', 'correas', 'cinta'];
 
 function asegurarHoja(n) {
@@ -1759,6 +1759,7 @@ function tallerDatos() {
     movimientos: movs.slice(0, 500),
     config: conf, productos: productos(c), stockTienda: stock(), ventas: mix,
     version: 5,
+    medidasKeys: MEDIDAS_KEYS,   // el panel avisa si faltan medidas nuevas (hay que volver a pegar el Codigo.gs)
     viejos: {costos: !!leerDoc('Costos'), insumos: !!leerDoc('Insumos'), pagos: !!leerDoc('Pagos'), corte: !!leerDoc('Corte')}
   };
 }

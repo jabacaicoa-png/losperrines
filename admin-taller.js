@@ -3,16 +3,17 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "14/11 · 2";
+window.PANEL_VERSION = "15/11 · 1";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
 const PRODS = ["doble", "individual"];
 const MED_DEF = {
-  doble: {an: 125, t1: 48, t2: 40, t3: 38, la: 40, lb: 38, nl: 2, nc: 6, tf: 10, tr: 60},
-  individual: {an: 60, t1: 48, t2: 40, t3: 38, la: 40, lb: 38, nl: 2, nc: 4, tf: 10, tr: 60}
+  doble: {an: 125, t1: 48, t2: 40, t3: 38, la: 40, lb: 38, nl: 2, nc: 6, tf: 10, tr: 60, bt: 10, ab: 20},
+  individual: {an: 60, t1: 48, t2: 40, t3: 38, la: 40, lb: 38, nl: 2, nc: 4, tf: 10, tr: 60, bt: 10, ab: 20}
 };
-const MED_LBL = [["an", "Ancho"], ["t3", "Respaldo delantero"], ["t2", "Asiento"], ["t1", "Respaldo trasero"], ["la", "Lateral: largo junto al asiento"], ["lb", "Lateral: alto (hacia la puerta)"], ["nl", "Laterales"], ["nc", "Correas (hebillas)"], ["tf", "Tira fija"], ["tr", "Tira regulable"]];
+const MED_LBL = [["an", "Ancho"], ["t3", "Respaldo delantero"], ["t2", "Asiento"], ["t1", "Respaldo trasero"], ["la", "Lateral: largo junto al asiento"], ["lb", "Lateral: alto (hacia la puerta)"], ["nl", "Laterales"], ["nc", "Correas (hebillas)"], ["tf", "Tira fija"], ["tr", "Tira regulable"], ["bt", "Cintas: distancia desde el borde"], ["ab", "Abertura del cinturón: largo"], ["ad", "Abertura: distancia desde el borde"]];
+const MED_NUEVAS = ["bt", "ab", "ad"];   // 15/11/2026: necesitan el Codigo.gs nuevo para guardarse
 const AUTO_TXT = {tela: "sale del corte", correas: "1 por correa", cinta: "correas × (tira fija + regulable)"};
 const ESTADO = {planificada: ["Planificada", "mute"], en_confeccion: ["En confección", "warn"], recibida: ["Recibida", "ok"], cancelada: ["Cancelada", "mute"]};
 
@@ -326,7 +327,9 @@ function vProductos() {
   const usados = (f.receta || []).map(r => r.insumo);
   let h = cabecera("Productos y recetas", "La ficha de cada funda: medidas de corte, qué lleva y cuánto cuesta. La tela, las hebillas y la cinta se calculan solas a partir de las medidas.") + bannerMigrar()
     + '<div class="filters">' + PRODS.map(x => '<button class="chip" data-a="pdTab" data-p="' + x + '" aria-pressed="' + (x === p) + '">' + esc(nombreP(x)) + "</button>").join("") + "</div>";
-  h += '<div class="cols2"><div class="block"><h3>Medidas de corte</h3><div class="g3">' + MED_LBL.map(k => '<label class="f">' + k[1] + '<input id="md-' + k[0] + '" data-in="pdMed" data-k="' + k[0] + '" inputmode="decimal" value="' + esc(f.medidas && f.medidas[k[0]] != null ? f.medidas[k[0]] : m[k[0]]) + '"></label>').join("") + "</div>"
+  h += '<div class="cols2"><div class="block"><h3>Medidas de corte</h3><div class="g3">' + MED_LBL.map(k => '<label class="f">' + k[1] + '<input id="md-' + k[0] + '" data-in="pdMed" data-k="' + k[0] + '" inputmode="decimal"' + (k[0] === "ad" ? ' placeholder="sola (al 30% del ancho)"' : "") + ' value="' + esc(f.medidas && f.medidas[k[0]] != null ? f.medidas[k[0]] : m[k[0]]) + '"></label>').join("") + "</div>"
+    + '<p class="muted small" style="margin:-4px 0 10px"><b>Cintas</b>: a cuántos cm del borde (izquierdo y derecho) se cosen las tiras de los respaldos. <b>Abertura</b>: el largo del hueco para el cinturón y a cuántos cm del borde empieza (vacío = se calcula sola).</p>'
+    + (!(T().medidasKeys && MED_NUEVAS.every(k => T().medidasKeys.indexOf(k) >= 0)) ? '<div class="note warn" style="margin:0 0 10px">Para que se <b>guarden</b> los cambios en Cintas y Abertura, volvé a pegar el <b>Codigo.gs</b> en Apps Script (Implementar → Nueva versión). Mientras tanto el plano usa 10 cm y 20 cm.</div>' : "")
     + '<p class="muted small" style="margin:-4px 0 10px">Centímetros. El <b>ancho</b> del cuerpo se corta tal cual (los bordes llevan gross: si querés dejarle lugar a Susana para emprolijar, cargalo con algo de más). Al <b>largo</b> se le suma el margen de costura de cada lado de las dos uniones del asiento (4 márgenes). Al lateral se le suma 1 margen en el alto, por la costura con el asiento.</p>'
     + '<div class="note" style="margin-top:0"><b>' + q(telaU(f)) + ' m de tela por funda</b><br><span class="small">Piezas de corte: cuerpo ' + Math.round(A.P.CW) + " × " + Math.round(A.P.CL) + " · " + A.P.nl + " laterales de " + Math.round(A.P.LA) + " × " + Math.round(A.P.LB) + ". Conviene cortar de a " + (A.best ? A.best.n : "—") + " (" + (A.best ? q(A.best.len / 100) : "—") + " m). Un rollo de " + esc(rd.rollo_largo) + " m rinde " + porLargo(A, nd(rd.rollo_largo) * 100) + " fundas.</span></div>"
     + '<div class="acts" style="margin-top:10px"><button class="btn ghost sm" data-a="pdPlano">Ver plano e imprimir ficha</button></div>'
