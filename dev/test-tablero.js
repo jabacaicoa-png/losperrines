@@ -63,3 +63,10 @@ gaCupo=99; t=A('tablero',{dias:30,forzar:1}); assert(t.ga.viejo&&t.ga.total,'usa
 // sin números guardados (otro período): aviso de falla momentánea
 t=A('tablero',{dias:3,forzar:1}); assert.equal(t.ga.error,'temporal'); gaCupo=0;
 console.log('TABLERO OK');
+// Publicidad: ciudades de las visitas que llegaron desde anuncios (utm_medium=paid), según Analytics
+{ let pedido=null; ga.Properties.runReport=(req)=>{ pedido=req; return {rows:[{dimensionValues:[{value:'San Luis'},{value:'San Luis Province'}],metricValues:[{value:'12'}]},{dimensionValues:[{value:'Palermo'},{value:'Buenos Aires'}],metricValues:[{value:'5'}]},{dimensionValues:[{value:'(not set)'},{value:'(not set)'}],metricValues:[{value:'3'}]}]}; };
+  const pub=env.post({accion:'publicidad',token:env.token,dias:7,forzar:1}); assert(pub.ok,pub.error);
+  const exprs=pedido.dimensionFilter.andGroup.expressions; assert(exprs.some(e=>e.filter.fieldName==='countryId')); assert(exprs.some(e=>e.filter.fieldName==='sessionMedium'&&/paid/.test(e.filter.stringFilter.value)));
+  assert(pub.zonas.conGA); const c=pub.zonas.ciudades; assert(c.find(x=>/^san luis$/i.test(x.nombre)&&x.visitas===12)); assert(c.find(x=>x.nombre==='Ciudad de Buenos Aires'&&x.visitas===5),'los barrios de Capital van juntos'); assert(!c.find(x=>/not set/.test(x.nombre)));
+  ga.Properties.runReport=()=>{ throw new Error('Exhausted'); }; const p2=env.post({accion:'publicidad',token:env.token,dias:30,forzar:1}); assert(p2.ok&&p2.zonas.conGA===false,'si Analytics falla, la pantalla anda igual');
+  console.log('PUBLICIDAD POR CIUDAD OK'); }

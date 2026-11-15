@@ -87,7 +87,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '15/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '15/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -1116,6 +1116,7 @@ function filaMeta(x) {
     facturado: accionMeta(x.action_values, TIPOS_META.compras)};
   Object.keys(TIPOS_META).forEach(function (k) { o[k] = accionMeta(x.actions, TIPOS_META[k]); });
   if (x.campaign_id) { o.id = String(x.campaign_id); o.nombre = String(x.campaign_name || ''); }
+  if (x.region != null) o.region = String(x.region);
   return o;
 }
 function periodoMeta(dias) {
@@ -1127,11 +1128,11 @@ function leerMetaAds(c, dias, forzar) {
   var cuenta = String(c.meta_ad_account || '').replace(/\D/g, '');
   if (!token) return {falta: 'token'};
   if (!cuenta) return {falta: 'cuenta'};
-  var per = periodoMeta(dias), clave = 'ads_' + cuenta + '_' + per.since + '_' + per.until, cache = CacheService.getScriptCache(), guardado = cache.get(clave);
+  var per = periodoMeta(dias), clave = 'ads2_' + cuenta + '_' + per.since + '_' + per.until, cache = CacheService.getScriptCache(), guardado = cache.get(clave);
   if (guardado && !forzar) return JSON.parse(guardado);
   var campos = 'spend,impressions,reach,frequency,inline_link_clicks,inline_link_click_ctr,actions,action_values';
-  function pedir(nivel) {
-    var url = META_API + 'act_' + cuenta + '/insights?level=' + nivel + '&limit=100&fields=' + (nivel === 'campaign' ? 'campaign_id,campaign_name,' : '') + campos +
+  function pedir(nivel, extra) {
+    var url = META_API + 'act_' + cuenta + '/insights?level=' + nivel + (extra || '') + '&limit=100&fields=' + (nivel === 'campaign' ? 'campaign_id,campaign_name,' : '') + campos +
       '&time_range=' + encodeURIComponent(JSON.stringify(per)) + '&access_token=' + encodeURIComponent(token);
     var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}), txt = res.getContentText(), j = {};
     try { j = JSON.parse(txt || '{}'); } catch (e) {}
@@ -1147,6 +1148,8 @@ function leerMetaAds(c, dias, forzar) {
     var tot = pedir('account');
     out = {periodo: per, total: tot.length ? filaMeta(tot[0]) : filaMeta({}), campanas: pedir('campaign').map(filaMeta).sort(function (a, b) { return b.inversion - a.inversion; })};
   } catch (e) { return {error: String(e.message || e), periodo: per}; }
+  try { out.regiones = pedir('account', '&breakdowns=region').map(filaMeta).filter(function (x) { return x.inversion > 0 || x.impresiones > 0; }); }   // por provincia (Meta no da ciudades)
+  catch (e) { out.regiones = null; out.regionesError = String(e.message || e).slice(0, 200); }
   cache.put(clave, JSON.stringify(out), 600);
   return out;
 }
@@ -1163,9 +1166,50 @@ function ventasPeriodo(c, dias) {   // para Publicidad: solo las ventas de la we
   o.neto = Math.round(o.neto);
   return o;
 }
+/* Visitas que llegaron desde anuncios (utm_medium=paid), por ciudad, según Google Analytics. Si falla, null (la pantalla sigue andando). */
+function gaAnuncios(c, dias, forzar) {
+  var prop = String(c.ga_property_id || '').replace(/\D/g, '');
+  if (!prop || typeof AnalyticsData === 'undefined') return null;
+  var per = periodoMeta(dias), clave = 'gaad_' + prop + '_' + per.since + '_' + per.until, cache = CacheService.getScriptCache(), g = cache.get(clave);
+  if (g && !forzar) return JSON.parse(g);
+  try {
+    var r = AnalyticsData.Properties.runReport({dateRanges: [{startDate: per.since, endDate: per.until}], dimensions: [{name: 'city'}, {name: 'region'}], metrics: [{name: 'sessions'}],
+      orderBys: [{metric: {metricName: 'sessions'}, desc: true}], limit: 40,
+      dimensionFilter: {andGroup: {expressions: [{filter: {fieldName: 'countryId', stringFilter: {value: 'AR'}}},
+        {filter: {fieldName: 'sessionMedium', stringFilter: {matchType: 'FULL_REGEXP', value: 'paid|cpc|ppc|paid_social|paidsocial', caseSensitive: false}}}]}}}, 'properties/' + prop);
+    var out = ((r && r.rows) || []).map(function (x) { return {nombre: x.dimensionValues[0].value, region: x.dimensionValues[1].value, sesiones: num(x.metricValues[0].value)}; });
+    cache.put(clave, JSON.stringify(out), 1800);
+    return out;
+  } catch (e) { console.error(e); return null; }
+}
+/* Publicidad por zona: lo invertido en Meta por provincia contra las ventas reales de la web en esa provincia y ciudad. */
+function zonasPublicidad(per, regiones, gaCiu) {
+  var prov = {}, ciu = {};
+  function p(k, nombre) { return prov[k] || (prov[k] = {clave: k, nombre: nombre, inversion: 0, impresiones: 0, alcance: 0, clics: 0, ventas: 0, cobrado: 0}); }
+  function c(k, nombre, pk) { return ciu[k] || (ciu[k] = {nombre: nombre, provincia: pk, visitas: 0, ventas: 0, cobrado: 0}); }
+  (regiones || []).forEach(function (x) {
+    var k = /^unknown$|^desconocid/i.test(x.region) || !x.region ? 'sin dato' : claveProv(x.region), a = p(k, x.region || 'Sin dato');
+    a.inversion += x.inversion; a.impresiones += x.impresiones; a.alcance += x.alcance; a.clics += x.clics;
+  });
+  filas(H.pedidos).forEach(function (x) {
+    if (VENDIDO.indexOf(x.estado) < 0 || esFuera(x)) return;
+    var dia = Utilities.formatDate(new Date(tsDe(x.pagado_el) || tsDe(x.fecha)), TZ, 'yyyy-MM-dd');
+    if (dia < per.since || dia > per.until) return;
+    var partes = String(x.prov_loc_cp || '').split(' / '), pk = claveProv(partes[0]), loc = partes[1] || '';
+    if (!pk) return;
+    var a = p(pk, partes[0]); a.ventas++; a.cobrado += num(x.total);
+    if (pk === 'capital federal') loc = 'Ciudad de Buenos Aires';
+    if (loc) { var b = c(pk + '|' + sinAcentos(loc), loc, pk); b.ventas++; b.cobrado += num(x.total); }
+  });
+  (gaCiu || []).forEach(function (x) { if (/not set/.test(x.nombre)) return; var pk = claveProv(x.region, true), nom = pk === 'capital federal' ? 'Ciudad de Buenos Aires' : x.nombre; c(pk + '|' + sinAcentos(nom), nom, pk).visitas += x.sesiones; });
+  return {provincias: Object.keys(prov).map(function (k) { return prov[k]; }).sort(function (a, b) { return (b.inversion - a.inversion) || (b.ventas - a.ventas); }),
+    ciudades: Object.keys(ciu).map(function (k) { return ciu[k]; }).sort(function (a, b) { return (b.ventas - a.ventas) || (b.visitas - a.visitas); }).slice(0, 20),
+    conMeta: !!regiones, conGA: !!gaCiu};
+}
 function publicidad(r) {
-  var c = cfg(), dias = [1, 7, 30].indexOf(num(r.dias)) >= 0 ? num(r.dias) : 7;
-  return {dias: dias, cuenta: String(c.meta_ad_account || ''), meta: leerMetaAds(c, dias, !!r.forzar), ventas: ventasPeriodo(c, dias),
+  var c = cfg(), dias = [1, 7, 30].indexOf(num(r.dias)) >= 0 ? num(r.dias) : 7, meta = leerMetaAds(c, dias, !!r.forzar);
+  return {dias: dias, cuenta: String(c.meta_ad_account || ''), meta: meta, ventas: ventasPeriodo(c, dias),
+    zonas: zonasPublicidad(periodoMeta(dias), meta && meta.regiones, gaAnuncios(c, dias, !!r.forzar)),
     tokenLectura: !!PropertiesService.getScriptProperties().getProperty('META_ADS_TOKEN')};
 }
 function lineaPublicidadResumen(c) {   // para el mail de las 20 h

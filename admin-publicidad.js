@@ -6,7 +6,7 @@
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money;
-const PUB = {dias: 7, datos: {}, cargando: false, forzar: false};
+const PUB = {dias: 7, datos: {}, cargando: false, forzar: false, abiertos: {}};
 
 function cargar() {
   if (PUB.cargando || PUB.datos[PUB.dias]) return;
@@ -76,6 +76,39 @@ function paraCadaAnuncio() {
 }
 document.addEventListener("toggle", e => { if (e.target && e.target.id === "pubPegar") { try { localStorage.setItem("lp_pub_pegar", e.target.open ? "1" : "0"); } catch (x) {} } }, true);
 window.LP_PARAMS_URL = PARAMS_URL;
+/* ---------- por zona (15/11/2026): Meta da provincias; las ciudades salen de Analytics y de las direcciones de envío ---------- */
+const PROV = {"capital federal": "Ciudad de Buenos Aires", "buenos aires": "Prov. de Buenos Aires", "cordoba": "Córdoba", "neuquen": "Neuquén", "rio negro": "Río Negro", "tucuman": "Tucumán", "entre rios": "Entre Ríos", "sin dato": "Sin dato"};
+const ACENTOS = {"cordoba": "Córdoba", "neuquen": "Neuquén", "tucuman": "Tucumán", "rio cuarto": "Río Cuarto", "san martin": "San Martín", "villa maria": "Villa María"};
+const titulo = s => { const t = String(s || "").toLowerCase(); return ACENTOS[t] || t.replace(/(^|\s)\S/g, x => x.toUpperCase()).replace(/ (De|Del|La|Las|Los|Y) /g, m => m.toLowerCase()); };
+const nProv = z => PROV[z.clave] || titulo(z.clave);
+function plegable(id, tit, cuerpo) { return '<details class="tb-pl pub-pl" id="' + id + '"' + (PUB.abiertos[id] ? " open" : "") + '><summary>' + tit + '</summary><div class="tb-pl-in">' + cuerpo + '</div></details>'; }
+document.addEventListener("toggle", e => { const t = e.target; if (t && t.classList && t.classList.contains("pub-pl")) PUB.abiertos[t.id] = t.open; }, true);
+function zonasPub(Z, gan) {
+  if (!Z) return "";
+  const P = Z.provincias || [], conInv = P.filter(z => z.inversion > 0), avisos = [];
+  // qué mirar: provincias donde se gasta sin vender, o donde la venta sale barata
+  conInv.forEach(z => {
+    if (!z.ventas && z.inversion >= 3000 && z.clics >= 15) avisos.push(["warn", "En <b>" + esc(nProv(z)) + "</b> invertiste " + money(z.inversion) + " (" + n0(z.clics) + " visitas a la web) y todavía no hubo ventas. Si sigue así unos días más, sacala del público del anuncio."]);
+    else if (z.ventas && gan > 0 && z.inversion / z.ventas < gan * 0.6) avisos.push(["ok", "En <b>" + esc(nProv(z)) + "</b> cada venta te costó " + money(z.inversion / z.ventas) + " de anuncios: anda bien, conviene darle más presupuesto ahí."]);
+  });
+  let h = '<div class="block"><h3>¿Dónde rinden los anuncios?</h3>';
+  if (!Z.conMeta) h += '<p class="muted small" style="margin:0 0 10px">Meta no mandó el detalle por provincia en este momento. Tocá ↻ Actualizar en un rato.</p>';
+  else if (!conInv.length) h += '<p class="muted small" style="margin:0 0 10px">No hubo anuncios en este período.</p>';
+  if (avisos.length) h += avisos.slice(0, 3).map(a => '<div class="note ' + a[0] + '" style="margin:0 0 8px">' + a[1] + '</div>').join("");
+  const filas = P.filter(z => z.inversion > 0 || z.ventas > 0).slice(0, 15);
+  // 4 columnas para que entre en el celular; las visitas van en chico debajo de la provincia
+  if (filas.length) h += '<div class="tw"><table><thead><tr><th>Provincia</th><th class="n">Invertido</th><th class="n">Ventas</th><th class="n">Por venta</th></tr></thead><tbody>'
+    + filas.map(z => { const cpv = z.ventas && z.inversion ? z.inversion / z.ventas : 0, cls = cpv && gan > 0 ? (cpv < gan ? "pos" : "neg") : "";
+      return '<tr><td>' + esc(nProv(z)) + (z.clics ? '<br><span class="muted small">' + n0(z.clics) + ' visitas · ' + money(z.inversion / z.clics) + ' c/u</span>' : "") + '</td><td class="n">' + (z.inversion ? money(z.inversion) : '<span class="muted small">—</span>') + '</td><td class="n"><b>' + z.ventas + '</b></td><td class="n' + (cls ? " " + cls : "") + '">' + (cpv ? money(cpv) : '<span class="muted small">—</span>') + '</td></tr>'; }).join("")
+    + '</tbody></table></div><p class="muted small" style="margin:6px 0 10px"><b>Por venta</b>: lo invertido en esa provincia dividido las ventas de ahí. En verde, si es menos de lo que te deja una funda.</p>';
+  const C = (Z.ciudades || []).filter(x => x.visitas || x.ventas);
+  h += plegable("pubCiu", "Ciudades (" + C.length + ")", !C.length ? '<p class="muted small" style="margin:0">' + (Z.conGA ? "Todavía no hay visitas desde anuncios ni ventas en este período." : "Para ver las ciudades hace falta Google Analytics conectado (Tablero).") + '</p>'
+    : '<div class="tw"><table><thead><tr><th>Ciudad</th><th class="n">Visitas de anuncios</th><th class="n">Ventas</th></tr></thead><tbody>'
+      + C.map(x => { const pr = PROV[x.provincia] || titulo(x.provincia); return '<tr><td>' + esc(titulo(x.nombre)) + (pr.toLowerCase() !== titulo(x.nombre).toLowerCase() ? '<br><span class="muted small">' + esc(pr) + '</span>' : "") + '</td><td class="n">' + (x.visitas ? n0(x.visitas) : '<span class="muted small">—</span>') + '</td><td class="n"><b>' + x.ventas + '</b></td></tr>'; }).join("") + '</tbody></table></div>');
+  h += plegable("pubZonasAyuda", "¿De dónde sale cada número?", '<p class="muted small" style="margin:0"><b>Invertido y visitas a la web</b>: los da Meta, por provincia (Meta no informa ciudades). <b>Ventas</b>: las de la web en ese período, según la dirección de envío; incluyen también las que llegaron sin anuncio, así que en las provincias donde ya te conocen el costo por venta se ve más barato. <b>Ciudades</b>: las visitas que entraron desde un anuncio (con <code>utm_medium=paid</code> en el link) según Google Analytics, que ubica a la gente en forma aproximada; y las ventas, por la dirección de envío. Las ventas cargadas por fuera de la web no se cuentan.</p>');
+  return h + '</div>';
+}
+
 function vPublicidad() {
   cargar();
   const d = PUB.datos[PUB.dias], T = window.TALLER;
@@ -115,6 +148,7 @@ function vPublicidad() {
       + C.map(c => { const vv = veredicto(c, gan), tips = consejos(c); return '<tr><td><b>' + esc(c.nombre) + '</b> <a class="small" href="' + esc(urlMeta(c.id)) + '" target="_blank" rel="noopener" title="Editar o pausar en Meta">Abrir en Meta ↗</a>' + (tips.length ? '<br><span class="small" style="color:var(--warn)">' + tips.map(esc).join("<br>") + '</span>' : "") + '</td><td class="n">' + money(c.inversion) + '</td><td class="n">' + n0(c.compras) + '</td><td class="n">' + (c.compras ? money(c.inversion / c.compras) : "—") + '</td><td class="n">' + String(c.ctr).replace(".", ",") + '%</td><td class="n">' + String(c.frecuencia).replace(".", ",") + '</td><td><span class="pill ' + vv[0] + '">' + esc(vv[1]) + '</span></td></tr>'; }).join("")
       + '</tbody></table></div><p class="muted small" style="margin:10px 0 0"><b>Toques</b>: de cada 100 que vieron el anuncio, cuántos lo tocaron (menos de 1% = no engancha). <b>Veces que la vio cada uno</b>: más de 3,5 = la gente se cansa, cambiá la imagen.</p>')
       + '</div>';
+    h += zonasPub(d.zonas, gan);
   }
   h += '<p class="muted small" style="margin:14px 0 0">Período: ' + esc(m.periodo ? m.periodo.since.split("-").reverse().join("/") + " al " + m.periodo.until.split("-").reverse().join("/") : "") + '. Los datos de Meta se actualizan cada 10 minutos; las ventas, al momento.</p>';
   return h;

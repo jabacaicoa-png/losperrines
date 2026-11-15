@@ -47,6 +47,7 @@ let insights=null; // null = Meta rechaza por permisos
 const env2=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs'),fetch:(url)=>{
   if(!/graph\.facebook\.com/.test(url)) return null;
   if(/\/insights/.test(url)){ if(!insights) return {getResponseCode:()=>400,getContentText:()=>'{"error":{"message":"(#200) Missing ads_read permission"}}'};
+    if(/breakdowns=region/.test(url)) return {getResponseCode:()=>200,getContentText:()=>JSON.stringify({data:insights.regiones||[]})};
     const camp=/level=campaign/.test(url); return {getResponseCode:()=>200,getContentText:()=>JSON.stringify({data:camp?insights.campanas:[insights.total]})}; }
   return {getResponseCode:()=>200,getContentText:()=>'{}'}; }});
 env2.ctx.instalar(); require('./seed-store')(env2);
@@ -67,4 +68,13 @@ assert.match(env2.fetches.filter(f=>/insights/.test(f.url)).at(-1).url,/act_1181
 // ventas reales del período (por fecha de pago)
 const pv=env2.post({accion:'pedido',nombre:'Ana',apellido:'Test',dni:'30111222',email:'a@ej.com',cel_cod:'266',cel_num:'4123456',entrega:'domicilio',calle:'X',numero:'1',prov_loc_cp:'San Luis 5700',pago:'transferencia',items:[{producto:'doble',cantidad:2}]}).id;
 A2('pagado',{id:pv}); pub=A2('publicidad',{dias:1}); assert.equal(pub.ventas.pedidos,1); assert.equal(pub.ventas.unidades.doble,2); assert.equal(pub.ventas.neto,85500*2);
+// por zona: Meta por provincia + ventas reales de la web por provincia y ciudad
+insights.regiones=[{region:'San Luis',spend:'8000',impressions:'4000',inline_link_clicks:'40'},{region:'Córdoba',spend:'5000',impressions:'3000',inline_link_clicks:'30'},{region:'Ciudad Autónoma de Buenos Aires',spend:'0',impressions:'0'}];
+const pz=env2.post({accion:'pedido',nombre:'Ana',apellido:'Test',dni:'30111222',email:'b@ej.com',cel_cod:'266',cel_num:'4123456',entrega:'domicilio',calle:'X',numero:'1',prov_loc_cp:'SAN LUIS / JUANA KOSLAY / 5701',pago:'transferencia',items:[{producto:'doble',cantidad:1}]}).id;
+A2('pagado',{id:pz}); pub=A2('publicidad',{dias:7,forzar:1});
+const Z=pub.zonas; assert(Z.conMeta); assert.equal(Z.conGA,false);
+const sl=Z.provincias.find(z=>z.clave==='san luis'); assert.equal(sl.inversion,8000); assert.equal(sl.clics,40); assert.equal(sl.ventas,1,'une la venta de la planilla con la provincia de Meta');
+assert.equal(Z.provincias[0].clave,'san luis','ordenadas por inversión'); assert(Z.provincias.find(z=>z.clave==='cordoba'&&z.ventas===0));
+assert(!Z.provincias.find(z=>z.clave==='capital federal'),'sin gasto ni ventas no aparece');
+assert(Z.ciudades.find(c=>c.nombre==='JUANA KOSLAY'&&c.ventas===1));
 console.log('PUBLICIDAD OK');
