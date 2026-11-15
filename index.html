@@ -384,6 +384,8 @@ details.m-det[open] summary::after{content:"−"}
   .hero{padding:24px 0 20px}
   .hero .grid{gap:22px}
   h1{font-size:clamp(1.9rem,8vw,2.4rem)}
+  .h1-hero{max-width:none;font-size:min(8.4vw,2.6rem);margin-bottom:12px}   /* celular: dos renglones que llenan el ancho (pedido del dueño, 15/11/2026) */
+  .h1-hero span{display:block;white-space:nowrap}
   .lead{font-size:1rem;margin-bottom:16px}
   .illus{padding:10px;border-radius:20px}
   /* arriba de todo, el producto: foto primero, una línea de texto, precio y botón a la vista */
@@ -438,7 +440,7 @@ details.m-det[open] summary::after{content:"−"}
 <section class="hero">
   <div class="wrap grid">
     <div>
-      <h1>Salí con tu mascota. El auto queda limpio.</h1>
+      <h1 class="h1-hero"><span>Salí con tu mascota.</span> <span>El auto queda limpio.</span></h1>
       <p class="lead-m">Funda impermeable para el asiento trasero. Hecha en San Luis.</p>
       <p class="precio-m" id="preciosM"></p>
       <p class="lead">Protegé los asientos de tu auto con nuestras fundas <strong>impermeables, acolchadas y resistentes</strong>. Diseñadas para viajar con tu mascota sin preocuparte por el agua, el barro ni los pelos. Disponibles para el asiento trasero completo o para una sola plaza.</p>
