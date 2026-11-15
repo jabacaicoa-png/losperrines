@@ -87,7 +87,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '15/11/2026 · 3';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '15/11/2026 · 4';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -2057,7 +2057,8 @@ function gsApi(metodo, ruta, cuerpo) {
   var j = {}; try { j = JSON.parse(t || '{}'); } catch (e) {}
   if (c >= 200 && c < 300) return j;
   var msg = (j.error && j.error.message) || t || ('código ' + c);
-  if (/has not been used|is disabled|SERVICE_DISABLED|User has not enabled the Apps Script API/i.test(msg)) throw new Error('Falta activar la "API de Google Apps Script" en script.google.com/home/usersettings (una sola vez, se puede desde el celular).');
+  if (/User has not enabled the Apps Script API/i.test(msg)) throw new Error('Falta activar la "API de Google Apps Script" en script.google.com/home/usersettings (una sola vez, se puede desde el celular).');
+  if (/has not been used|is disabled|SERVICE_DISABLED/i.test(msg)) throw new Error('El Apps Script necesita su propio proyecto de Google Cloud con la "Apps Script API" habilitada. Lo que dijo Google: ' + msg.slice(0, 200));
   if (c === 401 || c === 403 || /insufficient|scope/i.test(msg)) throw new Error('Falta el permiso para actualizarse (hay que agregarlo una vez desde la compu, en appsscript.json). Detalle: ' + msg);
   throw new Error('Google respondió: ' + msg);
 }
