@@ -802,7 +802,7 @@ function pintarPrecios(){
       return '<a class="pm-card" href="#prod-'+esc(p.id)+'"><span><span class="pm-nom">'+esc(p.nombre||(p.id==="individual"?"1 plaza":"2 plazas"))+'</span>'
         +'<span class="pm-tr"><b>'+money(p.precio_transferencia)+'</b><small>por transferencia</small><span class="pm-off">'+d+'% OFF</span></span>'
         +'<span class="pm-tj">o '+money(p.precio_tarjeta)+' con tarjeta'+(n>1?'<br>💳 '+n+' cuotas sin interés de '+money(p.precio_tarjeta/n):'')+'</span></span><span class="pm-ver">Ver ›</span></a>'; }).join("")
-      +'<span class="pm-env">🚚 <b>ENVÍO GRATIS</b> a todo el país'+(C.valor_envio?' · <span style="white-space:nowrap">te ahorrás '+money(C.valor_envio)+'</span>':'')+(PRODS().some(function(p){return p.disponible>0;})?'<br><b>'+llegaTxt()+'</b> por Andreani':'')+'</span>'; }
+      +'<span class="pm-env">🚚 <b>ENVÍO GRATIS</b>'+(C.valor_envio?' · <span style="white-space:nowrap">te ahorrás '+money(C.valor_envio)+'</span>':' a todo el país')+(PRODS().some(function(p){return p.disponible>0;})?'<br><b>'+llegaTxt()+'</b> por Andreani':'')+'</span>'; }
   $$('[data-p="desde"]').forEach(function(e){ var m=Math.min.apply(null,PRODS().map(function(p){return p.precio_tarjeta;})); e.textContent=money(m); });
   $$('.andreani-slot').forEach(function(e){ e.innerHTML=ANDREANI_LOGO; });
   $$('[data-p="envtach"]').forEach(function(e){ e.innerHTML = C.valor_envio ? '<s>'+money(C.valor_envio)+'</s> ' : ''; });
