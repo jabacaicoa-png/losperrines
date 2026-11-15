@@ -228,6 +228,22 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .hcard.dest h3,.hcard.dest p,.hcard.dest a{color:#F2F3EC}
 .hcard.dest a{font-weight:700}
 .cmp.ours ul{margin:0}
+.fc-t{margin:26px 0 10px;font-size:1.2rem}
+.fc{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card);font-size:.88rem;padding:0}
+.fc-r{display:grid;grid-template-columns:30% 30% 40%}
+.fc b,#canasto .fc b{display:inline;text-transform:none;font-size:inherit;letter-spacing:normal;font-weight:800;margin:0;padding:0}
+.fc-r>span{padding:9px 10px;border-top:1px solid var(--line);line-height:1.35}
+.fc-r>span:first-child{font-weight:700;color:var(--muted)}
+.fc-r>span:nth-child(2){color:var(--muted)}
+.fc-r>span:last-child{background:color-mix(in srgb, var(--ok) 9%, transparent)}
+.fc-r>span:last-child b{color:var(--ok)}
+.fc-h>span{border-top:0;font-weight:800;color:var(--ink)!important;font-size:.85rem}
+.fc-h>span:last-child{background:var(--olive);color:var(--on-olive)!important}
+/* confianza junto al botón de compra y consulta por foto del asiento (15/11/2026) */
+.modelo .m-conf{display:flex;flex-wrap:wrap;gap:4px 12px;margin:12px 0 0;font-size:.86rem;font-weight:600;color:var(--muted)}
+.modelo .m-conf a{color:inherit}
+.modelo .m-auto{margin:10px 0 0;font-size:.9rem;text-align:center}
+.modelo .m-auto a{color:var(--ok);font-weight:700}
 #modelos{padding:8px 0 40px}
 .modelos-grid{display:grid;gap:14px;grid-template-columns:1fr}
 @media(min-width:720px){.modelos-grid{grid-template-columns:1fr 1fr}}
@@ -473,7 +489,6 @@ details.m-det[open] summary::after{content:"−"}
         <!-- pelota -->
         <circle cx="150" cy="255" r="18" fill="#D9E15A"/><path d="M134 248 Q150 258 166 248 M134 262 Q150 252 166 262" stroke="#F2F3EC" stroke-width="2" fill="none"/>
       </svg>
-      <figcaption>Ilustración. Muy pronto, fotos reales del producto.</figcaption>
     </figure>
   </div>
 </section>
@@ -508,6 +523,16 @@ details.m-det[open] summary::after{content:"−"}
         <li>Para que tu mascota suba, abrís los cierres de un lado y el lateral baja</li>
         <li>Acolchado, impermeable y terminado de los dos lados</li>
       </ul>
+    </div>
+    <!-- comparación con la funda hamaca común que se vende en Mercado Libre (pedido del dueño, 15/11/2026): explica por qué cuesta más -->
+    <h3 class="fc-t">¿Por qué no una funda común?</h3>
+    <div class="fc" role="table" aria-label="Funda hamaca común comparada con Los Perrines">
+      <div class="fc-r fc-h" role="row"><span role="columnheader"></span><span role="columnheader">Funda hamaca común</span><span role="columnheader">Los Perrines</span></div>
+      <div class="fc-r" role="row"><span role="rowheader">Forma</span><span role="cell">Una lona abierta a los costados</span><span role="cell"><b>Canasto cerrado</b> por los cuatro lados</span></div>
+      <div class="fc-r" role="row"><span role="rowheader">Puertas</span><span role="cell">Quedan expuestas a uñas y barro</span><span role="cell"><b>Laterales con cierre</b> que las cubren</span></div>
+      <div class="fc-r" role="row"><span role="rowheader">Comodidad</span><span role="cell">Tela fina</span><span role="cell"><b>Acolchada</b> y terminada de los dos lados</span></div>
+      <div class="fc-r" role="row"><span role="rowheader">Origen</span><span role="cell">Importada</span><span role="cell"><b>Hecha en San Luis</b></span></div>
+      <div class="fc-r" role="row"><span role="rowheader">Garantía</span><span role="cell">Según el vendedor</span><span role="cell"><b>De fábrica</b>: la reparamos o te mandamos una nueva</span></div>
     </div>
   </div>
 </section>
@@ -787,8 +812,10 @@ function pintarModelos(){
       +'<div class="m-precio"><div class="m-ptr"><strong>'+money(p.precio_transferencia)+'</strong><span class="pm-off">'+d+'% OFF</span></div><small class="m-ptr-l">💚 por transferencia</small>'
       +'<span class="m-tj">o '+money(p.precio_tarjeta)+' con tarjeta</span><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<p class="m-envio">'+ANDREANI_LOGO+'<span><b>🚚 ENVÍO GRATIS</b><small>A todo el país por Andreani'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):'')+'</small></span></p>'
+      +'<p class="m-conf"><span>🛡️ <a href="#garantia">Garantía de fábrica</a></span><span>📦 Seguimiento de Andreani</span><span>↩️ 10 días para arrepentirte</span></p>'
       +(sin?'<p class="stockline low">Sin stock por el momento</p>':(p.disponible<=5?'<p class="stockline low">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
       +'<button class="btn btn-main m-cta" style="width:100%;margin-top:16px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'COMPRAR AHORA')+'</button>'
+      +(C.whatsapp&&C.whatsapp.length>6?'<p class="m-auto">¿Dudás si entra en tu auto? <a target="_blank" rel="noopener" href="https://wa.me/'+C.whatsapp+'?text='+encodeURIComponent("¡Hola! Quiero saber si el "+(p.nombre||"canasto")+" entra en mi auto. Te mando una foto del asiento trasero.")+'">Mandanos una foto del asiento por WhatsApp</a></p>':'')
       +'<details class="m-det" id="det-'+p.id+'"'+(DET_ABIERTO[p.id]?' open':'')+'><summary class="m-det-t">Medidas y detalles</summary><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>'
       +'</div></article>';
   }).join("");
@@ -1133,5 +1160,7 @@ document.addEventListener("change",function(e){ if(e.target.name==="entrega") en
 document.addEventListener("input",function(e){ if(e.target.name==="cp") buscarCP(e.target.value); if(e.target.closest&&e.target.closest("#f")&&["email","nombre","apellido","cel_cod","cel_num"].indexOf(e.target.name)>=0) guardarCarritoLuego(); });
 })();
 </script>
+<script>/* el link "Garantía de fábrica" de cada producto abre esa pregunta frecuente */
+document.addEventListener("click",function(e){ var a=e.target.closest&&e.target.closest('a[href="#garantia"]'); if(a){ var d=document.getElementById("garantia"); if(d) d.open=true; } });</script>
 </body>
 </html>
