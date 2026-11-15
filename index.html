@@ -714,13 +714,14 @@ function money(v){return fmt.format(Math.round(v));}
 /* "Cuándo llega" (pedido del dueño, 15/11/2026): 2 días hábiles contando desde el día siguiente a la compra,
    con la hora de Argentina (no la del aparato). Lunes → miércoles, jueves → lunes, viernes a domingo → martes.
    Se saltean sábados, domingos y feriados nacionales (Andreani no entrega). Agregar los feriados de cada año acá. */
-var DIAS_ENTREGA=2;
+var DIAS_ENTREGA=2, HORA_CORTE=17;   /* hasta las 16:59 cuenta el día; desde las 17:00, un día más (pedido del dueño) */
 var FERIADOS=["2026-11-23","2026-12-07","2026-12-08","2026-12-25",
   "2027-01-01","2027-02-08","2027-02-09","2027-03-24","2027-03-26","2027-04-02","2027-05-25","2027-07-09","2027-12-08","2027-12-25"];
 var DIAS_SEM=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 function llegaFecha(hoy){
   var d=hoy?new Date(hoy.getTime()):new Date(Date.now()-3*3600e3);   /* fecha de Argentina (UTC-3) leída con getUTC* */
-  d=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
+  var tarde=d.getUTCHours()>=HORA_CORTE;   /* desde las 17 h cuenta como si comprara mañana */
+  d=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()+(tarde?1:0)));
   var n=0; while(n<DIAS_ENTREGA){ d.setUTCDate(d.getUTCDate()+1); var w=d.getUTCDay(); if(w!==0&&w!==6&&FERIADOS.indexOf(d.toISOString().slice(0,10))<0) n++; }
   return d;
 }
