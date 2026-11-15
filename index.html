@@ -240,8 +240,10 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .modelo .m-body{padding:18px 20px 20px;display:flex;flex-direction:column;flex:1}
 .modelo .m-transf{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .modelo .m-transf small{color:var(--ok);font-weight:700;font-size:.9rem}
-.modelo .m-envio{margin:14px 0 0;font-size:1.02rem;line-height:1.4}
-.modelo .m-envio s{color:var(--muted);margin-left:4px}
+/* envío gratis destacado: recuadro amarillo con el ahorro (pedido del dueño, 15/11/2026: la gente quiere evitar pagar envío) */
+.modelo .m-envio{margin:14px 0 0;display:flex;align-items:center;gap:10px;background:var(--ball);color:#1E2418;border-radius:14px;padding:10px 14px;line-height:1.25}
+.modelo .m-envio b{display:block;font-size:1.15rem;font-weight:800;letter-spacing:.01em}
+.modelo .m-envio small{display:block;font-size:.88rem;font-weight:600}
 .modelo .m-det{margin-top:10px;font-size:.93rem}
 .modelo .m-det-t{margin:0;font-weight:700;color:var(--ink)}
 .modelo .m-det ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
@@ -328,7 +330,8 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .pm-tr small{font-size:.82rem;color:var(--muted)}
 .pm-off{background:var(--ball);color:#1E2418;font-weight:800;font-size:.72rem;border-radius:999px;padding:3px 8px;letter-spacing:.02em}
 .pm-tj{display:block;font-size:.86rem;color:var(--muted);margin-top:2px}
-.pm-env{font-size:.92rem;font-weight:700;color:var(--ok)}
+.pm-env{display:block;background:var(--ball);color:#1E2418;border-radius:12px;padding:8px 12px;font-size:.92rem;font-weight:600;line-height:1.3}
+.pm-env b{font-weight:800;font-size:1.02rem}
 .hero .hero-pagos{display:none}
 @media(min-width:900px){.precio-m{gap:10px;margin:18px 0 8px;max-width:520px}.pm-card{padding:12px 16px}.pm-tr b{font-size:1.7rem}.pm-env{display:none}}   /* compu: una funda debajo de la otra; el envío gratis ya está en el recuadro de abajo */
 .wa-in{display:none}
@@ -751,7 +754,7 @@ function pintarPrecios(){
       return '<span class="pm-card"><span class="pm-nom">'+esc(p.nombre||(p.id==="individual"?"1 plaza":"2 plazas"))+'</span>'
         +'<span class="pm-tr"><b>'+money(p.precio_transferencia)+'</b><small>por transferencia</small><span class="pm-off">'+d+'% OFF</span></span>'
         +'<span class="pm-tj">o '+money(p.precio_tarjeta)+' con tarjeta'+(n>1?'<br>💳 '+n+' cuotas sin interés de '+money(p.precio_tarjeta/n):'')+'</span></span>'; }).join("")
-      +'<span class="pm-env">🚚 Envío gratis a todo el país</span>'; }
+      +'<span class="pm-env">🚚 <b>ENVÍO GRATIS</b> a todo el país'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):'')+'</span>'; }
   $$('[data-p="desde"]').forEach(function(e){ var m=Math.min.apply(null,PRODS().map(function(p){return p.precio_tarjeta;})); e.textContent=money(m); });
   $$('.andreani-slot').forEach(function(e){ e.innerHTML=ANDREANI_LOGO; });
   $$('[data-p="envtach"]').forEach(function(e){ e.innerHTML = C.valor_envio ? '<s>'+money(C.valor_envio)+'</s> ' : ''; });
@@ -779,7 +782,7 @@ function pintarModelos(){
       /* precio por transferencia primero, con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
       +'<div class="m-precio"><div class="m-ptr"><strong>'+money(p.precio_transferencia)+'</strong><span class="pm-off">'+d+'% OFF</span></div><small class="m-ptr-l">💚 por transferencia</small>'
       +'<span class="m-tj">o '+money(p.precio_tarjeta)+' con tarjeta</span><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
-      +'<p class="m-envio">'+ANDREANI_LOGO+' <b>ENVÍO GRATIS por Andreani a todo el país:</b> '+(C.valor_envio?'<s>'+money(C.valor_envio)+'</s>':'')+'</p>'
+      +'<p class="m-envio">'+ANDREANI_LOGO+'<span><b>🚚 ENVÍO GRATIS</b><small>A todo el país por Andreani'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):'')+'</small></span></p>'
       +(sin?'<p class="stockline low">Sin stock por el momento</p>':(p.disponible<=5?'<p class="stockline low">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
       +'<button class="btn btn-main m-cta" style="width:100%;margin-top:16px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'COMPRAR AHORA')+'</button>'
       +'<details class="m-det" id="det-'+p.id+'"'+(DET_ABIERTO[p.id]?' open':'')+'><summary class="m-det-t">Medidas y detalles</summary><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>'
