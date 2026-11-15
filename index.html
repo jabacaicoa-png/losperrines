@@ -313,7 +313,19 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .big{font-size:2rem;font-weight:800;letter-spacing:-.02em}
 /* ===== celular: menos cosas fijas, menos largo ===== */
 .m-only{display:none}
-.lead-m,.precio-m{display:none}
+.lead-m{display:none}
+.precio-m{display:grid;gap:8px;margin:4px 0 12px}
+/* precio por transferencia primero, grande y con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
+.pm-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 12px}
+.pm-nom{display:block;font-size:.9rem;font-weight:700;color:var(--ink)}
+.pm-tr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;line-height:1.2}
+.pm-tr b{font-size:1.5rem;font-weight:800;color:var(--ok)}
+.pm-tr small{font-size:.82rem;color:var(--muted)}
+.pm-off{background:var(--ball);color:#1E2418;font-weight:800;font-size:.72rem;border-radius:999px;padding:3px 8px;letter-spacing:.02em}
+.pm-tj{display:block;font-size:.86rem;color:var(--muted);margin-top:2px}
+.pm-env{font-size:.92rem;font-weight:700;color:var(--ok)}
+.hero .hero-pagos{display:none}
+@media(min-width:900px){.precio-m{gap:10px;margin:18px 0 8px;max-width:520px}.pm-card{padding:12px 16px}.pm-tr b{font-size:1.7rem}.pm-env{display:none}}   /* compu: una funda debajo de la otra; el envío gratis ya está en el recuadro de abajo */
 .wa-in{display:none}
 #bbCta[hidden]{display:none}
 details.m-det summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
@@ -351,17 +363,6 @@ details.m-det[open] summary::after{content:"−"}
   .hero .grid>.illus{order:-1}
   .hero .lead,.hero .sello,.hero .ship{display:none}
   .lead-m{display:block;font-size:1.02rem;margin:8px 0 4px;color:var(--muted)}
-  .precio-m{display:grid;gap:8px;margin:4px 0 12px}
-  /* precio por transferencia primero, grande y con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
-  .pm-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 12px}
-  .pm-nom{display:block;font-size:.9rem;font-weight:700;color:var(--ink)}
-  .pm-tr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;line-height:1.2}
-  .pm-tr b{font-size:1.5rem;font-weight:800;color:var(--ok)}
-  .pm-tr small{font-size:.82rem;color:var(--muted)}
-  .pm-off{background:var(--ball);color:#1E2418;font-weight:800;font-size:.72rem;border-radius:999px;padding:3px 8px;letter-spacing:.02em}
-  .pm-tj{display:block;font-size:.86rem;color:var(--muted);margin-top:2px}
-  .pm-env{font-size:.92rem;font-weight:700;color:var(--ok)}
-  .hero .hero-pagos{display:none}
   .hero .price-box{padding:0;background:none;border:0;box-shadow:none}
   .hero-pagos{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.84rem;margin:0 0 12px}
   .hero-pagos>span:first-child{display:none}
