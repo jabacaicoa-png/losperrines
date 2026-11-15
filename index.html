@@ -351,6 +351,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .pm-tr small{font-size:.82rem;color:var(--muted)}
 .pm-off{background:var(--ball);color:#1E2418;font-weight:800;font-size:.72rem;border-radius:999px;padding:3px 8px;letter-spacing:.02em}
 .pm-tj{display:block;font-size:.86rem;color:var(--muted);margin-top:2px}
+.pm-cuo{display:block}.pm-sep{display:none}.pm-ver-i{display:none}.pm-llega{display:block}
 .pm-env{display:block;background:var(--ball);color:#1E2418;border-radius:12px;padding:8px 12px;font-size:.92rem;font-weight:600;line-height:1.3}
 .pm-env b{font-weight:800;font-size:1.02rem}
 .hero .hero-pagos{display:none}
@@ -384,7 +385,7 @@ details.m-det[open] summary::after{content:"−"}
   .hero{padding:24px 0 20px}
   .hero .grid{gap:22px}
   h1{font-size:clamp(1.9rem,8vw,2.4rem)}
-  .h1-hero{max-width:none;font-size:min(8.4vw,2.6rem);margin-bottom:12px}   /* celular: dos renglones que llenan el ancho (pedido del dueño, 15/11/2026) */
+  .h1-hero{max-width:none;font-size:min(7.6vw,2.4rem);margin-bottom:4px}   /* celular: dos renglones que llenan el ancho (pedido del dueño, 15/11/2026) */
   .h1-hero span{display:block;white-space:nowrap}
   .lead{font-size:1rem;margin-bottom:16px}
   .illus{padding:10px;border-radius:20px}
@@ -393,7 +394,33 @@ details.m-det[open] summary::after{content:"−"}
   .hero .grid{gap:14px}
   .hero .grid>.illus{order:-1}
   .hero .lead,.hero .sello,.hero .ship{display:none}
-  .lead-m{display:block;font-size:1.02rem;margin:8px 0 4px;color:var(--muted)}
+  .lead-m{display:block;font-size:.92rem;margin:2px 0 8px;color:var(--muted)}
+  /* primera pantalla compacta (15/11/2026, pedido del dueño): foto, título, precios y envío entran sin bajar */
+  .hero{padding-top:8px}
+  .hero .grid{gap:12px}
+  .illus.con-foto.foto-alta{aspect-ratio:3/2}   /* foto vertical o cuadrada: llena el ancho, más baja (se recorta arriba y abajo) */
+  .illus.foto-alta .foto{object-fit:cover;object-position:50% 22%}
+  .illus.foto-alta .foto-fondo{display:none}
+  .precio-m{gap:6px;margin:0 0 8px}
+  .pm-card{padding:7px 10px 7px 12px;gap:6px}
+  .pm-nom{font-size:.85rem}
+  .pm-tr{gap:6px;flex-wrap:nowrap}
+  .pm-tr b{font-size:1.35rem}
+  .pm-tr small{font-size:.76rem;white-space:nowrap}
+  .pm-tr .pm-off{font-size:.66rem;padding:2px 6px;white-space:nowrap}
+  .pm-tj{font-size:.78rem;margin-top:1px;white-space:nowrap}
+  .pm-cuo{display:inline}.pm-sep{display:inline}.pm-larg{display:none}
+  .pm-ver{width:32px;height:32px;padding:0;display:grid;place-items:center}
+  .pm-ver-t{display:none}
+  .pm-ver-i{display:block;width:18px;height:18px}
+  .pm-env{padding:6px 12px;font-size:.84rem;line-height:1.25}
+  .pm-env b{font-size:.95rem}
+  .pm-llega{font-size:.8rem;white-space:nowrap;letter-spacing:-.01em}
+  .pm-llega b{font-size:inherit}
+}
+@media(max-width:349px){   /* celulares muy angostos: que corte renglón antes que salirse */
+  .pm-tr{flex-wrap:wrap}
+  .pm-tj,.pm-llega{white-space:normal}
   .hero .price-box{padding:0;background:none;border:0;box-shadow:none}
   .hero-pagos{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.84rem;margin:0 0 12px}
   .hero-pagos>span:first-child{display:none}
@@ -727,8 +754,8 @@ function llegaFecha(hoy,dias){
   var n=0, tope=dias||DIAS_ENTREGA; while(n<tope){ d.setUTCDate(d.getUTCDate()+1); var w=d.getUTCDay(); if(w!==0&&w!==6&&FERIADOS.indexOf(d.toISOString().slice(0,10))<0) n++; }
   return d;
 }
-function diaTxt(d){ return DIAS_SEM[d.getUTCDay()]+' '+d.getUTCDate()+'/'+(d.getUTCMonth()+1); }
-function llegaTxt(hoy){ return 'Llega entre el '+diaTxt(llegaFecha(hoy,DIAS_ENTREGA))+' y el '+diaTxt(llegaFecha(hoy,DIAS_ENTREGA_MAX)); }
+function diaTxt(d,corto){ var n=DIAS_SEM[d.getUTCDay()]; return (corto?n.slice(0,3):n)+' '+d.getUTCDate()+'/'+(d.getUTCMonth()+1); }
+function llegaTxt(hoy,corto){ var a=llegaFecha(hoy,DIAS_ENTREGA), b=llegaFecha(hoy,DIAS_ENTREGA_MAX); return corto?'Llega entre '+diaTxt(a,1)+' y '+diaTxt(b,1):'Llega entre el '+diaTxt(a)+' y el '+diaTxt(b); }   /* corto: "mié 18/11" (franja del celular) */
 function $(s,r){return (r||document).querySelector(s);}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
@@ -801,8 +828,9 @@ function pintarPrecios(){
     pm.innerHTML=PRODS().slice().sort(function(a,b){return (ord[a.id]||0)-(ord[b.id]||0);}).map(function(p){ var n=Math.max(C.cuotas,1);
       return '<a class="pm-card" href="#prod-'+esc(p.id)+'"><span><span class="pm-nom">'+esc(p.nombre||(p.id==="individual"?"1 plaza":"2 plazas"))+'</span>'
         +'<span class="pm-tr"><b>'+money(p.precio_transferencia)+'</b><small>por transferencia</small><span class="pm-off">'+d+'% OFF</span></span>'
-        +'<span class="pm-tj">o '+money(p.precio_tarjeta)+' con tarjeta'+(n>1?'<br>💳 '+n+' cuotas sin interés de '+money(p.precio_tarjeta/n):'')+'</span></span><span class="pm-ver">Ver ›</span></a>'; }).join("")
-      +'<span class="pm-env">🚚 <b>ENVÍO GRATIS</b>'+(C.valor_envio?' · <span style="white-space:nowrap">te ahorrás '+money(C.valor_envio)+'</span>':' a todo el país')+(PRODS().some(function(p){return p.disponible>0;})?'<br><b>'+llegaTxt()+'</b> por Andreani':'')+'</span>'; }
+        +'<span class="pm-tj">o '+money(p.precio_tarjeta)+' con tarjeta'+(n>1?'<span class="pm-cuo"><span class="pm-sep"> · </span><span class="pm-larg">💳 </span>'+n+' cuotas <span class="pm-larg">sin interés </span>de '+money(p.precio_tarjeta/n)+'</span>':'')+'</span></span>'
+        +'<span class="pm-ver"><span class="pm-ver-t">Ver ›</span><svg class="pm-ver-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>'; }).join("")
+      +'<span class="pm-env">🚚 <b>ENVÍO GRATIS</b>'+(C.valor_envio?' · <span style="white-space:nowrap">te ahorrás '+money(C.valor_envio)+'</span>':' a todo el país')+(PRODS().some(function(p){return p.disponible>0;})?'<span class="pm-llega"><b>'+llegaTxt(null,true)+'</b> por Andreani</span>':'')+'</span>'; }
   $$('[data-p="desde"]').forEach(function(e){ var m=Math.min.apply(null,PRODS().map(function(p){return p.precio_tarjeta;})); e.textContent=money(m); });
   $$('.andreani-slot').forEach(function(e){ e.innerHTML=ANDREANI_LOGO; });
   $$('[data-p="envtach"]').forEach(function(e){ e.innerHTML = C.valor_envio ? '<s>'+money(C.valor_envio)+'</s> ' : ''; });
@@ -868,7 +896,7 @@ function fotos(){
   hero.onerror=function(){hero.remove();};
   hero.onload=function(){ var fig=$(".illus"), r=hero.naturalWidth/hero.naturalHeight; if(!fig||!r) return;
     var fondo=document.createElement("img"); fondo.className="foto-fondo"; fondo.alt=""; fondo.setAttribute("aria-hidden","true"); fondo.src=hero.src; fig.insertBefore(fondo,hero);
-    fig.style.setProperty("--ar",Math.max(r,1)); fig.classList.add("con-foto"); };
+    fig.style.setProperty("--ar",Math.max(r,1)); fig.classList.add("con-foto"); if(r<1.5) fig.classList.add("foto-alta"); };
   hero.src=pp?urlImg(pp.drive,1600):"foto-principal.jpg"; $(".illus").appendChild(hero);
   var port=MED("portada").filter(function(m){return !pp||m.id!==pp.id;});
   if(port.length){
