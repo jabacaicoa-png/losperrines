@@ -323,7 +323,11 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .lead-m{display:none}
 .precio-m{display:grid;gap:8px;margin:4px 0 12px}
 /* precio por transferencia primero, grande y con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
-.pm-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 12px}
+.pm-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 12px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;color:inherit;text-decoration:none}
+.pm-card:active{border-color:var(--olive)}
+.pm-card>span:first-child{display:block;min-width:0}
+.pm-ver{background:var(--olive);color:var(--on-olive);border-radius:999px;padding:7px 12px;font-weight:700;font-size:.85rem;white-space:nowrap}
+.modelo{scroll-margin-top:80px}   /* al tocar una tarjeta de precio del inicio, el producto no queda tapado por la barra de arriba */
 .pm-nom{display:block;font-size:.9rem;font-weight:700;color:var(--ink)}
 .pm-tr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;line-height:1.2}
 .pm-tr b{font-size:1.5rem;font-weight:800;color:var(--ok)}
@@ -751,9 +755,9 @@ function pintarPrecios(){
   $$('[data-p="cuotasmini"]').forEach(function(e){ e.textContent = 'hasta '+C.cuotas+' cuotas sin interés'; });
   var pm=$("#preciosM"); if(pm){ var ord={doble:0,individual:1};   /* celular: el precio de cada funda, sin "desde" (son dos productos distintos) */
     pm.innerHTML=PRODS().slice().sort(function(a,b){return (ord[a.id]||0)-(ord[b.id]||0);}).map(function(p){ var n=Math.max(C.cuotas,1);
-      return '<span class="pm-card"><span class="pm-nom">'+esc(p.nombre||(p.id==="individual"?"1 plaza":"2 plazas"))+'</span>'
+      return '<a class="pm-card" href="#prod-'+esc(p.id)+'"><span><span class="pm-nom">'+esc(p.nombre||(p.id==="individual"?"1 plaza":"2 plazas"))+'</span>'
         +'<span class="pm-tr"><b>'+money(p.precio_transferencia)+'</b><small>por transferencia</small><span class="pm-off">'+d+'% OFF</span></span>'
-        +'<span class="pm-tj">o '+money(p.precio_tarjeta)+' con tarjeta'+(n>1?'<br>💳 '+n+' cuotas sin interés de '+money(p.precio_tarjeta/n):'')+'</span></span>'; }).join("")
+        +'<span class="pm-tj">o '+money(p.precio_tarjeta)+' con tarjeta'+(n>1?'<br>💳 '+n+' cuotas sin interés de '+money(p.precio_tarjeta/n):'')+'</span></span><span class="pm-ver">Ver ›</span></a>'; }).join("")
       +'<span class="pm-env">🚚 <b>ENVÍO GRATIS</b> a todo el país'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):'')+'</span>'; }
   $$('[data-p="desde"]').forEach(function(e){ var m=Math.min.apply(null,PRODS().map(function(p){return p.precio_tarjeta;})); e.textContent=money(m); });
   $$('.andreani-slot').forEach(function(e){ e.innerHTML=ANDREANI_LOGO; });
@@ -776,7 +780,7 @@ function pintarModelos(){
   var ps=PRODS(); $("#modelos").hidden=!ps.length;
   g.innerHTML=ps.map(function(p){ var i0=INFO[p.id]||{sub:"",det:[],ancho:40,foto:""}, i={sub:p.sub||i0.sub,det:(p.medidas&&p.medidas.length)?p.medidas:i0.det,ancho:i0.ancho,foto:i0.foto}, sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
     var ilus='<svg viewBox="0 0 120 80" aria-hidden="true"><rect x="0" y="0" width="120" height="80" rx="12" fill="#2F3822"/><rect x="'+(60-i.ancho/2)+'" y="18" width="'+i.ancho+'" height="44" rx="6" fill="#D9E15A" stroke="#F2F3EC" stroke-width="2"/><path d="M'+(60-i.ancho/2)+' 40H'+(60+i.ancho/2)+'" stroke="#4E5B3A" stroke-width="2" stroke-dasharray="4 3"/></svg>';
-    return '<article class="modelo">'
+    return '<article class="modelo" id="prod-'+esc(p.id)+'">'
       +fotoCard(p,i,ilus)
       +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-beneficio-desc">Funda impermeable para mascotas: protege los asientos del agua, barro y pelos.</p><div class="m-beneficios"><span>💧 IMPERMEABLE</span><span>🛡️ PROTECCIÓN</span><span>ACOLCHADA</span></div><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       /* precio por transferencia primero, con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
