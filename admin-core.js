@@ -195,6 +195,27 @@ var CFG_GRUPOS=[
   ["Medición (Meta)",["meta_pixel_id","meta_ad_account","meta_test_code"]],
   ["Medición (Google Analytics)",["ga_property_id"]]
 ];
+/* ---------- Sistema: actualizar el Codigo.gs desde el panel (15/11/2026) ---------- */
+var SIS_PASOS='<b>Para activarlo (una sola vez, desde la compu):</b> pegá el Codigo.gs nuevo y seguí los pasos que te pasó Claude (activar la “API de Google Apps Script” y agregar los permisos).';
+function sisBox(h){ var b=document.getElementById("sisBox"); if(b) b.innerHTML=h; }
+function sisBuscar(t){ t.disabled=true; t.textContent="Buscando…";
+  api("sistemaEstado").then(function(r){
+    var hay=r.nueva&&r.nueva!==r.version, h='<p style="margin:0 0 8px">Versión instalada: <b>'+esc(r.version)+'</b>'+(r.nueva?'<br>Última versión: <b>'+esc(r.nueva)+'</b>':'')+'</p>';
+    if(hay&&r.cambios) h+='<p class="muted small" style="margin:0 0 8px">Último cambio: '+esc(r.cambios)+'</p>';
+    if(!r.puede) h+='<div class="note warn" style="margin:0 0 8px">Todavía no se puede actualizar desde acá. '+esc(r.motivo||"")+'</div>';
+    else if(hay) h+='<button class="btn main" data-a="sisActualizar">Actualizar ahora</button>';
+    else if(r.nueva) h+='<p class="pos" style="margin:0">Estás al día ✓</p>';
+    sisBox(h);
+  }).catch(function(e){ sisBox('<div class="note warn" style="margin:0">'+(/desconocida/i.test(e.message)?'Este botón empieza a andar después de pegar el Codigo.gs una vez más. '+SIS_PASOS:esc(e.message))+'</div>'); });
+}
+function sisActualizar(t){ if(!confirm("¿Actualizar el sistema ahora? Tarda menos de un minuto. Mientras tanto no cargues ventas.")) return;
+  t.disabled=true; t.textContent="Actualizando…";
+  api("actualizarSistema").then(function(r){ t.textContent="Terminando de instalar…";
+    var intento=0; function fin(){ return api("sistemaInstalar").then(function(x){ return x; }).catch(function(e){ if(++intento<4) return new Promise(function(ok){ setTimeout(ok,4000); }).then(fin); throw e; }); }
+    return fin().then(function(x){ sisBox('<p class="pos" style="margin:0"><b>Listo, actualizado ✓</b><br><span class="muted small">Ahora tenés la versión '+esc(x.version||r.version)+'.</span></p>'); toast("Sistema actualizado",5000); },
+      function(e){ sisBox('<div class="note warn" style="margin:0">El código nuevo ya quedó instalado (versión '+esc(r.version)+'), pero no pude terminar el último paso: '+esc(e.message)+'<br><span class="small">Tocá “Buscar actualización” en un rato; si sigue, avisale a Claude.</span></div>'); });
+  }).catch(function(e){ sisBox('<div class="note warn" style="margin:0">No se pudo actualizar: '+esc(e.message)+'<br><span class="small">El sistema sigue andando con la versión anterior.</span></div>'); });
+}
 function vConfig(d){
   var c=d.config;
   return '<div class="ph"><div><h2>Configuración</h2><p class="sub">Los precios también los podés probar y aplicar desde Precios y rentabilidad.</p></div></div>'
@@ -203,6 +224,7 @@ function vConfig(d){
       +(d.meta.token?' <button class="btn ghost sm" data-a="probarMeta" style="margin-left:6px">Probar conexión</button>':'')+'</div>':'')+'</div>'
     +'<form id="cfg">'+CFG_GRUPOS.map(function(g){ return '<div class="block"><h3>'+esc(g[0])+'</h3>'+g[1].map(function(k){return '<div class="cfg-row"><label class="f" style="margin:0">'+esc(CFG_LBL[k]||k)+(/^medidas/.test(k)?'<textarea name="'+k+'" rows="5">'+esc(c[k]||"")+'</textarea><small style="font-weight:500">Un renglón por cada punto. Se muestran en “Medidas y detalles”.</small>':'<input name="'+k+'" value="'+esc(c[k]||"")+'">')+'</label></div>';}).join("")+'</div>'; }).join("")
     +'</form><button class="btn main big" data-a="guardarCfg" style="margin:14px 0 20px">Guardar cambios</button>'
+    +'<div class="block"><h3>Sistema</h3><p class="muted small" style="margin:-4px 0 10px">Cuando Claude te diga que hay una versión nueva del sistema, la instalás desde acá, sin entrar a Apps Script.</p><div id="sisBox"><button class="btn ghost" data-a="sisBuscar">Buscar actualización</button></div></div>'
     +'<div class="block" style="border-color:var(--bad)"><h3>Empezar de cero</h3><p class="muted small" style="margin:-4px 0 10px">Para antes de abrir: borra los pedidos y carritos de prueba. <b>No toca</b> el taller (insumos, recetas, tandas, compras, pagos, proveedores), la configuración ni las fotos. Antes de borrar se guarda la planilla completa como Excel en tu Drive (carpeta “Los Perrines - Respaldos”).</p>'
     +'<button class="btn danger" data-a="ceroAbrir">Empezar de cero…</button></div>';
 }
@@ -378,6 +400,8 @@ document.addEventListener("click",function(e){
       cargar();
     }).catch(function(e){ toast(e.message,6000); t.disabled=false; t.textContent="Borrar datos de prueba"; });
   }
+  else if(a==="sisBuscar"){ sisBuscar(t); }
+  else if(a==="sisActualizar"){ sisActualizar(t); }
   else if(a==="probarMeta"){ t.disabled=true; api("probarMeta").then(function(r){ toast("Listo: fijate en Probar eventos de Meta (código "+r.codigo+"). Tiene que aparecer una Compra de $1.",7000); cargar(); }).catch(function(e){ toast(e.message,8000); t.disabled=false; }); }
   else if(a==="guardarCfg"){ var vals={}; new FormData($("#cfg")).forEach(function(v,k){vals[k]=v;});
     if(vals.whatsapp!=null&&String(vals.whatsapp).trim()){ var w=waNorm(vals.whatsapp); if(!/^549\d{10}$/.test(w)){ toast("Revisá el WhatsApp: tiene que tener característica y número, por ejemplo 2664669910.",6000); return; } vals.whatsapp=w; }

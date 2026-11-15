@@ -4,6 +4,8 @@
  * exportación de envíos a Andreani y el taller: insumos, recetas, tandas de
  * producción, compras y pagos a proveedores.
  *
+ * Desde el 15/11/2026 se puede actualizar solo desde el panel (Configuración → Sistema → Actualizar):
+ * ver actualizarSistema() y, para prepararlo la primera vez, probarActualizador().
  * Se pega completo en el editor de Apps Script de la planilla.
  * Primera vez: ejecutar la función instalar().
  * Propiedades del script (Configuración del proyecto → Propiedades del script):
@@ -85,6 +87,8 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
+var SISTEMA_VERSION = '15/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
 
@@ -166,6 +170,9 @@ function rutear(r) {
     case 'entregado': return conLock(function () { return enLote(r.ids, function (id) { marcarEntregado(String(id), r.valor !== false); }); });
     case 'problemaResuelto': return conLock(function () { return problemaResuelto(String(r.id)); });
     case 'probarMeta': return probarMeta();
+    case 'sistemaEstado': return sistemaEstado();
+    case 'actualizarSistema': return conLock(function () { return actualizarSistema(); });
+    case 'sistemaInstalar': instalar(); return {version: SISTEMA_VERSION};
     case 'ceroPreview': return ceroPreview();
     case 'dejarEnCero': return conLock(function () { return dejarEnCero(r); });
     case 'publicidad': return publicidad(r);
@@ -1987,3 +1994,73 @@ function tallerMigrar(r) {
   if (d.tanda && d.tanda.items) tandaCrear(d.tanda);
   return {proveedores: provs.length, insumos: (d.insumos || []).length};
 }
+
+
+/* ================= ACTUALIZARSE SOLO (15/11/2026) =================
+   El dueño trabaja desde el celular y ahí no puede pegar código en Apps Script. Con esto, el panel
+   (Configuración → Sistema) baja el Codigo.gs de GitHub, lo guarda en este mismo proyecto, crea una
+   versión nueva y la publica en la implementación de la app web. Después el panel llama a
+   'sistemaInstalar', que ya corre con el código nuevo y ejecuta instalar().
+   Requisitos (una sola vez, desde la compu):
+   1) script.google.com/home/usersettings → "API de Google Apps Script": activada.
+   2) En appsscript.json, los permisos de OAUTH_ACTUALIZADOR (lo explica probarActualizador()).
+   Si algo falla, no se toca nada: el código viejo sigue andando. */
+var OAUTH_ACTUALIZADOR = ['https://www.googleapis.com/auth/script.projects', 'https://www.googleapis.com/auth/script.deployments'];
+function gsApi(metodo, ruta, cuerpo) {
+  var o = {method: metodo, muteHttpExceptions: true, headers: {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()}};
+  if (cuerpo) { o.contentType = 'application/json'; o.payload = JSON.stringify(cuerpo); }
+  var r = UrlFetchApp.fetch('https://script.googleapis.com/v1/projects/' + ScriptApp.getScriptId() + ruta, o), c = r.getResponseCode(), t = r.getContentText();
+  var j = {}; try { j = JSON.parse(t || '{}'); } catch (e) {}
+  if (c >= 200 && c < 300) return j;
+  var msg = (j.error && j.error.message) || t || ('código ' + c);
+  if (/has not been used|is disabled|SERVICE_DISABLED|User has not enabled the Apps Script API/i.test(msg)) throw new Error('Falta activar la "API de Google Apps Script" en script.google.com/home/usersettings (una sola vez, se puede desde el celular).');
+  if (c === 401 || c === 403 || /insufficient|scope/i.test(msg)) throw new Error('Falta el permiso para actualizarse (hay que agregarlo una vez desde la compu, en appsscript.json). Detalle: ' + msg);
+  throw new Error('Google respondió: ' + msg);
+}
+function ghBajar(ruta, crudo) {
+  var r = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO_GH + ruta, {muteHttpExceptions: true, headers: {Accept: crudo ? 'application/vnd.github.raw' : 'application/vnd.github+json', 'User-Agent': 'los-perrines-panel'}});
+  if (r.getResponseCode() !== 200) throw new Error('No pude bajar la versión nueva de GitHub (código ' + r.getResponseCode() + '). Probá de nuevo en un rato.');
+  return r.getContentText();
+}
+function versionDe(codigo) { var m = String(codigo).match(/var SISTEMA_VERSION = '([^']+)'/); return m ? m[1] : ''; }
+function codigoNuevo() {
+  var c = ghBajar('/contents/Codigo.gs?ref=main', true);
+  // controles antes de tocar nada: que sea el archivo completo, que se pueda seguir actualizando y que no tenga errores de escritura
+  if (c.length < 50000 || c.indexOf('function rutear(') < 0 || c.indexOf('function actualizarSistema(') < 0 || !versionDe(c)) throw new Error('El archivo que bajé de GitHub no parece completo. No cambié nada.');
+  try { new Function(c); } catch (e) { if (e instanceof SyntaxError) throw new Error('El archivo nuevo tiene un error (' + e.message + '). No cambié nada.'); }   // si Google no deja usar Function, sigue igual
+  return c;
+}
+function sistemaEstado() {
+  var o = {version: SISTEMA_VERSION, nueva: '', cambios: '', puede: false, motivo: ''};
+  try {
+    o.nueva = versionDe(ghBajar('/contents/Codigo.gs?ref=main', true));
+    try { var cm = JSON.parse(ghBajar('/commits?path=Codigo.gs&sha=main&per_page=1')); if (cm[0]) { o.cambios = String(cm[0].commit.message).split('\n')[0]; o.fecha = String(cm[0].commit.committer.date); } } catch (e) {}
+  } catch (e) { o.motivo = e.message; return o; }
+  try { gsApi('get', '/deployments'); o.puede = true; } catch (e) { o.motivo = e.message; }
+  return o;
+}
+function actualizarSistema() {
+  var codigo = codigoNuevo(), nueva = versionDe(codigo);
+  var cont = gsApi('get', '/content'), files = cont.files || [];
+  var este = files.filter(function (f) { return f.type === 'SERVER_JS' && String(f.source).indexOf('function rutear(') >= 0; })[0];
+  if (!este) throw new Error('No encontré el archivo del sistema dentro del proyecto. No cambié nada.');
+  var deps = (gsApi('get', '/deployments').deployments || []).filter(function (d) {
+    return d.deploymentConfig && d.deploymentConfig.versionNumber && (d.entryPoints || []).some(function (e) { return e.entryPointType === 'WEB_APP'; });
+  });
+  if (!deps.length) throw new Error('No encontré la implementación de la app web. No cambié nada.');
+  este.source = codigo;
+  gsApi('put', '/content', {files: files.map(function (f) { return {name: f.name, type: f.type, source: f.source}; })});
+  var ver = gsApi('post', '/versions', {description: 'Actualización desde el panel · ' + nueva});
+  deps.forEach(function (d) {
+    gsApi('put', '/deployments/' + d.deploymentId, {deploymentConfig: {scriptId: ScriptApp.getScriptId(), versionNumber: ver.versionNumber, manifestFileName: 'appsscript', description: 'Panel · ' + nueva}});
+  });
+  return {antes: SISTEMA_VERSION, version: nueva, numero: ver.versionNumber, implementaciones: deps.length};
+}
+/* Se ejecuta desde el editor (una vez, en la compu) para ver si el actualizador está listo. Escribe en el Registro qué falta. */
+function probarActualizador() {
+  try { var e = sistemaEstado(); Logger.log(e.puede ? 'LISTO: el panel ya puede actualizar el sistema. Versión actual ' + e.version + (e.nueva && e.nueva !== e.version ? ' · hay una nueva: ' + e.nueva : '') : 'Falta algo: ' + e.motivo); }
+  catch (err) { Logger.log('Falta algo: ' + err.message); }
+  Logger.log('Permisos que tiene que tener appsscript.json en "oauthScopes": ' + JSON.stringify(OAUTH_BASE.concat(OAUTH_ACTUALIZADOR)));
+}
+var OAUTH_BASE = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/script.external_request',
+  'https://www.googleapis.com/auth/script.send_mail', 'https://www.googleapis.com/auth/script.scriptapp', 'https://www.googleapis.com/auth/analytics.readonly'];

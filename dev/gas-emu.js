@@ -63,7 +63,7 @@ function makeEnv(opts) {
     MailApp: { sendEmail: o => mails.push(o), getRemainingDailyQuota: () => (opts.quota == null ? 100 : opts.quota) },
     UrlFetchApp: { fetch: (url, o) => { fetches.push({url, o}); return (opts.fetch && opts.fetch(url, o)) || { getResponseCode: () => 500, getContentText: () => '{}', getBlob: () => ({ setName() { return this; } }) }; } },
     ScriptApp: {
-      getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/TEST/exec' }), getOAuthToken: () => 'x',
+      getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/TEST/exec' }), getOAuthToken: () => 'x', getScriptId: () => 'SCRIPT-ID',
       getProjectTriggers: () => triggers, deleteTrigger() {}, newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create() {} }) }) })
     },
     DriveApp: {
