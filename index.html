@@ -714,18 +714,19 @@ function money(v){return fmt.format(Math.round(v));}
 /* "Cuándo llega" (pedido del dueño, 15/11/2026): 2 días hábiles contando desde el día siguiente a la compra,
    con la hora de Argentina (no la del aparato). Lunes → miércoles, jueves → lunes, viernes a domingo → martes.
    Se saltean sábados, domingos y feriados nacionales (Andreani no entrega). Agregar los feriados de cada año acá. */
-var DIAS_ENTREGA=2, HORA_CORTE=17;   /* hasta las 16:59 cuenta el día; desde las 17:00, un día más (pedido del dueño) */
+var DIAS_ENTREGA=2, DIAS_ENTREGA_MAX=4, HORA_CORTE=17;   /* "Llega entre…": de 2 a 4 días hábiles (el dueño eligió rango); hasta las 16:59 cuenta el día, desde las 17:00 un día más */
 var FERIADOS=["2026-11-23","2026-12-07","2026-12-08","2026-12-25",
   "2027-01-01","2027-02-08","2027-02-09","2027-03-24","2027-03-26","2027-04-02","2027-05-25","2027-07-09","2027-12-08","2027-12-25"];
 var DIAS_SEM=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-function llegaFecha(hoy){
+function llegaFecha(hoy,dias){
   var d=hoy?new Date(hoy.getTime()):new Date(Date.now()-3*3600e3);   /* fecha de Argentina (UTC-3) leída con getUTC* */
   var tarde=d.getUTCHours()>=HORA_CORTE;   /* desde las 17 h cuenta como si comprara mañana */
   d=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()+(tarde?1:0)));
-  var n=0; while(n<DIAS_ENTREGA){ d.setUTCDate(d.getUTCDate()+1); var w=d.getUTCDay(); if(w!==0&&w!==6&&FERIADOS.indexOf(d.toISOString().slice(0,10))<0) n++; }
+  var n=0, tope=dias||DIAS_ENTREGA; while(n<tope){ d.setUTCDate(d.getUTCDate()+1); var w=d.getUTCDay(); if(w!==0&&w!==6&&FERIADOS.indexOf(d.toISOString().slice(0,10))<0) n++; }
   return d;
 }
-function llegaTxt(hoy){ var d=llegaFecha(hoy); return 'Llega el '+DIAS_SEM[d.getUTCDay()]+' '+d.getUTCDate()+'/'+(d.getUTCMonth()+1); }
+function diaTxt(d){ return DIAS_SEM[d.getUTCDay()]+' '+d.getUTCDate()+'/'+(d.getUTCMonth()+1); }
+function llegaTxt(hoy){ return 'Llega entre el '+diaTxt(llegaFecha(hoy,DIAS_ENTREGA))+' y el '+diaTxt(llegaFecha(hoy,DIAS_ENTREGA_MAX)); }
 function $(s,r){return (r||document).querySelector(s);}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
@@ -827,7 +828,7 @@ function pintarModelos(){
       /* precio por transferencia primero, con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
       +'<div class="m-precio"><div class="m-ptr"><strong>'+money(p.precio_transferencia)+'</strong><span class="pm-off">'+d+'% OFF</span></div><small class="m-ptr-l">💚 por transferencia</small>'
       +'<span class="m-tj">o '+money(p.precio_tarjeta)+' con tarjeta</span><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
-      +'<p class="m-envio">'+ANDREANI_LOGO+'<span><b>🚚 ENVÍO GRATIS</b>'+(sin?'':'<span class="m-llega">'+llegaTxt()+' por Andreani</span>')+'<small>A todo el país por Andreani'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):'')+'</small></span></p>'
+      +'<p class="m-envio">'+ANDREANI_LOGO+'<span><b>🚚 ENVÍO GRATIS</b>'+(sin?'':'<span class="m-llega">'+llegaTxt()+'</span>')+'<small>A todo el país por Andreani'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):'')+'</small></span></p>'
       +'<p class="m-conf"><span>🛡️ <a href="#garantia">Garantía de fábrica</a></span><span>📦 Seguimiento de Andreani</span><span>↩️ 10 días para arrepentirte</span></p>'
       +(sin?'<p class="stockline low">Sin stock por el momento</p>':(p.disponible<=5?'<p class="stockline low">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
       +'<button class="btn btn-main m-cta" style="width:100%;margin-top:16px" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'COMPRAR AHORA')+'</button>'
