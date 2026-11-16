@@ -262,6 +262,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .modelo .m-envio small{display:block;font-size:.88rem;font-weight:600}
 .modelo .m-envio .m-llega{display:block;font-size:1rem;font-weight:800;margin:1px 0}
 .modelo .m-envio .m-llega .ct,.modelo .m-ptr-x{display:none}
+.modelo .m-imp{display:none}
 .modelo .m-det{margin-top:10px;font-size:.93rem}
 .modelo .m-det-t{margin:0;font-weight:700;color:var(--ink)}
 .modelo .m-det ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
@@ -396,7 +397,10 @@ details.m-det[open] summary::after{content:"−"}
   .hero .grid{gap:14px}
   .hero .grid>.illus{order:-1}
   .hero .lead,.hero .sello,.hero .ship{display:none}
-  .lead-m{display:block;font-size:.92rem;margin:2px 0 8px;color:var(--muted)}
+  .lead-m{display:block;font-size:min(.95rem,3.6vw);margin:2px 0 8px;color:var(--ink);font-weight:500;white-space:nowrap}
+  .lead-m .imp{display:inline-block;background:#DDEFFB;color:#0E4A6E;border-radius:999px;padding:1px 9px;font-weight:800}   /* que "impermeable" se lea (16/11/2026, pedido del dueño) */
+  .modelo{position:relative}
+  .modelo .m-imp{display:block;position:absolute;top:12px;left:12px;z-index:3;background:#DDEFFB;color:#0E4A6E;border-radius:999px;padding:6px 12px;font-weight:800;font-size:.85rem;letter-spacing:.02em;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}   /* sobre la foto, sin ocupar lugar */
   /* primera pantalla compacta (15/11/2026, pedido del dueño): foto, título, precios y envío entran sin bajar */
   .hero{padding-top:8px}
   .hero .grid{gap:10px}
@@ -467,7 +471,7 @@ details.m-det[open] summary::after{content:"−"}
 }
 @media(max-width:349px){   /* celulares muy angostos: que corte renglón antes que salirse */
   .pm-tr{flex-wrap:wrap}
-  .pm-tj,.pm-llega,.pm-env-t .l1,.pm-env-t .l2{white-space:normal}
+  .pm-tj,.pm-llega,.pm-env-t .l1,.pm-env-t .l2,.lead-m{white-space:normal}
 }
 </style>
 </head>
@@ -501,7 +505,7 @@ details.m-det[open] summary::after{content:"−"}
   <div class="wrap grid">
     <div>
       <h1 class="h1-hero"><span>Salí con tu mascota.</span> <span>El auto queda limpio.</span></h1>
-      <p class="lead-m">Funda impermeable para el asiento trasero.</p>
+      <p class="lead-m">Funda <b class="imp">💧 impermeable</b> para el asiento trasero.</p>
       <p class="precio-m" id="preciosM"></p>
       <p class="lead">Protegé los asientos de tu auto con nuestras fundas <strong>impermeables, acolchadas y resistentes</strong>. Diseñadas para viajar con tu mascota sin preocuparte por el agua, el barro ni los pelos. Disponibles para el asiento trasero completo o para una sola plaza.</p>
       <div class="price-box">
@@ -886,7 +890,7 @@ function pintarModelos(){
   var ps=PRODS(); $("#modelos").hidden=!ps.length;
   g.innerHTML=ps.map(function(p){ var i0=INFO[p.id]||{sub:"",det:[],ancho:40,foto:""}, i={sub:p.sub||i0.sub,det:(p.medidas&&p.medidas.length)?p.medidas:i0.det,ancho:i0.ancho,foto:i0.foto}, sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
     var ilus='<svg viewBox="0 0 120 80" aria-hidden="true"><rect x="0" y="0" width="120" height="80" rx="12" fill="#2F3822"/><rect x="'+(60-i.ancho/2)+'" y="18" width="'+i.ancho+'" height="44" rx="6" fill="#D9E15A" stroke="#F2F3EC" stroke-width="2"/><path d="M'+(60-i.ancho/2)+' 40H'+(60+i.ancho/2)+'" stroke="#4E5B3A" stroke-width="2" stroke-dasharray="4 3"/></svg>';
-    return '<article class="modelo" id="prod-'+esc(p.id)+'">'
+    return '<article class="modelo" id="prod-'+esc(p.id)+'"><span class="m-imp">💧 IMPERMEABLE</span>'
       +fotoCard(p,i,ilus)
       +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-beneficio-desc">Funda impermeable para mascotas: protege los asientos del agua, barro y pelos.</p><div class="m-beneficios"><span>💧 IMPERMEABLE</span><span>🛡️ PROTECCIÓN</span><span>ACOLCHADA</span></div><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       /* precio por transferencia primero, con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
