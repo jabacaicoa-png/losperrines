@@ -27,7 +27,7 @@ var COLS = {
   Avisos: ['fecha','email','avisado'],
   Media: ['id','fecha','destino','tipo','nombre','orden','principal','drive_id'],
   Carritos: ['email','fecha','actualizado','nombre','apellido','cel','items','estado','pedido','origen','recordatorio','segundo'],
-  Cupones: ['codigo','porcentaje','vence','unico','activo','creado'],
+  Cupones: ['codigo','porcentaje','vence','unico','activo','creado','monto'],   // monto: descuento fijo en $ por funda (16/11/2026); si está, manda sobre el porcentaje
   Bajas: ['fecha','email'],
   Config: ['clave','valor','descripcion'],
   TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
@@ -87,7 +87,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '15/11/2026 · 4';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '16/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -350,7 +350,7 @@ function crearPedido(r) {
   var cuponOk = null, descuento = 0;
   if (r.cupon && d.pago === 'transferencia') {
     cuponOk = validarCupon(r.cupon, d.email);
-    descuento = Math.round(total * cuponOk.porcentaje / 100);
+    descuento = descuentoCupon(cuponOk, total, d.items.reduce(function (a, it) { return a + num(it.cantidad); }, 0));
     total = total - descuento;
   }
   var fechaPedido = ahora();
@@ -1687,7 +1687,7 @@ function enviarSegundo(r) {
     var x=carritoDe(em);
     var nombre=dato.nombre || (x && x.nombre) || '';
     var cuerpo=esc(msg.replace(/\{nombre\}/g,nombre)).replace(/\n/g,'<br>');
-    var cupHtml=cup ? '<div style="background:#D9E15A;border-radius:12px;padding:14px;margin:16px 0;text-align:center"><div style="font-size:13px">Tu código de descuento</div><div style="font-size:26px;font-weight:bold;letter-spacing:2px">'+esc(cup.codigo)+'</div><div style="font-size:13px">'+cup.porcentaje+'% off extra pagando por transferencia'+(cup.vence?' · válido hasta el '+esc(cup.vence):'')+'</div></div>' : '';
+    var cupHtml=cup ? '<div style="background:#D9E15A;border-radius:12px;padding:14px;margin:16px 0;text-align:center"><div style="font-size:13px">Tu código de descuento</div><div style="font-size:26px;font-weight:bold;letter-spacing:2px">'+esc(cup.codigo)+'</div><div style="font-size:13px">'+textoCupon(cup)+' pagando por transferencia'+(cup.vence?' · válido hasta el '+esc(cup.vence):'')+'</div></div>' : '';
     var items=x && x.items ? x.items : (dato.pedido ? JSON.stringify(itemsDe(d.pedidos.filter(function(p){return String(p.id)===dato.pedido;})[0])) : '[]');
     var url=linkCarrito(items,cup?'&cupon='+encodeURIComponent(cup.codigo):'');
     enviar(em,asunto,plantilla(esc(asunto),'<p>'+cuerpo+'</p>'+cupHtml+boton(url,'Ir a mi carrito')+pieBaja(em),c),c);
@@ -1709,7 +1709,7 @@ function listaCupones() {
   hojaOk(H.cupones);
   return filas(H.cupones).map(function (x) {
     var v = x.vence instanceof Date ? Utilities.formatDate(x.vence, TZ, 'dd/MM/yyyy') : String(x.vence || '');
-    return {codigo: String(x.codigo).toUpperCase(), porcentaje: num(x.porcentaje), vence: v, unico: x.unico === 'SI', activo: x.activo !== 'NO'};
+    return {codigo: String(x.codigo).toUpperCase(), porcentaje: num(x.porcentaje), monto: num(x.monto), vence: v, unico: x.unico === 'SI', activo: x.activo !== 'NO'};
   });
 }
 function venceDate(v) { var m = String(v || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1], 23, 59, 59) : null; }
@@ -1723,17 +1723,24 @@ function validarCupon(codigo, email) {
     var usado = filas(H.pedidos).some(function (p) { return String(p.cupon).toUpperCase() === codigo && String(p.email).toLowerCase() === email && ['cancelado','vencido'].indexOf(p.estado) < 0; });
     if (usado) throw new Error('Ya usaste este código.');
   }
-  return {codigo: codigo, porcentaje: x.porcentaje};
+  return {codigo: codigo, porcentaje: x.porcentaje, monto: x.monto};
 }
+/* Descuento de un código: monto fijo por funda (ej. $2.000 × cada funda, sin pasarse del total) o porcentaje. */
+function descuentoCupon(cup, total, unidades) {
+  if (num(cup.monto) > 0) return Math.min(total, Math.round(num(cup.monto) * Math.max(1, unidades || 1)));
+  return Math.round(total * num(cup.porcentaje) / 100);
+}
+function textoCupon(cup) { return num(cup.monto) > 0 ? plata(cup.monto) + ' de descuento por funda' : cup.porcentaje + '% off extra'; }
 function guardarCupon(r) {
-  var cod = limpiar(r.codigo, 30).toUpperCase().replace(/[^A-Z0-9]/g, ''), pct = num(r.porcentaje);
+  var cod = limpiar(r.codigo, 30).toUpperCase().replace(/[^A-Z0-9]/g, ''), pct = num(r.porcentaje), monto = Math.round(num(r.monto));
   if (!cod) throw new Error('Poné un código (solo letras y números).');
-  if (!(pct > 0 && pct < 100)) throw new Error('El porcentaje tiene que estar entre 1 y 99.');
+  if (monto > 0) pct = '';
+  else if (!(pct > 0 && pct < 100)) throw new Error('Poné un porcentaje entre 1 y 99, o un monto en pesos por funda.');
   var vence = '';
   if (r.vence) { var m = String(r.vence).match(/^(\d{4})-(\d{2})-(\d{2})$/); vence = m ? m[3] + '/' + m[2] + '/' + m[1] : String(r.vence); }
   hojaOk(H.cupones); var sh = hoja(H.cupones); sh.getRange('C:C').setNumberFormat('@');
   var x = filas(H.cupones).filter(function (k) { return String(k.codigo).toUpperCase() === cod; })[0];
-  var datos = {codigo: cod, porcentaje: pct, vence: vence, unico: r.unico ? 'SI' : 'NO', activo: r.activo === false ? 'NO' : 'SI'};
+  var datos = {codigo: cod, porcentaje: pct, monto: monto > 0 ? monto : '', vence: vence, unico: r.unico ? 'SI' : 'NO', activo: r.activo === false ? 'NO' : 'SI'};
   if (x) setear(H.cupones, x._fila, datos); else agregar(H.cupones, Object.assign({creado: ahora()}, datos));
   return {};
 }

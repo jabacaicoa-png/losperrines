@@ -292,6 +292,7 @@ function waRecuperar(x){
   var txt="Hola "+nombre+"! Te escribo de Los Perrines 🐾 Vi que te quedó pendiente "+(x.items||"tu funda")+". ¿Te quedó alguna duda con las medidas o con el envío? Te ayudo a terminar la compra.";
   return "https://wa.me/"+tel+"?text="+encodeURIComponent(txt);
 }
+function descTxt(c){ return +c.monto>0 ? money(c.monto)+' por funda' : c.porcentaje+'% off'; }   /* código con monto fijo o con % */
 function vRecuperar(){
   if(!RC){ cargarRecuperar(); return '<div class="ph"><div><h2>Recuperar ventas</h2></div></div><p class="muted"><span class="spinner"></span> Cargando…</p>'; }
   var st=RC.stats||{}, L=RC.lista||[], cups=RC.cupones||[];
@@ -310,12 +311,13 @@ function vRecuperar(){
     h+='<h3 style="margin-top:16px">Segundo mail promocional</h3>'
       +'<label class="f">Asunto<input id="rcAsunto" value="¡Tenemos un regalo para vos! 🐾"></label>'
       +'<label class="f">Mensaje (escribí {nombre} y se reemplaza por el nombre de cada cliente)<textarea id="rcMsg" rows="5">Hola {nombre}, vimos que te quedó pendiente tu funda. Para que te animes, te dejamos un descuento extra pagando por transferencia. ¡Tu mascota y tu auto te lo van a agradecer!</textarea></label>'
-      +'<label class="f">Código de descuento (opcional)<select id="rcCupon"><option value="">Sin código</option>'+activos.map(function(c){return '<option value="'+esc(c.codigo)+'">'+esc(c.codigo)+' · '+c.porcentaje+'% off'+(c.vence?' (hasta '+esc(c.vence)+')':'')+'</option>';}).join("")+'</select></label>'
+      +'<label class="f">Código de descuento (opcional)<select id="rcCupon"><option value="">Sin código</option>'+activos.map(function(c){return '<option value="'+esc(c.codigo)+'">'+esc(c.codigo)+' · '+descTxt(c)+(c.vence?' (hasta '+esc(c.vence)+')':'')+'</option>';}).join("")+'</select></label>'
       +'<button class="btn main big" data-a="rcEnviar">Enviar a los seleccionados ('+Object.keys(RCsel).filter(function(k){return RCsel[k];}).length+')</button>';
   }
   h+='</div><div class="block"><h3>Códigos de descuento</h3><p class="muted small" style="margin:-4px 0 10px">Se aplican solo pagando por transferencia, sobre el precio de transferencia.</p>'
-    +(cups.length?'<div class="tw"><table><thead><tr><th>Código</th><th>Descuento</th><th>Vence</th><th>Uso</th><th>Estado</th><th></th></tr></thead><tbody>'+cups.map(function(c){ return '<tr><td><b>'+esc(c.codigo)+'</b></td><td>'+c.porcentaje+'%</td><td>'+esc(c.vence||"—")+'</td><td>'+(c.unico?'Una vez por cliente':'Ilimitado')+'</td><td>'+(c.activo?'<span class="pill ok">Activo</span>':'<span class="pill mute">Pausado</span>')+'</td><td style="white-space:nowrap"><button class="btn ghost sm" data-a="cupToggle" data-cod="'+esc(c.codigo)+'">'+(c.activo?'Pausar':'Activar')+'</button> <button class="btn danger sm" data-a="cupDel" data-cod="'+esc(c.codigo)+'">Borrar</button></td></tr>'; }).join("")+'</tbody></table></div>':'<p class="muted">Todavía no creaste códigos.</p>')
+    +(cups.length?'<div class="tw"><table><thead><tr><th>Código</th><th>Descuento</th><th>Vence</th><th>Uso</th><th>Estado</th><th></th></tr></thead><tbody>'+cups.map(function(c){ return '<tr><td><b>'+esc(c.codigo)+'</b></td><td>'+descTxt(c)+'</td><td>'+esc(c.vence||"—")+'</td><td>'+(c.unico?'Una vez por cliente':'Ilimitado')+'</td><td>'+(c.activo?'<span class="pill ok">Activo</span>':'<span class="pill mute">Pausado</span>')+'</td><td style="white-space:nowrap"><button class="btn ghost sm" data-a="cupToggle" data-cod="'+esc(c.codigo)+'">'+(c.activo?'Pausar':'Activar')+'</button> <button class="btn danger sm" data-a="cupDel" data-cod="'+esc(c.codigo)+'">Borrar</button></td></tr>'; }).join("")+'</tbody></table></div>':'<p class="muted">Todavía no creaste códigos.</p>')
     +'<div class="g2" style="margin-top:12px"><label class="f">Código<input id="cpCod" placeholder="Ej. VOLVE10" style="text-transform:uppercase"></label><label class="f">% de descuento<input id="cpPct" type="number" min="1" max="99" value="10"></label></div>'
+    +'<label class="f">o descuento fijo en $ por funda (opcional)<input id="cpMonto" inputmode="numeric" placeholder="Ej. 2000 · si lo ponés, no se usa el %"></label>'
     +'<div class="g2"><label class="f">Vence (opcional)<input id="cpVence" type="date"></label><label class="check" style="margin-top:18px"><input type="checkbox" id="cpUnico" checked> Una vez por cliente</label></div>'
     +'<button class="btn main" data-a="cupCrear">Crear código</button></div>';
   return h;
@@ -381,9 +383,9 @@ document.addEventListener("click",function(e){
     t.disabled=true; api("enviarSegundo",{emails:ems,asunto:$("#rcAsunto").value,mensaje:$("#rcMsg").value,cupon:$("#rcCupon").value}).then(function(r){ toast("Mails enviados: "+r.enviados); RCsel={}; cargarRecuperar(); }).catch(function(e){ toast(e.message); t.disabled=false; });
   }
   else if(a==="cupCrear"){ var cod=$("#cpCod").value.trim(); if(!cod){ toast("Poné el código."); return; }
-    t.disabled=true; api("guardarCupon",{codigo:cod,porcentaje:$("#cpPct").value,vence:$("#cpVence").value,unico:$("#cpUnico").checked}).then(function(){ toast("Código creado"); cargarRecuperar(); }).catch(function(e){ toast(e.message); t.disabled=false; }); }
+    t.disabled=true; api("guardarCupon",{codigo:cod,porcentaje:$("#cpPct").value,monto:nm($("#cpMonto").value),vence:$("#cpVence").value,unico:$("#cpUnico").checked}).then(function(){ toast("Código creado"); cargarRecuperar(); }).catch(function(e){ toast(e.message); t.disabled=false; }); }
   else if(a==="cupToggle"){ var c0=(RC.cupones||[]).filter(function(x){return x.codigo===t.dataset.cod;})[0]; if(!c0) return;
-    var vv=c0.vence?c0.vence.split("/").reverse().join("-"):""; api("guardarCupon",{codigo:c0.codigo,porcentaje:c0.porcentaje,vence:vv,unico:c0.unico,activo:!c0.activo}).then(function(){ cargarRecuperar(); }).catch(function(e){ toast(e.message); }); }
+    var vv=c0.vence?c0.vence.split("/").reverse().join("-"):""; api("guardarCupon",{codigo:c0.codigo,porcentaje:c0.porcentaje,monto:c0.monto,vence:vv,unico:c0.unico,activo:!c0.activo}).then(function(){ cargarRecuperar(); }).catch(function(e){ toast(e.message); }); }
   else if(a==="cupDel"){ if(confirm("¿Borrar el código "+t.dataset.cod+"?")) api("borrarCupon",{codigo:t.dataset.cod}).then(function(){ cargarRecuperar(); }).catch(function(e){ toast(e.message); }); }
   else if(a==="ceroAbrir"){ t.disabled=true; api("ceroPreview").then(function(p){ t.disabled=false; dlgCero(p); }).catch(function(e){ toast(/desconocida/i.test(e.message)?"Primero pegá el Codigo.gs nuevo en Apps Script.":e.message,6000); t.disabled=false; }); }
   else if(a==="ceroOk"){

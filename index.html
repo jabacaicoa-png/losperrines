@@ -1117,15 +1117,17 @@ function pagoSel(){ var r=$('#f [name="pago"]:checked'); return r?r.value:"tarje
 function pintarCupon(){
   var msg=$("#cuponMsg"), lbl=$("#lblTransf"); if(!msg||!lbl) return;
   if(!CUPON){ lbl.innerHTML=money(sumX()); msg.textContent=""; return; }
-  var conDesc=Math.round(sumX()*(1-CUPON.pct/100));
+  var uni=PRODS().reduce(function(a,p){return a+(Q[p.id]||0);},0);
+  var desc=CUPON.monto>0?Math.min(sumX(),CUPON.monto*Math.max(1,uni)):Math.round(sumX()*CUPON.pct/100), conDesc=sumX()-desc;   /* monto fijo por funda o porcentaje (igual que descuentoCupon en Codigo.gs) */
+  var txt=CUPON.monto>0?money(desc)+' de descuento':CUPON.pct+'% off extra';
   lbl.innerHTML='<s style="opacity:.6;font-weight:600">'+money(sumX())+'</s> '+money(conDesc);
-  msg.innerHTML=pagoSel()==="transferencia"?'<b style="color:var(--ok)">Código '+esc(CUPON.codigo)+' aplicado: '+CUPON.pct+'% off extra. Pagás '+money(conDesc)+'.</b>':'<b>El código '+esc(CUPON.codigo)+' es válido pagando por transferencia</b> ('+CUPON.pct+'% off extra: '+money(conDesc)+').';
+  msg.innerHTML=pagoSel()==="transferencia"?'<b style="color:var(--ok)">Código '+esc(CUPON.codigo)+' aplicado: '+txt+'. Pagás '+money(conDesc)+'.</b>':'<b>El código '+esc(CUPON.codigo)+' es válido pagando por transferencia</b> ('+txt+': '+money(conDesc)+').';
 }
 function aplicarCupon(){
   var f=$("#f"); if(!f) return; var cod=(f.querySelector('[name="cupon_in"]').value||"").trim().toUpperCase(), msg=$("#cuponMsg");
   if(!cod){ CUPON=null; pintarCupon(); return; }
   msg.innerHTML='<span class="spinner"></span>';
-  api("cupon",{codigo:cod,email:(f.querySelector('[name="email"]')||{}).value||""}).then(function(r){ CUPON={codigo:r.codigo,pct:r.porcentaje}; pintarCupon(); })
+  api("cupon",{codigo:cod,email:(f.querySelector('[name="email"]')||{}).value||""}).then(function(r){ CUPON={codigo:r.codigo,pct:+r.porcentaje||0,monto:+r.monto||0}; pintarCupon(); })
     .catch(function(e){ CUPON=null; pintarCupon(); msg.innerHTML='<span style="color:#C2553F;font-weight:600">'+esc(e.message)+'</span>'; });
 }
 function guardarCarritoLuego(){

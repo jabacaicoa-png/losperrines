@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "16/11 · 1";
+window.PANEL_VERSION = "16/11 · 2";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -635,11 +635,11 @@ function vRentabilidad() {
   return h;
 }
 /* Venta con código de vendedor (16/11/2026, pedido del dueño): el cliente paga por transferencia con
-   5% de descuento y al vendedor se le pagan $3.000 de comisión. Es solo referencia: no entra en la mezcla. */
-const VEND_DESC = 5, VEND_COMISION = 3000;
+   $2.000 de descuento (código de monto fijo) y al vendedor se le pagan $3.000 de comisión. Es solo referencia: no entra en la mezcla. */
+const VEND_DESC = 2000, VEND_COMISION = 3000;
 function filaVendedor(r, obj) {
-  const rec = r.px - Math.round(r.px * VEND_DESC / 100) - VEND_COMISION, g = rec - r.C;
-  return "<tr><td>Código de vendedor<br><span class='muted small'>−" + VEND_DESC + "% y " + money(VEND_COMISION) + " de comisión</span></td><td class='n'>" + money(rec) + "</td><td class='n'>" + money(g) + "</td><td class='n'>" + pillR(r.C ? g / r.C : 0, obj) + "</td></tr>";
+  const rec = r.px - VEND_DESC - VEND_COMISION, g = rec - r.C;
+  return "<tr><td>Código de vendedor<br><span class='muted small'>−" + money(VEND_DESC) + " y " + money(VEND_COMISION) + " de comisión</span></td><td class='n'>" + money(rec) + "</td><td class='n'>" + money(g) + "</td><td class='n'>" + pillR(r.C ? g / r.C : 0, obj) + "</td></tr>";
 }
 function rentCard(p, obj) {
   const f = fichaGuardada(p), r = rent(p), pr = RS.precios[p];
