@@ -27,7 +27,7 @@ var COLS = {
   Avisos: ['fecha','email','avisado'],
   Media: ['id','fecha','destino','tipo','nombre','orden','principal','drive_id'],
   Carritos: ['email','fecha','actualizado','nombre','apellido','cel','items','estado','pedido','origen','recordatorio','segundo'],
-  Cupones: ['codigo','porcentaje','vence','unico','activo','creado','monto'],   // monto: descuento fijo en $ por funda (16/11/2026); si está, manda sobre el porcentaje
+  Cupones: ['codigo','porcentaje','vence','unico','activo','creado','monto','email','comision'],   // email/comision: vendedor al que se le avisa cada venta y cuánto cobra por funda   // monto: descuento fijo en $ por funda (16/11/2026); si está, manda sobre el porcentaje
   Bajas: ['fecha','email'],
   Config: ['clave','valor','descripcion'],
   TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
@@ -87,7 +87,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '16/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '16/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -587,6 +587,7 @@ function procesarPago(pago) {
     p.estado = 'pagado'; p.total = num(pago.transaction_amount) || p.total;
     mailPagoTarjeta(p, c);
     compraMeta(p, c);
+    avisoVendedor(p, c);
     avisoDueño('Pago con tarjeta aprobado ' + p.id, p, c);
     marcarCarritoPorPedido(p.id, 'compro');
   } else if (!p.mp_pago) {
@@ -651,6 +652,7 @@ function marcarPagado(id) {
   if (esFuera(p)) { setear(H.pedidos, p._fila, {vence: ''}); mailPagoFuera(p, c); return {}; }   // vendida por fuera: no vino de un anuncio, no se avisa a Meta
   if (p.pago === 'transferencia') mailPagoTransferencia(p, c); else mailPagoTarjeta(p, c);
   compraMeta(p, c);
+  avisoVendedor(p, c);
   return {};
 }
 function despachar(id, tracking) {
@@ -1451,6 +1453,32 @@ function mailDespacho(p, c) {
     '<p>Hola ' + esc(p.nombre) + ', tu pedido <b>' + p.id + '</b> ya salió de San Luis.</p>' + boton(link, 'Seguí tu envío') +
     '<p style="color:#5E6656;font-size:14px">Número de seguimiento: <b>' + p.tracking + '</b></p>' + detalle(p, c), c), c);
 }
+/* Vendedores (16/11/2026): si el pedido pagado usó el código de un vendedor que tiene mail cargado,
+   le avisa la venta y su comisión, con lo que lleva en el mes. Nunca manda datos del cliente.
+   Si falla, el pago se registra igual. */
+function avisoVendedor(p, c) {
+  try {
+    if (!p.cupon) return;
+    var cup = listaCupones().filter(function (k) { return k.codigo === String(p.cupon).toUpperCase(); })[0];
+    if (!cup || !emailOk(cup.email)) return;
+    var its = []; try { its = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []); } catch (e) {}
+    var unidades = its.reduce(function (a, it) { return a + num(it.cantidad); }, 0) || 1;
+    var hoy = ahora(), mes = Utilities.formatDate(hoy, TZ, 'yyyyMM'), fundasMes = 0;
+    filas(H.pedidos).forEach(function (x) {
+      if (String(x.cupon).toUpperCase() !== cup.codigo || VENDIDO.indexOf(x.estado) < 0) return;
+      var f = x.pagado_el instanceof Date ? x.pagado_el : (x.id === p.id ? hoy : null);
+      if (!f || Utilities.formatDate(f, TZ, 'yyyyMM') !== mes) return;
+      var xi = []; try { xi = JSON.parse(x.items); } catch (e) {}
+      fundasMes += xi.reduce(function (a, it) { return a + num(it.cantidad); }, 0) || 1;
+    });
+    var lista = its.map(function (it) { return num(it.cantidad) + ' × ' + esc(it.nombre || it.producto); }).join('<br>');
+    var com = cup.comision > 0 ? '<p style="font-size:18px">Tu comisión por esta venta: <b>' + plata(cup.comision * unidades) + '</b></p>' : '';
+    var acum = '<p>Este mes llevás <b>' + fundasMes + ' funda' + (fundasMes === 1 ? '' : 's') + '</b> vendida' + (fundasMes === 1 ? '' : 's') + (cup.comision > 0 ? ' · <b>' + plata(cup.comision * fundasMes) + '</b> de comisión' : '') + '.</p>';
+    enviar(cup.email, '¡Vendiste con tu código ' + cup.codigo + '! 🐶', plantilla('¡Entró una venta con tu código!',
+      '<p>Se acaba de pagar una compra con tu código <b>' + esc(cup.codigo) + '</b>:</p><p>' + lista + '</p>' + com + acum +
+      '<p style="color:#5E6656;font-size:14px">Gracias por recomendar Los Perrines. Cualquier duda sobre tu comisión, escribinos.</p>', c), c);
+  } catch (e) { console.log('avisoVendedor: ' + e.message); }
+}
 function avisoDueño(asunto, p, c) {
   if (!c.email_aviso) return;
   enviar(c.email_aviso, asunto, plantilla(asunto, '<p>' + esc(p.nombre + ' ' + p.apellido) + ' · ' + esc(p.email) + ' · ' + esc(p.cel_cod + ' ' + p.cel_num) + '</p>' + detalle(p, c), c), c);
@@ -1709,7 +1737,7 @@ function listaCupones() {
   hojaOk(H.cupones);
   return filas(H.cupones).map(function (x) {
     var v = x.vence instanceof Date ? Utilities.formatDate(x.vence, TZ, 'dd/MM/yyyy') : String(x.vence || '');
-    return {codigo: String(x.codigo).toUpperCase(), porcentaje: num(x.porcentaje), monto: num(x.monto), vence: v, unico: x.unico === 'SI', activo: x.activo !== 'NO'};
+    return {codigo: String(x.codigo).toUpperCase(), porcentaje: num(x.porcentaje), monto: num(x.monto), vence: v, unico: x.unico === 'SI', activo: x.activo !== 'NO', email: String(x.email || ''), comision: num(x.comision)};
   });
 }
 function venceDate(v) { var m = String(v || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1], 23, 59, 59) : null; }
@@ -1736,11 +1764,13 @@ function guardarCupon(r) {
   if (!cod) throw new Error('Poné un código (solo letras y números).');
   if (monto > 0) pct = '';
   else if (!(pct > 0 && pct < 100)) throw new Error('Poné un porcentaje entre 1 y 99, o un monto en pesos por funda.');
+  var mail = limpiar(r.email, 100).toLowerCase(), com = Math.round(num(r.comision));
+  if (mail && !emailOk(mail)) throw new Error('El mail del vendedor no es válido.');
   var vence = '';
   if (r.vence) { var m = String(r.vence).match(/^(\d{4})-(\d{2})-(\d{2})$/); vence = m ? m[3] + '/' + m[2] + '/' + m[1] : String(r.vence); }
   hojaOk(H.cupones); var sh = hoja(H.cupones); sh.getRange('C:C').setNumberFormat('@');
   var x = filas(H.cupones).filter(function (k) { return String(k.codigo).toUpperCase() === cod; })[0];
-  var datos = {codigo: cod, porcentaje: pct, monto: monto > 0 ? monto : '', vence: vence, unico: r.unico ? 'SI' : 'NO', activo: r.activo === false ? 'NO' : 'SI'};
+  var datos = {codigo: cod, porcentaje: pct, monto: monto > 0 ? monto : '', email: mail, comision: com > 0 ? com : '', vence: vence, unico: r.unico ? 'SI' : 'NO', activo: r.activo === false ? 'NO' : 'SI'};
   if (x) setear(H.cupones, x._fila, datos); else agregar(H.cupones, Object.assign({creado: ahora()}, datos));
   return {};
 }
