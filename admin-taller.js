@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "15/11 · 4";
+window.PANEL_VERSION = "16/11 · 1";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -634,6 +634,13 @@ function vRentabilidad() {
     + '<span class="acts"><button class="btn ghost" data-a="rsReset"' + (cambios ? "" : " disabled") + '>Volver a los de la web</button><button class="btn main" data-a="rsAplicar"' + (cambios ? "" : " disabled") + ">Aplicar precios a la web</button></span></div>";
   return h;
 }
+/* Venta con código de vendedor (16/11/2026, pedido del dueño): el cliente paga por transferencia con
+   5% de descuento y al vendedor se le pagan $3.000 de comisión. Es solo referencia: no entra en la mezcla. */
+const VEND_DESC = 5, VEND_COMISION = 3000;
+function filaVendedor(r, obj) {
+  const rec = r.px - Math.round(r.px * VEND_DESC / 100) - VEND_COMISION, g = rec - r.C;
+  return "<tr><td>Código de vendedor<br><span class='muted small'>−" + VEND_DESC + "% y " + money(VEND_COMISION) + " de comisión</span></td><td class='n'>" + money(rec) + "</td><td class='n'>" + money(g) + "</td><td class='n'>" + pillR(r.C ? g / r.C : 0, obj) + "</td></tr>";
+}
 function rentCard(p, obj) {
   const f = fichaGuardada(p), r = rent(p), pr = RS.precios[p];
   if (f._nueva) return '<div class="block" style="margin-top:0"><h3>' + esc(nombreP(p)) + '</h3><p class="muted">Cargá la receta en <button class="linkb" data-go="productos">Productos y recetas</button> para calcular el costo.</p></div>';
@@ -643,6 +650,7 @@ function rentCard(p, obj) {
     + '<div class="tw"><table><thead><tr><th>Pago</th><th class="n">Recibís</th><th class="n">Ganás</th><th class="n">Rentab.</th></tr></thead><tbody>'
     + "<tr><td>Tarjeta<br><span class='muted small'>" + money(r.pt) + " − " + esc(RS.comision) + "%</span></td><td class='n'>" + money(r.recT) + "</td><td class='n'>" + money(r.gT) + "</td><td class='n'>" + pillR(r.rT, obj) + "</td></tr>"
     + "<tr><td>Transferencia</td><td class='n'>" + money(r.px) + "</td><td class='n'>" + money(r.gX) + "</td><td class='n'>" + pillR(r.rX, obj) + "</td></tr>"
+    + filaVendedor(r, obj)
     + "<tr class='tot'><td>Mezcla (" + esc(RS.mix) + "% tarjeta)</td><td class='n'></td><td class='n'>" + money(r.gMix) + "</td><td class='n'>" + pillR(r.rMix, obj) + "</td></tr></tbody></table></div>"
     + '<div class="note ' + (r.rMix >= obj ? "ok" : "warn") + '">' + (r.rMix >= obj ? "Con esta mezcla llegás al " + esc(RS.objetivo) + "%." : "Para llegar al " + esc(RS.objetivo) + "% con esta mezcla, el precio con tarjeta tendría que ser <b>" + money(Math.ceil(r.minLista / 100) * 100) + "</b> (manteniendo " + q(r.d * 100) + "% menos por transferencia)"
       + (r.minTransf != null && r.minTransf < 1 ? ", o vender al menos <b>" + Math.ceil(r.minTransf * 100) + "%</b> por transferencia" : "") + ".") + "</div></div>";
