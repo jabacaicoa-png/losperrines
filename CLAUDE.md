@@ -84,7 +84,7 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 
 ## Estado y pendientes (actualizar al cerrar cada tema)
 
-- **Instalado:** `Codigo.gs` **16/11/2026 · 3** (pantalla Vendedores y pagos; el dueño confirmó el 16/11 que anda). Panel **16/11 · 5**. Listo para arrancar con vendedores.
+- **Instalado:** `Codigo.gs` **16/11/2026 · 3** (pantalla Vendedores y pagos; el dueño confirmó el 16/11 que anda). Panel **16/11 · 6**. Listo para arrancar con vendedores.
 - **Vendedores:** EMILIANO creado ($2.000 por funda). Mensajes en `vendedores-mensajes.md` (comisión $2.000; **EMILIANO hay que recrearlo con comisión 2000**) y placa `estado-en-blanco.png` (el vendedor escribe su código encima). Para cada vendedor nuevo: crear código con mail y comisión.
 - **Susana (16/11):** las 6 de 1 plaza salieron **mal**; dejó de trabajar y el dueño retiró el material de las 15 dobles. **Decidió no pagarle** (tema cerrado) y usar esa plata para **arreglar las 6**. Pasos dados en el panel: editar la tanda a 8 dobles (libera el material de las 15) y dejar pendientes las 6 chicas; cuando estén arregladas, recibirlas con confección **$0** y cargar el arreglo como gasto del costurero nuevo. Cuenta saldada: los $80.000 adelantados pagaron justo las 8 dobles; no se le debe nada. El dueño **siempre paga contra entrega** (con Susana fue la excepción).
 - **Costurero nuevo (16/11):** está haciendo **una funda de prueba**; después charlan precio y condiciones. Cuando arranque: cargarlo como proveedor y nueva tanda.
