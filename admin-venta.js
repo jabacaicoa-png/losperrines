@@ -138,4 +138,62 @@ L.CLICK.nvGuardar = t => {
 };
 
 L.vista("nueva", "Ventas", "Nueva venta", vNueva, null, "envios");
+
+/* ================= VENDEDORES (16/11/2026, pedido del dueño) =================
+ * Cuánto se le debe a cada vendedor y el botón para registrar el pago (los viernes).
+ * Regla del dueño: la comisión se gana cuando la venta queda pagada, aunque después la devuelvan
+ * o se cancele. La comisión de cada pedido queda fija al pagarse (columna `comision` de Pedidos).
+ * Backend: acciones `vendedores` y `pagarVendedor` (Codigo.gs, hoja PagosVendedores). */
+const VD = {datos: null, cargando: false, hist: false};
+function cargarVend(forzar) {
+  if (VD.cargando || (VD.datos && !forzar)) return;
+  VD.cargando = true;
+  L.api("vendedores").then(r => { VD.datos = r; })
+    .catch(e => { VD.datos = {error: /desconocida/i.test(e.message) ? "backend" : e.message}; })
+    .then(() => { VD.cargando = false; L.render(); });
+}
+function proxViernes() {
+  const d = new Date(), k = (5 - d.getDay() + 7) % 7; d.setDate(d.getDate() + k);
+  return (k === 0 ? "hoy, " : "") + "viernes " + d.getDate() + "/" + (d.getMonth() + 1);
+}
+const dia = f => String(f || "").slice(0, 10);
+const ESTADO_TXT = {cancelado: "Cancelado: se paga igual", vencido: "Vencido: se paga igual", entregado: "Entregado", despachado: "En camino", exportado: "Para despachar", pagado: "Pagado"};
+function vVendedores() {
+  cargarVend();
+  let h = '<div class="ph"><div><h2>Vendedores</h2><p class="sub">Cuánto le debés a cada vendedor. La comisión se gana cuando la venta queda pagada, aunque después el cliente la devuelva. Se paga los viernes.</p></div>'
+    + '<button class="btn ghost sm" data-a="vdRef">↻ Actualizar</button></div>';
+  const D = VD.datos;
+  if (!D) return h + '<div class="block"><p class="muted">Cargando…</p></div>';
+  if (D.error === "backend") return h + '<div class="note bad"><b>Falta actualizar el sistema.</b> Andá a Configuración → Sistema → Buscar actualización → Actualizar ahora.</div>';
+  if (D.error) return h + '<div class="note bad">' + esc(D.error) + '</div>';
+  if (!D.vendedores.length) return h + '<div class="block"><p class="muted" style="margin:0">Todavía no hay vendedores. Para sumar uno, creá su código en <button class="linkb" data-go="recuperar">Recuperar ventas → Códigos de descuento</button> con su mail y su comisión por funda.</p></div>';
+  const conDeuda = D.vendedores.filter(v => v.deuda > 0);
+  h += '<div class="block" style="margin-top:0"><div class="muted small">Para pagar el ' + proxViernes() + '</div><div style="font-size:2rem;font-weight:800;line-height:1.2">' + money(D.deuda) + '</div>'
+    + (conDeuda.length ? '<div class="muted small">' + conDeuda.map(v => esc(v.codigo) + ' ' + money(v.deuda)).join(" · ") + '</div>' : '<div class="muted small">No le debés nada a nadie. 👌</div>') + '</div>';
+  D.vendedores.forEach(v => {
+    h += '<div class="block"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">' + esc(v.codigo) + '</h3>'
+      + '<span class="muted small">' + (v.email ? esc(v.email) : 'sin mail') + (v.comision > 0 ? ' · ' + money(v.comision) + ' por funda' : '') + '</span></div>';
+    if (v.pendientes.length) {
+      h += '<p style="margin:10px 0 6px">Le debés <b style="font-size:1.2rem">' + money(v.deuda) + '</b> · ' + v.fundasPend + ' funda' + (v.fundasPend === 1 ? '' : 's') + '</p>'
+        + '<div class="tw"><table><thead><tr><th>Pedido</th><th>Pagó</th><th class="n">Fundas</th><th class="n">Comisión</th></tr></thead><tbody>'
+        + v.pendientes.map(x => '<tr><td>' + esc(x.id) + (x.estado === "cancelado" || x.estado === "vencido" ? '<br><span class="pill warn" style="white-space:normal">' + esc(ESTADO_TXT[x.estado]) + '</span>' : '') + '</td><td>' + esc(dia(x.pagado_el).slice(0, 5)) + '</td><td class="n">' + x.fundas + '</td><td class="n">' + money(x.monto) + '</td></tr>').join("")
+        + '</tbody></table></div>'
+        + '<button class="btn main" style="margin-top:10px" data-a="vdPagar" data-cod="' + esc(v.codigo) + '" data-m="' + v.deuda + '">Le pagué ' + money(v.deuda) + '</button>';
+    } else h += '<p class="muted" style="margin:10px 0 0">No le debés nada.</p>';
+    h += '<p class="muted small" style="margin:10px 0 0">Ya cobró ' + money(v.cobrado) + (v.fundasCobradas ? ' (' + v.fundasCobradas + ' funda' + (v.fundasCobradas === 1 ? '' : 's') + ')' : '') + (v.ultimoPago ? ' · último pago el ' + esc(dia(v.ultimoPago.fecha)) : '') + '</p></div>';
+  });
+  if (D.pagos.length) h += '<details class="block" id="vd-hist"' + (VD.hist ? ' open' : '') + '><summary><b>Pagos hechos</b></summary><div class="tw" style="margin-top:8px"><table><thead><tr><th>Fecha</th><th>Vendedor</th><th class="n">Fundas</th><th class="n">Monto</th></tr></thead><tbody>'
+    + D.pagos.map(x => '<tr><td>' + esc(dia(x.fecha)) + '</td><td>' + esc(x.codigo) + '</td><td class="n">' + x.fundas + '</td><td class="n">' + money(x.monto) + '</td></tr>').join("") + '</tbody></table></div></details>';
+  return h;
+}
+document.addEventListener("toggle", e => { if (e.target && e.target.id === "vd-hist") VD.hist = e.target.open; }, true);
+L.CLICK.vdRef = () => { VD.datos = null; cargarVend(true); L.render(); };
+L.CLICK.vdPagar = t => {
+  const cod = t.dataset.cod, m = +t.dataset.m;
+  if (!confirm("¿Ya le transferiste " + money(m) + " a " + cod + "?\n\nSe registra el pago y, si tiene mail, le avisamos.")) return;
+  t.disabled = true;
+  L.api("pagarVendedor", {codigo: cod, monto: m}).then(r => { L.toast("Pago de " + money(r.pagado) + " a " + cod + " registrado"); VD.datos = null; cargarVend(true); })
+    .catch(e => { L.toast(e.message, 5000); t.disabled = false; VD.datos = null; cargarVend(true); });
+};
+L.vista("vendedores", "Ventas", "Vendedores", vVendedores, () => ({n: VD.datos && VD.datos.vendedores ? VD.datos.vendedores.filter(v => v.deuda > 0).length : 0}), "envios");
 })();

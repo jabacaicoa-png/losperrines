@@ -19,4 +19,30 @@ const mv=env.mails.slice(m0).filter(m=>m.to==='emi@vende.com'); assert.equal(mv.
 assert(/\$6\.000/.test(mv[0].htmlBody),'comisión de 2 fundas'); assert(/2 fundas/.test(mv[0].htmlBody)); assert(!/ana@x\.com|Ana|30111222|4111111/.test(mv[0].htmlBody),'sin datos del cliente');
 const m1=env.mails.length; P({accion:'pagado',token:tok,id:o2.id}); assert.equal(env.mails.slice(m1).filter(m=>m.to==='emi@vende.com').length,0,'otro código no avisa');
 console.log('aviso al vendedor:',mv[0].subject);
+// ===== Vendedores: lo que se debe y los pagos de los viernes =====
+const V=()=>P({accion:'vendedores',token:tok}).vendedores.find(v=>v.codigo==='EMILIANO');
+let vd=V(); assert.equal(vd.deuda,6000); assert.equal(vd.pendientes.length,1); assert.equal(vd.fundasPend,2);
+assert.equal(P({accion:'vendedores',token:tok}).vendedores.filter(x=>x.codigo==='VOLVE10').length,0,'un código común no es vendedor');
+// si el cliente devuelve / se cancela después de pagar, se paga igual
+P({accion:'cancelar',token:tok,id:o.id}); vd=V(); assert.equal(vd.deuda,6000,'cancelado después de pagar: se paga igual');
+// si después cambia la comisión del código, lo ya vendido no cambia
+P({accion:'guardarCupon',token:tok,codigo:'EMILIANO',monto:2000,unico:true,email:'emi@vende.com',comision:5000}); vd=V(); assert.equal(vd.deuda,6000,'la comisión queda fija al pagarse');
+// una reserva sin pagar no genera comisión
+const o3=P(Object.assign({accion:'pedido',cupon:'EMILIANO',items:[{producto:'doble',cantidad:1}]},datos,{email:'c@x.com'})); assert.equal(V().deuda,6000,'sin pagar no suma');
+// pagar: con el monto que se vio
+r0=env.post({accion:'pagarVendedor',token:tok,codigo:'EMILIANO',monto:9999}); assert(!r0.ok&&/Entró otra venta/.test(r0.error));
+const m2=env.mails.length; P({accion:'pagarVendedor',token:tok,codigo:'EMILIANO',monto:6000});
+assert.equal(env.mails.slice(m2).filter(m=>m.to==='emi@vende.com'&&/Te pagamos/.test(m.subject)).length,1,'mail de pago al vendedor');
+vd=V(); assert.equal(vd.deuda,0); assert.equal(vd.cobrado,6000); assert.equal(vd.fundasCobradas,2);
+r0=env.post({accion:'pagarVendedor',token:tok,codigo:'EMILIANO'}); assert(!r0.ok&&/No le debés/.test(r0.error));
+// la reserva se paga después: nueva comisión con el valor nuevo ($5.000)
+P({accion:'pagado',token:tok,id:o3.id}); vd=V(); assert.equal(vd.deuda,5000); assert.equal(vd.pendientes[0].id,o3.id);
+assert.equal(P({accion:'vendedores',token:tok}).pagos.length,1);
+// recordatorio en el resumen del viernes
+env.ctx.ahora=()=>new Date('2026-11-20T20:10:00-03:00'); P({accion:'guardarConfig',token:tok,valores:{email_aviso:'yo@lp.com'}});
+const m3=env.mails.length; P({accion:'resumenAhora',token:tok}); const res=env.mails.slice(m3).find(m=>/Resumen/.test(m.subject));
+assert(res&&/Hoy es viernes: comisiones para pagar/.test(res.htmlBody)&&/EMILIANO/.test(res.htmlBody),'el resumen del viernes recuerda las comisiones');
+env.ctx.ahora=()=>new Date('2026-11-18T20:10:00-03:00'); const m4=env.mails.length; P({accion:'resumenAhora',token:tok});
+assert(!/comisiones para pagar/.test(env.mails.slice(m4).find(m=>/Resumen/.test(m.subject)).htmlBody),'el miércoles no');
+console.log('vendedores: ok');
 console.log('ok');

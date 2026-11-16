@@ -16,18 +16,19 @@
  */
 
 var TZ = 'America/Argentina/Buenos_Aires';
-var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas'};
+var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores'};
 var COLS = {
   Pedidos: ['id','fecha','estado','pago','cantidad','total','nombre','apellido','dni','email','cel_cod','cel_num',
             'entrega','calle','numero','piso','depto','prov_loc_cp','sucursal','observaciones','vence',
             'mp_preferencia','mp_pago','tracking','exportado','notas','items','cupon','descuento','recordatorio',
             'pagado_el','preparado','despachado_el','entregado_el','consulta_el','problema_el',
-            'origen','canal','medio','bonificacion'],
+            'origen','canal','medio','bonificacion','comision'],   // comision: lo que gana el vendedor por este pedido, fijado al pagarse (16/11/2026)
   Movimientos: ['fecha','tipo','cantidad','motivo','producto'],
   Avisos: ['fecha','email','avisado'],
   Media: ['id','fecha','destino','tipo','nombre','orden','principal','drive_id'],
   Carritos: ['email','fecha','actualizado','nombre','apellido','cel','items','estado','pedido','origen','recordatorio','segundo'],
-  Cupones: ['codigo','porcentaje','vence','unico','activo','creado','monto','email','comision'],   // email/comision: vendedor al que se le avisa cada venta y cuánto cobra por funda   // monto: descuento fijo en $ por funda (16/11/2026); si está, manda sobre el porcentaje
+  Cupones: ['codigo','porcentaje','vence','unico','activo','creado','monto','email','comision'],   // monto: descuento fijo en $ por funda (manda sobre el %); email/comision: vendedor y lo que cobra por funda (16/11/2026)
+  PagosVendedores: ['fecha','codigo','monto','fundas','pedidos','notas'],   // cada pago de comisiones (los viernes); pedidos = IDs pagados, separados por coma
   Bajas: ['fecha','email'],
   Config: ['clave','valor','descripcion'],
   TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
@@ -87,7 +88,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '16/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '16/11/2026 · 3';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -191,6 +192,8 @@ function rutear(r) {
     case 'enviarSegundo': return enviarSegundo(r);
     case 'guardarCupon': return conLock(function () { return guardarCupon(r); });
     case 'borrarCupon': return conLock(function () { return borrarCupon(r.codigo); });
+    case 'vendedores': return vendedoresResumen();
+    case 'pagarVendedor': return conLock(function () { return pagarVendedor(r.codigo, r.monto); });
     case 'corte': return {corte: leerDoc('Corte')};
     case 'insumos': return {insumos: leerDoc('Insumos')};
     case 'guardarInsumos': return guardarDoc('Insumos', r.data);
@@ -920,6 +923,7 @@ function resumenDiario(automatico) {
     seccion('Despachar', g.despachar, 'Exportados: falta cargar el número de seguimiento.');
   if (g.camino.length) cuerpo += '<p style="margin:18px 0 0;color:#5E6656">En camino: ' + g.camino.length + '.</p>';
   cuerpo += lineaPublicidadResumen(c);
+  cuerpo += lineaComisionesResumen();
   cuerpo += '<p style="margin:18px 0 0"><b>Stock:</b> ' + productos(c).filter(function (pr) { return pr.activo || s[pr.id].ingresado > 0; }).map(function (pr) {
     var st = s[pr.id], bajo = st.ingresado > 0 && st.disponible <= num(c.stock_minimo);
     return esc(pr.nombre) + ' <b' + (bajo ? ' style="color:#B4432F"' : '') + '>' + Math.max(0, st.disponible) + '</b> disponibles' + (bajo ? ' (stock bajo)' : '');
@@ -1453,31 +1457,88 @@ function mailDespacho(p, c) {
     '<p>Hola ' + esc(p.nombre) + ', tu pedido <b>' + p.id + '</b> ya salió de San Luis.</p>' + boton(link, 'Seguí tu envío') +
     '<p style="color:#5E6656;font-size:14px">Número de seguimiento: <b>' + p.tracking + '</b></p>' + detalle(p, c), c), c);
 }
-/* Vendedores (16/11/2026): si el pedido pagado usó el código de un vendedor que tiene mail cargado,
-   le avisa la venta y su comisión, con lo que lleva en el mes. Nunca manda datos del cliente.
-   Si falla, el pago se registra igual. */
+/* ================= VENDEDORES (16/11/2026) =================
+   Cada vendedor tiene un código (hoja Cupones) con su mail y su comisión por funda.
+   Regla del dueño: la comisión se GANA cuando el pedido queda pagado, aunque después el cliente
+   lo devuelva o se cancele (el riesgo lo asume el negocio). Se paga una vez por semana, los viernes.
+   Al pagarse un pedido con código se fija la comisión en la columna `comision` del pedido (no cambia
+   si después se modifica la comisión del código) y se le avisa por mail al vendedor (sin datos del cliente). */
+function cuponDe(codigo) { codigo = String(codigo || '').toUpperCase(); return codigo ? listaCupones().filter(function (k) { return k.codigo === codigo; })[0] : null; }
+function esVendedor(cup) { return !!cup && (cup.comision > 0 || emailOk(cup.email)); }
+function fundasDe(p) { var its = []; try { its = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []); } catch (e) {} return its.reduce(function (a, it) { return a + num(it.cantidad); }, 0) || 1; }
+function comisionDe(p, cup) { var c0 = String(p.comision == null ? '' : p.comision); return c0 !== '' ? num(c0) : (cup ? num(cup.comision) * fundasDe(p) : 0); }
 function avisoVendedor(p, c) {
   try {
-    if (!p.cupon) return;
-    var cup = listaCupones().filter(function (k) { return k.codigo === String(p.cupon).toUpperCase(); })[0];
-    if (!cup || !emailOk(cup.email)) return;
+    var cup = cuponDe(p.cupon); if (!esVendedor(cup)) return;
+    var unidades = fundasDe(p), monto = num(cup.comision) * unidades;
+    var fila = pedido(p.id); if (fila) setear(H.pedidos, fila._fila, {comision: monto});
+    if (!emailOk(cup.email)) return;
     var its = []; try { its = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []); } catch (e) {}
-    var unidades = its.reduce(function (a, it) { return a + num(it.cantidad); }, 0) || 1;
-    var hoy = ahora(), mes = Utilities.formatDate(hoy, TZ, 'yyyyMM'), fundasMes = 0;
+    var hoy = ahora(), mes = Utilities.formatDate(hoy, TZ, 'yyyyMM'), fundasMes = 0, plataMes = 0;
     filas(H.pedidos).forEach(function (x) {
-      if (String(x.cupon).toUpperCase() !== cup.codigo || VENDIDO.indexOf(x.estado) < 0) return;
-      var f = x.pagado_el instanceof Date ? x.pagado_el : (x.id === p.id ? hoy : null);
-      if (!f || Utilities.formatDate(f, TZ, 'yyyyMM') !== mes) return;
-      var xi = []; try { xi = JSON.parse(x.items); } catch (e) {}
-      fundasMes += xi.reduce(function (a, it) { return a + num(it.cantidad); }, 0) || 1;
+      if (String(x.cupon).toUpperCase() !== cup.codigo || !(x.pagado_el instanceof Date)) return;
+      if (Utilities.formatDate(x.pagado_el, TZ, 'yyyyMM') !== mes) return;
+      fundasMes += fundasDe(x); plataMes += comisionDe(x, cup);
     });
     var lista = its.map(function (it) { return num(it.cantidad) + ' × ' + esc(it.nombre || it.producto); }).join('<br>');
-    var com = cup.comision > 0 ? '<p style="font-size:18px">Tu comisión por esta venta: <b>' + plata(cup.comision * unidades) + '</b></p>' : '';
-    var acum = '<p>Este mes llevás <b>' + fundasMes + ' funda' + (fundasMes === 1 ? '' : 's') + '</b> vendida' + (fundasMes === 1 ? '' : 's') + (cup.comision > 0 ? ' · <b>' + plata(cup.comision * fundasMes) + '</b> de comisión' : '') + '.</p>';
+    var com = monto > 0 ? '<p style="font-size:18px">Tu comisión por esta venta: <b>' + plata(monto) + '</b></p>' : '';
+    var acum = '<p>Este mes llevás <b>' + fundasMes + ' funda' + (fundasMes === 1 ? '' : 's') + '</b> vendida' + (fundasMes === 1 ? '' : 's') + (plataMes > 0 ? ' · <b>' + plata(plataMes) + '</b> de comisión' : '') + '.</p>';
     enviar(cup.email, '¡Vendiste con tu código ' + cup.codigo + '! 🐶', plantilla('¡Entró una venta con tu código!',
       '<p>Se acaba de pagar una compra con tu código <b>' + esc(cup.codigo) + '</b>:</p><p>' + lista + '</p>' + com + acum +
-      '<p style="color:#5E6656;font-size:14px">Gracias por recomendar Los Perrines. Cualquier duda sobre tu comisión, escribinos.</p>', c), c);
+      '<p style="color:#5E6656;font-size:14px">Las comisiones se pagan <b>todos los viernes</b>. Gracias por recomendar Los Perrines.</p>', c), c);
   } catch (e) { console.log('avisoVendedor: ' + e.message); }
+}
+/* Lo que se le debe a cada vendedor: pedidos con su código que se pagaron (aunque después se hayan
+   devuelto o cancelado) y que todavía no entraron en un pago de la hoja PagosVendedores. */
+function vendedoresResumen() {
+  hojaOk(H.pagosv);
+  var pagos = filas(H.pagosv), pagados = {};
+  pagos.forEach(function (x) { String(x.pedidos || '').split(',').forEach(function (id) { id = id.trim(); if (id) pagados[id] = 1; }); });
+  var cups = listaCupones().filter(esVendedor), P = filas(H.pedidos);
+  var vend = cups.map(function (cup) {
+    var pend = [], cobradoF = 0;
+    P.forEach(function (p) {
+      if (String(p.cupon).toUpperCase() !== cup.codigo || !(p.pagado_el instanceof Date)) return;
+      if (pagados[p.id]) { cobradoF += fundasDe(p); return; }
+      pend.push({id: p.id, pagado_el: fmtFecha(p.pagado_el), ts: p.pagado_el.getTime(), fundas: fundasDe(p), monto: comisionDe(p, cup), estado: p.estado, items: textoItems(p, cfg())});
+    });
+    pend.sort(function (a, b) { return a.ts - b.ts; });
+    var mios = pagos.filter(function (x) { return String(x.codigo).toUpperCase() === cup.codigo; });
+    var ult = mios.length ? mios[mios.length - 1] : null;
+    return {codigo: cup.codigo, email: cup.email, comision: cup.comision, activo: cup.activo, pendientes: pend,
+      deuda: pend.reduce(function (a, x) { return a + x.monto; }, 0), fundasPend: pend.reduce(function (a, x) { return a + x.fundas; }, 0),
+      cobrado: mios.reduce(function (a, x) { return a + num(x.monto); }, 0), fundasCobradas: cobradoF,
+      ultimoPago: ult ? {fecha: fmtFecha(ult.fecha), monto: num(ult.monto)} : null};
+  });
+  vend.sort(function (a, b) { return b.deuda - a.deuda || (a.codigo < b.codigo ? -1 : 1); });
+  return {vendedores: vend, pagos: pagos.slice(-30).reverse().map(function (x) { return {fecha: fmtFecha(x.fecha), codigo: x.codigo, monto: num(x.monto), fundas: num(x.fundas), pedidos: String(x.pedidos || '')}; }),
+    deuda: vend.reduce(function (a, v) { return a + v.deuda; }, 0)};
+}
+/* En el resumen de las 20 h del jueves ("mañana") y del viernes ("hoy"): a quién hay que pagarle comisión. */
+function lineaComisionesResumen() {
+  try {
+    var dia = String(new Date(Utilities.formatDate(ahora(), TZ, 'yyyy-MM-dd') + 'T12:00:00Z').getUTCDay()); if (dia !== '4' && dia !== '5') return '';   // 4 = jueves, 5 = viernes (hora de Argentina)
+    var r = vendedoresResumen(), v = r.vendedores.filter(function (x) { return x.deuda > 0; }); if (!v.length) return '';
+    return '<div style="background:#EEF1DB;border-radius:12px;padding:12px 14px;margin:18px 0 0"><b>' + (dia === '4' ? 'Mañana es viernes: comisiones para pagar' : 'Hoy es viernes: comisiones para pagar') + ' (' + plata(r.deuda) + ')</b>' +
+      '<ul style="margin:6px 0 0;padding-left:18px">' + v.map(function (x) { return '<li><b>' + esc(x.codigo) + '</b>: ' + plata(x.deuda) + ' (' + x.fundasPend + ' funda' + (x.fundasPend === 1 ? '' : 's') + ')</li>'; }).join('') + '</ul>' +
+      '<p style="margin:6px 0 0;color:#5E6656;font-size:14px">Cuando les transfieras, tocá "Le pagué" en el panel → Vendedores.</p></div>';
+  } catch (e) { return ''; }
+}
+/* Registra el pago de todo lo pendiente de un vendedor. `monto` es el que vio el dueño en la pantalla:
+   si mientras tanto entró otra venta, no paga de más sin avisar. */
+function pagarVendedor(codigo, montoVisto) {
+  var r = vendedoresResumen(), v = r.vendedores.filter(function (x) { return x.codigo === String(codigo || '').toUpperCase(); })[0];
+  if (!v) throw new Error('No encontré ese vendedor.');
+  if (!v.pendientes.length) throw new Error('No le debés nada a ' + v.codigo + '.');
+  if (montoVisto != null && num(montoVisto) !== v.deuda) throw new Error('Entró otra venta mientras mirabas: ahora le debés ' + plata(v.deuda) + '. Tocá ↻ y revisá.');
+  agregar(H.pagosv, {fecha: ahora(), codigo: v.codigo, monto: v.deuda, fundas: v.fundasPend, pedidos: v.pendientes.map(function (x) { return x.id; }).join(',')});
+  var c = cfg();
+  if (emailOk(v.email)) try {
+    enviar(v.email, 'Te pagamos tu comisión · Los Perrines 🐶', plantilla('¡Te pagamos!',
+      '<p>Te transferimos <b>' + plata(v.deuda) + '</b> por <b>' + v.fundasPend + ' funda' + (v.fundasPend === 1 ? '' : 's') + '</b> vendida' + (v.fundasPend === 1 ? '' : 's') + ' con tu código <b>' + esc(v.codigo) + '</b>.</p>' +
+      '<p style="color:#5E6656;font-size:14px">Gracias por recomendar Los Perrines. Seguimos el próximo viernes.</p>', c), c);
+  } catch (e) {}
+  return {pagado: v.deuda, fundas: v.fundasPend};
 }
 function avisoDueño(asunto, p, c) {
   if (!c.email_aviso) return;
