@@ -433,28 +433,29 @@ details.m-det[open] summary::after{content:"−"}
   .illus svg{max-height:210px;display:block;margin:0 auto}
   .modelo .m-beneficio-desc{display:none}
   .modelo .m-body{padding:16px 16px 18px}
-  .modelo .m-foto{aspect-ratio:5/4}
+  .modelo .m-foto{aspect-ratio:6/5}
   /* al tocar una tarjeta de precio del inicio, la funda entra entera con el botón COMPRAR a la vista (16/11/2026, pedido del dueño) */
   .modelo{scroll-margin-top:-8px}   /* se suma al scroll-padding-top de 70 px: queda justo debajo de la barra */
-  .modelo .m-body{padding:12px 16px 16px}
-  .modelo .m-body h3{font-size:1.3rem;margin:0}
+  .modelo .m-body{padding:14px 16px 16px}
+  .modelo .m-body h3{font-size:min(1.5rem,5.8vw);margin:0}   /* más grande (16/11/2026): las garantías quedan fuera de la pantalla, debajo del botón */
   .modelo .m-sub,.modelo .m-beneficios,.modelo .m-sello,.modelo .m-ptr-l{display:none}
   .modelo .m-precio{margin-top:4px}
-  .modelo .m-ptr{gap:4px 8px;align-items:center}
-  .modelo .m-ptr strong{font-size:1.9rem}
-  .modelo .m-ptr .m-ptr-x{display:inline;color:var(--muted);font-size:.88rem;font-weight:600;white-space:nowrap}
-  .modelo .m-ptr .pm-off{white-space:nowrap}
-  .modelo .m-precio .m-tj{margin-top:4px;font-size:.95rem}
-  .modelo .m-precio span{margin-top:2px;font-size:.98rem}
-  .modelo .m-envio{margin-top:12px;padding:9px 14px;gap:12px}
-  .modelo .m-envio .andreani-a{width:36px;height:auto;margin:0}
-  .modelo .m-envio b{font-size:1.08rem}
-  .modelo .m-envio .m-llega{font-size:.95rem}
+  .modelo .m-ptr{gap:4px 6px;align-items:center}
+  .modelo .m-ptr strong{font-size:min(2.15rem,7.5vw)}
+  .modelo .m-ptr .m-ptr-x{display:inline;color:var(--muted);font-size:min(.92rem,3.3vw);font-weight:600;white-space:nowrap}
+  .modelo .m-ptr .pm-off{white-space:nowrap;font-size:min(.8rem,2.9vw)}
+  .modelo .m-precio .m-tj{margin-top:6px;font-size:min(1.08rem,4.15vw)}
+  .modelo .m-precio span{margin-top:3px;font-size:min(1.1rem,4.2vw)}
+  .modelo .m-envio{margin-top:14px;padding:11px 14px;gap:14px}
+  .modelo .m-envio .andreani-a{width:min(42px,10vw);height:auto;margin:0}
+  .modelo .m-envio b{font-size:min(1.2rem,4.6vw)}
+  .modelo .m-envio .m-llega{font-size:min(1rem,3.8vw);white-space:nowrap}
   .modelo .m-envio .m-llega .lg{display:none}
   .modelo .m-envio .m-llega .ct{display:inline}
-  .modelo .m-envio small{font-size:.85rem}
-  .modelo .m-cta{margin-top:12px !important;padding:15px;order:1}
+  .modelo .m-envio small{font-size:min(.95rem,3.6vw)}
+  .modelo .m-cta{margin-top:14px !important;padding:18px;font-size:1.12rem;order:1}
   .modelo .m-conf,.modelo .m-auto,.modelo .m-det{order:2}
+  .modelo .m-conf{margin-top:46px}   /* que arranquen debajo de la barra de abajo */
   .modelo .stockline{margin-top:8px}
   .tela .grid4,.hgrid,.features{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;padding-bottom:8px;margin:0 -20px;padding-left:20px;padding-right:20px;scrollbar-width:none;scroll-padding-left:20px}
   .tela .grid4::-webkit-scrollbar,.hgrid::-webkit-scrollbar,.features::-webkit-scrollbar{display:none}
