@@ -16,6 +16,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | `Codigo.gs` | Backend en Google Apps Script sobre una planilla. Se instala con el botón del panel (ver abajo). |
 | `corte.html` | Plano de corte y ficha para la costurera. |
 | `ig/`, `pet/`, `fb/`, `wa/` | Links cortos con utm (Instagram bio, veterinarias, Marketplace/Facebook, WhatsApp). |
+| `vendedores-mensajes.md` | Mensajes de WhatsApp para invitar vendedores. |
 | `privacidad/` | Política de privacidad (la pidió Google). |
 | `dev/` | Emulador de Apps Script, pruebas y helpers de Playwright; `dev/instagram/` placas (lanzamiento, semana, **vendedor.js**); `dev/video/` scripts ffmpeg de Reels. |
 | `costos.html`, `insumos.html`, `pagos.html`, `admin-viejo.html` | Herramientas viejas, de respaldo. |
@@ -60,7 +61,7 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 - Compras suman stock y deuda con el proveedor; "Otro gasto" solo deuda. Proveedores y gastos estilo app del banco (adelantos = saldo a favor).
 - Tandas: en confección reservan insumos; al recibir descuentan insumos, suman fundas a la tienda y anotan la confección. Se pueden editar mientras no estén cerradas.
 - **Códigos de descuento:** solo con transferencia, una vez por cliente (opcional). Pueden ser **% o monto fijo en $ por funda** (columna `monto` de Cupones; manda sobre el %).
-- **Vendedores (16/11):** cada vendedor tiene un código con **$2.000 de descuento por funda** para el cliente y cobra **$3.000 por funda**. Se cargan en Recuperar ventas → Códigos de descuento con su **mail** y **comisión** (para cambiar un código existente se crea de nuevo con el mismo nombre). La comisión se **gana cuando el pedido queda pagado, aunque después se devuelva o cancele**, y queda fija en el pedido (columna `comision`). **Se paga los viernes**: pantalla **Ventas → Vendedores** (lo que se debe pedido por pedido, botón "Le pagué", hoja PagosVendedores, mail al vendedor); el resumen de las 20 h del jueves y viernes lo recuerda. Al pagarse una compra con su código, al vendedor le llega un mail (sin datos del cliente).
+- **Vendedores (16/11):** cada vendedor tiene un código con **$2.000 de descuento por funda** para el cliente y cobra **$2.000 por funda** (bajó de $3.000 el 16/11, decisión del dueño). Se cargan en Recuperar ventas → Códigos de descuento con su **mail** y **comisión** (para cambiar un código existente se crea de nuevo con el mismo nombre). La comisión se **gana cuando el pedido queda pagado, aunque después se devuelva o cancele**, y queda fija en el pedido (columna `comision`). **Se paga los viernes**: pantalla **Ventas → Vendedores** (lo que se debe pedido por pedido, botón "Le pagué", hoja PagosVendedores, mail al vendedor); el resumen de las 20 h del jueves y viernes lo recuerda. Al pagarse una compra con su código, al vendedor le llega un mail (sin datos del cliente).
 - Las transferencias llegan a **Mercado Pago**.
 
 ## Funciones principales (detalle en NOTAS-HISTORIA.md)
@@ -71,7 +72,7 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 - **Empezar de cero:** respaldo .xlsx en Drive y borra lo de prueba.
 - **Medición:** GA4 + píxel de Meta + API de Conversiones (token en propiedades del script, nunca en el repo). `?no_medir=1` apaga la medición en un aparato (se le explicó al dueño el 16/11 para que sus visitas no cuenten).
 - **Tablero** (Analytics + ventas, solo Argentina) y **Publicidad** (Meta Ads vs ventas reales, por provincia).
-- **Precios y rentabilidad:** prueba precios; fila "Código de vendedor" (−$2.000 −$3.000; `VEND_DESC`, `VEND_COMISION`).
+- **Precios y rentabilidad:** prueba precios; fila "Código de vendedor" (−$2.000 −$2.000; `VEND_DESC`, `VEND_COMISION`).
 
 ## La web hoy (16/11)
 
@@ -83,8 +84,8 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 
 ## Estado y pendientes (actualizar al cerrar cada tema)
 
-- **Instalado:** `Codigo.gs` **16/11/2026 · 3** (pantalla Vendedores y pagos; el dueño confirmó el 16/11 que anda). Panel **16/11 · 4**. Listo para arrancar con vendedores.
-- **Vendedores:** EMILIANO creado ($2.000 por funda). Mensajes de difusión dados (1 invitación "subís un estado, si alguien compra con tu código ganás $3.000" → 2 pedir mail y nombre → 3 condiciones con pago los viernes) y placa `estado-en-blanco.png` (el vendedor escribe su código encima). Para cada vendedor nuevo: crear código con mail y comisión.
+- **Instalado:** `Codigo.gs` **16/11/2026 · 3** (pantalla Vendedores y pagos; el dueño confirmó el 16/11 que anda). Panel **16/11 · 5**. Listo para arrancar con vendedores.
+- **Vendedores:** EMILIANO creado ($2.000 por funda). Mensajes en `vendedores-mensajes.md` (comisión $2.000; **EMILIANO hay que recrearlo con comisión 2000**) y placa `estado-en-blanco.png` (el vendedor escribe su código encima). Para cada vendedor nuevo: crear código con mail y comisión.
 - **Susana (16/11):** las 6 de 1 plaza salieron **mal**; dejó de trabajar y el dueño retiró el material de las 15 dobles. **Decidió no pagarle** (tema cerrado) y usar esa plata para **arreglar las 6**. Pasos dados en el panel: editar la tanda a 8 dobles (libera el material de las 15) y dejar pendientes las 6 chicas; cuando estén arregladas, recibirlas con confección **$0** y cargar el arreglo como gasto del costurero nuevo. Cuenta saldada: los $80.000 adelantados pagaron justo las 8 dobles; no se le debe nada. El dueño **siempre paga contra entrega** (con Susana fue la excepción).
 - **Costurero nuevo (16/11):** está haciendo **una funda de prueba**; después charlan precio y condiciones. Cuando arranque: cargarlo como proveedor y nueva tanda.
 - **URGENTE sin respuesta:** la compra de prueba con tarjeta del 13/11 (LP-261113-002) quedó vencida sin pago: preguntar si pagó (si pagó, el webhook de Mercado Pago no llega).
