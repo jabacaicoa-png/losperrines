@@ -3,6 +3,7 @@
 Tienda online de fundas tipo canasto para mascotas (asiento trasero del auto), hecha en San Luis.
 Dueño: no es programador. **Hablale en español rioplatense, simple, paso a paso, sin jerga técnica**;
 muchas veces trabaja desde el celular. Explicá el "por qué" con ejemplos y números concretos.
+**Pidió (17/11) que seas siempre sincero, no condescendiente:** si algo que propone no conviene, decíselo claro y con números, aunque después decida él.
 El repositorio es **público**: no escribas acá datos sensibles (costos, márgenes, datos de clientes, claves).
 
 > **Detalle completo** de cada cambio, decisión y medida (hasta el 16/11/2026): `NOTAS-HISTORIA.md`. No se carga solo: buscá ahí (grep) cuando necesites el porqué o el nombre exacto de algo. Este archivo es el resumen: mantenelo corto (el dueño pidió cuidar el contexto) y actualizalo **una vez al final de cada tema**, no en cada cambio.
