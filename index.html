@@ -354,6 +354,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .pm-off{background:var(--ball);color:#1E2418;font-weight:800;font-size:.72rem;border-radius:999px;padding:3px 8px;letter-spacing:.02em}
 .pm-tj{display:block;font-size:.86rem;color:var(--muted);margin-top:2px}
 .pm-cuo{display:block}.pm-sep{display:none}.pm-ver-i{display:none}.pm-llega{display:block}
+.pm-q{display:none}   /* celular: cuotas primero (17/11/2026, pedido del dueño); en la compu sigue la transferencia primero */
 .pm-top{display:block;align-items:center;justify-content:space-between;gap:8px}.pm-top .pm-off{display:none}
 .pm-env{display:block;background:var(--ball);color:#1E2418;border-radius:12px;padding:8px 12px;font-size:.92rem;font-weight:600;line-height:1.3}
 .pm-env b{font-weight:800;font-size:1.02rem}
@@ -419,6 +420,17 @@ details.m-det[open] summary::after{content:"−"}
   .pm-tr small{font-size:min(.9rem,3.5vw);white-space:nowrap}
   .pm-tj{font-size:min(.88rem,3.42vw);margin-top:3px;white-space:nowrap}
   .pm-cuo{display:inline}.pm-sep{display:inline}.pm-larg{display:none}
+  /* cuotas primero (17/11/2026, lo eligió el dueño): "3 cuotas de $X sin interés" grande y "o $Y por transferencia" en verde abajo; sin 10% OFF ni total con tarjeta */
+  .pm-top .pm-off,.pm-tr,.pm-tj{display:none}
+  .pm-q{display:block}
+  .pm-q1,.pm-q2{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+  .pm-q1{margin-top:1px}
+  .pm-q1 small{font-size:min(.95rem,3.7vw);font-weight:700;color:var(--ink)}
+  .pm-q1 b{font-size:min(1.6rem,6.2vw);font-weight:800;color:var(--ink);line-height:1.1}
+  .pm-q1 i{font-style:normal;font-size:min(.85rem,3.3vw);color:var(--muted)}
+  .pm-q2{margin-top:1px;font-size:min(1rem,3.9vw);color:var(--ink)}
+  .pm-q2 b{font-size:min(1.3rem,5.05vw);font-weight:800;color:var(--ok);line-height:1.15}
+  .pm-q2 small{font-size:min(.9rem,3.5vw);color:var(--muted)}
   .pm-ver{width:40px;height:40px;padding:0;display:grid;place-items:center}
   .pm-ver-t{display:none}
   .pm-ver-i{display:block;width:20px;height:20px}
@@ -472,6 +484,7 @@ details.m-det[open] summary::after{content:"−"}
 @media(max-width:349px){   /* celulares muy angostos: que corte renglón antes que salirse */
   .pm-tr{flex-wrap:wrap}
   .pm-tj,.pm-llega,.pm-env-t .l1,.pm-env-t .l2,.lead-m{white-space:normal}
+  .pm-q1,.pm-q2{flex-wrap:wrap;column-gap:5px;row-gap:0}
 }
 </style>
 </head>
@@ -865,6 +878,8 @@ function pintarPrecios(){
     pm.innerHTML=PRODS().slice().sort(function(a,b){return (ord[a.id]||0)-(ord[b.id]||0);}).map(function(p){ var n=Math.max(C.cuotas,1);
       return '<a class="pm-card" href="#prod-'+esc(p.id)+'"><span><span class="pm-top"><span class="pm-nom">'+esc(p.nombre||(p.id==="individual"?"1 plaza":"2 plazas"))+'</span><span class="pm-off">'+d+'% OFF</span></span>'
         +'<span class="pm-tr"><b>'+money(p.precio_transferencia)+'</b><small>por transferencia</small><span class="pm-off">'+d+'% OFF</span></span>'
+        +'<span class="pm-q"><span class="pm-q1">'+(n>1?'<small>'+n+' cuotas de</small><b>'+money(p.precio_tarjeta/n)+'</b><i>sin interés</i>':'<b>'+money(p.precio_tarjeta)+'</b><i>con tarjeta</i>')+'</span>'
+        +(p.precio_transferencia<p.precio_tarjeta?'<span class="pm-q2">o <b>'+money(p.precio_transferencia)+'</b><small>por transferencia</small></span>':'')+'</span>'
         +'<span class="pm-tj">o '+money(p.precio_tarjeta)+' con tarjeta'+(n>1?'<span class="pm-cuo"><span class="pm-sep"> · </span><span class="pm-larg">💳 </span>'+n+' cuotas <span class="pm-larg">sin interés </span>de '+money(p.precio_tarjeta/n)+'</span>':'')+'</span></span>'
         +'<span class="pm-ver"><span class="pm-ver-t">Ver ›</span><svg class="pm-ver-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>'; }).join("")
       +'<span class="pm-env">'+ANDREANI_LOGO+'<span class="pm-env-t"><span class="l1">🚚 <b>ENVÍO GRATIS</b>'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):' a todo el país')+'</span>'
