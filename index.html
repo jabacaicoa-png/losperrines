@@ -282,6 +282,7 @@ legend{font-weight:800;font-size:1.05rem;margin-bottom:8px;padding:0}
 .modelo .m-ptr .pm-off{display:inline-block;margin:0;color:#1E2418;font-size:.8rem}
 .modelo .m-ptr-l{display:block;color:var(--muted);font-weight:600;font-size:.92rem;margin-top:2px}
 .modelo .m-precio .m-tj{color:var(--ink);font-weight:600;margin-top:10px}
+.modelo .m-precio .m-cuo{margin-top:10px}
 .modelo .m-transf{margin-top:12px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font-weight:600;background:var(--field)}
 .modelo .m-transf b{color:var(--ok);font-size:1.15rem;white-space:nowrap}
 .price-main{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
@@ -468,6 +469,7 @@ details.m-det[open] summary::after{content:"−"}
   .modelo .m-ptr .pm-off{white-space:nowrap;font-size:min(.8rem,2.9vw)}
   .modelo .m-precio .m-tj{margin-top:6px;font-size:min(1.08rem,4.15vw)}
   .modelo .m-precio span{margin-top:3px;font-size:min(1.1rem,4.2vw)}
+  .modelo .m-precio .m-cuo{margin-top:6px}
   .modelo .m-envio{margin-top:14px;padding:11px 14px;gap:14px}
   .modelo .m-envio .andreani-a{width:min(42px,10vw);height:auto;margin:0}
   .modelo .m-envio b{font-size:min(1.2rem,4.6vw)}
@@ -916,7 +918,8 @@ function pintarModelos(){
       +'<div class="m-body"><h3>'+esc(p.nombre)+'</h3><p class="m-sub">'+esc(i.sub)+'</p><p class="m-beneficio-desc">Funda impermeable para mascotas: protege los asientos del agua, barro y pelos.</p><div class="m-beneficios"><span>💧 IMPERMEABLE</span><span>🛡️ PROTECCIÓN</span><span>ACOLCHADA</span></div><p class="m-sello">🇦🇷 Confeccionada en San Luis · Garantía de fábrica</p>'
       /* precio por transferencia primero, con el 10% OFF; tarjeta y cuotas abajo (pedido del dueño, 15/11/2026) */
       +'<div class="m-precio"><div class="m-ptr"><strong>'+money(p.precio_transferencia)+'</strong><small class="m-ptr-x">por transferencia</small><span class="pm-off">'+d+'% OFF</span></div><small class="m-ptr-l">💚 por transferencia</small>'
-      +'<span class="m-tj">o '+money(p.precio_tarjeta)+' con tarjeta</span><span>💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
+      /* sin "o $X con tarjeta": las cuotas suben a su lugar, en verde (17/11/2026, pedido del dueño) */
+      +'<span class="m-cuo">💳 '+C.cuotas+' cuotas sin interés de '+money(p.precio_tarjeta/Math.max(C.cuotas,1))+'</span></div>'
       +'<p class="m-envio">'+ANDREANI_LOGO+'<span><b>🚚 ENVÍO GRATIS</b>'+(sin?'':'<span class="m-llega"><span class="lg">'+llegaTxt()+'</span><span class="ct">'+llegaTxt(null,true)+'</span></span>')+(C.valor_envio?'<small>Te ahorrás '+money(C.valor_envio)+'</small>':'')+'</span></p>'   /* sin "A todo el país por Andreani" (16/11/2026, pedido del dueño): lo dice el logo */
       +'<p class="m-conf"><span>🛡️ <a href="#garantia">Garantía de fábrica</a></span><span>📦 Seguimiento de Andreani</span><span>↩️ 10 días para arrepentirte</span></p>'
       +(sin?'<p class="stockline low">Sin stock por el momento</p>':(p.disponible<=5?'<p class="stockline low">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
