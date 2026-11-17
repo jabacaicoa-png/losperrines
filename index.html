@@ -459,11 +459,12 @@ details.m-det[open] summary::after{content:"−"}
   .pm-tj{font-size:min(.88rem,3.42vw);margin-top:3px;white-space:nowrap}
   .pm-cuo{display:inline}.pm-sep{display:inline}.pm-larg{display:none}
   /* cuotas primero (17/11/2026, lo eligió el dueño): "3 cuotas de $X sin interés" grande y "o $Y por transferencia" en verde abajo; sin 10% OFF ni total con tarjeta */
-  .pm-q1,.pm-q2{gap:6px}
-  .pm-q1{margin-top:1px}
-  .pm-q1 small{font-size:min(.95rem,3.7vw);font-weight:700;color:var(--ink)}
-  .pm-q1 b{font-size:min(1.6rem,6.2vw);font-weight:800;color:var(--ink);line-height:1.1}
-  .pm-q1 i{font-style:normal;font-size:min(.85rem,3.3vw);color:var(--muted)}
+  .pm-q2{gap:6px}
+  .pm-q1{margin-top:1px;gap:min(8px,1.9vw)}
+  /* el renglón de las cuotas termina a la misma altura que el de la transferencia (17/11/2026: el dueño lo veía "descentrado") */
+  .pm-q1 small{font-size:min(1rem,3.9vw);font-weight:700;color:var(--ink)}
+  .pm-q1 b{font-size:min(1.72rem,6.7vw);font-weight:800;color:var(--ink);line-height:1}
+  .pm-q1 i{font-style:normal;font-size:min(.92rem,3.55vw);color:var(--muted)}
   .pm-q2{margin-top:1px;font-size:min(1rem,3.9vw)}
   .pm-q2 b{font-size:min(1.3rem,5.05vw);font-weight:800;color:var(--ok);line-height:1.15}
   .pm-q2 small{font-size:min(.9rem,3.5vw);color:var(--muted)}
