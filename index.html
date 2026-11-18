@@ -549,6 +549,8 @@ h3{font-weight:600}
 .pg img{position:absolute;inset:0;width:100%;height:100%}
 .pg .pg-img{object-fit:contain}   /* la foto entera, sin recortar */
 .pg .pg-fondo{object-fit:cover;filter:blur(22px) brightness(.75);transform:scale(1.2)}
+@keyframes pgIn{from{opacity:.15;transform:scale(.97)}to{opacity:1;transform:none}}
+.pg-cambio .m-track{animation:pgIn .45s ease-out}   /* al cambiar de tamaño, la foto nueva entra con un fundido para que se note */
 .pg iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .pg-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#1E2418;font-size:2rem;padding-left:6px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 .pg .m-fl{display:block;width:34px;height:34px;font-size:1.4rem;background:rgba(255,255,255,.8)}   /* flechitas también en el celular: avisan que hay más fotos */
@@ -1061,9 +1063,11 @@ function pintarProducto(){
      foto desenfocada) y los videos se reproducen ahí mismo. Orden: principal de Portada, fotos y videos de la funda elegida,
      y el resto de Portada. Tocar una foto la abre en grande. */
   var orden=function(dest){ var l=MED(dest), pr=principalDe(dest); return pr?[pr].concat(l.filter(function(m){return m.id!==pr.id;})):l; };
-  var por=orden("portada"), L=[];
-  if(por.length&&por[0].tipo==="img") L.push(por.shift());
-  L=L.concat(orden(p.id),por);
+  /* primero las fotos de la funda elegida (al tocar 2 plazas / 1 plaza cambia la primera foto, 18/11/2026, pedido del dueño);
+     si esa funda no tiene fotos, arranca con la principal de Portada */
+  var por=orden("portada"), pf=orden(p.id), L;
+  if(pf.length&&pf[0].tipo==="img") L=pf.concat(por);
+  else { L=[]; if(por.length&&por[0].tipo==="img") L.push(por.shift()); L=L.concat(pf,por); }
   PLIST=L;
   var fondo=function(src){ return '<img class="pg-fondo" src="'+src+'" alt="" aria-hidden="true" loading="lazy">'; };
   var slides=L.length?L.map(function(m,k){ var src=urlImg(m.drive,1200);
@@ -1420,7 +1424,7 @@ document.addEventListener("click",function(e){
   if(e.target.closest("#galPrev")){ if(GAL.i>0){ GAL.i--; pintarGaleria(); } return; }
   if(e.target.closest("#galNext")){ if(GAL.i<GAL.lista.length-1){ GAL.i++; pintarGaleria(); } return; }
   var t=e.target.closest("button,a"); if(!t) return;
-  if(t.dataset.psel){ PSEL=t.dataset.psel; pintarProducto(); return; }
+  if(t.dataset.psel){ var cambia=PSEL!==t.dataset.psel; PSEL=t.dataset.psel; pintarProducto(); if(cambia){ var g=$("#prodBox .pg"); if(g){ g.classList.add("pg-cambio"); if(g.getBoundingClientRect().top<0) g.scrollIntoView({behavior:"smooth",block:"start"}); } } return; }
   if(t.hasAttribute("data-add")&&PSEL&&t.id==="bbCta"){ t.removeAttribute("data-add"); t.dataset.addp=PSEL; setTimeout(bbUpdate,0); }   /* la barra de abajo agrega directo el tamaño elegido */
   if(t.hasAttribute("data-add")){ var m=$("#producto"); if(m){ m.scrollIntoView({behavior:"smooth",block:"start"}); return; } t.setAttribute("data-addp","doble"); }
   if(t.dataset.addp){ var id=t.dataset.addp, pr=PR(id); if(!pr) return; if(pr.disponible<=0){ abrirDlg("aviso"); return; }
