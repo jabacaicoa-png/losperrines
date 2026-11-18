@@ -553,24 +553,24 @@ h3{font-weight:600}
 .pg-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#1E2418;font-size:2rem;padding-left:6px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 .pg .m-fl{display:block;width:34px;height:34px;font-size:1.4rem;background:rgba(255,255,255,.8)}   /* flechitas también en el celular: avisan que hay más fotos */
 .pg .m-galbadge{top:10px;right:10px;bottom:auto}
-.pi{padding-top:16px}
-.p-cat{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
-.p-tit{font-family:Inter,sans-serif;font-size:1.35rem;font-weight:600;letter-spacing:0;line-height:1.25;margin:0 0 12px;max-width:none}
-.p-cuo{margin:0;font-size:1rem;color:var(--ink)}
-.p-cuo b{font-size:2rem;font-weight:700;letter-spacing:-.02em;margin:0 4px}
+.pi{padding-top:12px}
+.p-cat{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.p-tit{font-family:Inter,sans-serif;font-size:1.35rem;font-weight:600;letter-spacing:0;line-height:1.25;margin:0 0 6px;max-width:none}
+.p-cuo{margin:0;font-size:1rem;color:var(--ink);display:flex;align-items:baseline;flex-wrap:wrap;column-gap:6px}
+.p-cuo b{font-size:1.75rem;font-weight:700;letter-spacing:-.02em;line-height:1.15}
 .p-cuo span{color:var(--muted)}
-.p-tr{margin:4px 0 0;font-size:1rem}
+.p-tr{margin:2px 0 0;font-size:1rem}
 .p-tr b{color:var(--ok);font-size:1.25rem;font-weight:700}
 .p-tr .off{color:var(--ok);font-weight:700;font-size:.85rem;margin-left:4px}
-.p-mp{margin:6px 0 0;font-size:.82rem;color:var(--muted)}
-.p-lbl{margin:20px 0 8px;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.p-mp{margin:8px 0 0;font-size:.8rem;color:var(--muted);text-align:center}
+.p-lbl{margin:12px 0 6px;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .p-lbl b{text-transform:none;letter-spacing:0;color:var(--ink);font-weight:600}
 .p-op{display:flex;gap:8px;flex-wrap:wrap}
-.p-op button{font:500 .95rem Inter,sans-serif;background:var(--card);color:var(--ink);border:1px solid #CFCFC8;border-radius:4px;padding:9px 14px;cursor:pointer}
+.p-op button{font:500 .95rem Inter,sans-serif;background:var(--card);color:var(--ink);border:1px solid #CFCFC8;border-radius:4px;padding:8px 14px;cursor:pointer}
 .p-op button.on{border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive);font-weight:600}
 .p-op button small{color:var(--muted);font-weight:400}
 .p-stock{margin:10px 0 0;font-size:.88rem;color:#B5541B;font-weight:600}
-.p-buy{width:100%;margin-top:18px;padding:15px;font-size:1.02rem;text-transform:uppercase;letter-spacing:.04em}
+.p-buy{width:100%;margin-top:12px;padding:15px;font-size:1.02rem;text-transform:uppercase;letter-spacing:.04em}
 .p-env{display:flex;gap:12px;align-items:center;margin:18px 0 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:.95rem;line-height:1.4}
 .p-env .andreani-a{width:38px;height:auto;margin:0;flex:none}
 .p-env b{color:var(--ok)}
@@ -603,8 +603,12 @@ h3{font-weight:600}
 }
 @media(max-width:899px){
   .prod .wrap{padding-left:16px;padding-right:16px}
-  .pg{margin:0 -16px}
+  .pg{margin:0 -16px;aspect-ratio:5/4}   /* un poco más baja que cuadrada: el botón COMPRAR entra en la primera pantalla (18/11/2026) */
   .buybar .btn{border-radius:6px}
+}
+@media(max-width:389px){
+  .p-tit{font-size:1.2rem;margin-bottom:4px}
+  .p-cuo b{font-size:1.6rem}
 }
 </style>
 </head>
@@ -1073,12 +1077,12 @@ function pintarProducto(){
     +'<p class="p-cat">Funda para auto · Hecha en San Luis</p>'
     +'<h1 class="p-tit">'+esc(p.nombre||"Funda canasto")+'</h1>'
     /* precio: las cuotas primero y después la transferencia (pedido del dueño, 18/11/2026: no mostrar el total con tarjeta grande) */
-    +'<p class="p-cuo">'+(n>1?n+' cuotas sin interés de<br><b>'+money(p.precio_tarjeta/n)+'</b>':'<b>'+money(p.precio_tarjeta)+'</b> <span>con tarjeta</span>')+'</p>'
+    +'<p class="p-cuo">'+(n>1?n+' cuotas sin interés de <b>'+money(p.precio_tarjeta/n)+'</b>':'<b>'+money(p.precio_tarjeta)+'</b> <span>con tarjeta</span>')+'</p>'
     +(p.precio_transferencia<p.precio_tarjeta?'<p class="p-tr">o <b>'+money(p.precio_transferencia)+'</b> por transferencia<span class="off">'+d+'% OFF</span></p>':'')
-    +'<p class="p-mp">Tarjeta de crédito o débito con Mercado Pago, o transferencia.</p>'
     +(ps.length>1?'<p class="p-lbl">Tamaño: <b>'+esc(sub||p.nombre)+'</b></p><div class="p-op" role="group" aria-label="Tamaño">'+ps.map(function(x){ return '<button type="button" data-psel="'+x.id+'"'+(x.id===p.id?' class="on" aria-pressed="true"':' aria-pressed="false"')+'>'+(x.id==="individual"?"1 plaza":"2 plazas")+(x.disponible<=0?' <small>· sin stock</small>':'')+'</button>'; }).join("")+'</div>':'')
     +(sin?'<p class="p-stock">Sin stock por el momento. Dejanos tu mail y te avisamos cuando vuelva.</p>':(p.disponible<=5?'<p class="p-stock">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
     +'<button class="btn btn-main p-buy" id="pBuy" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'Comprar')+'</button>'
+    +'<p class="p-mp">Tarjeta de crédito o débito con Mercado Pago, o transferencia.</p>'
     +'<div class="p-env">'+ANDREANI_LOGO+'<span>🚚 <b>Envío gratis</b> a todo el país'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):'')+(sin?'':'<small>'+llegaTxt()+'</small>')+'</span></div>'
     +'<ul class="p-trust"><li><span>🔒</span><span><b>Compra protegida</b><small>Pagás con Mercado Pago o por transferencia.</small></span></li>'
     +'<li><span>🛡️</span><span><b>Garantía de fábrica</b><small>Si falla por la confección, la reparamos o la cambiamos. <a href="#garantia">Condiciones</a></small></span></li>'
