@@ -88,7 +88,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '16/11/2026 · 3';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '18/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -1420,7 +1420,7 @@ function plantilla(titulo, cuerpo, c) {
     '<div style="background:#4E5B3A;color:#F2F3EC;padding:18px 24px;font-size:20px;font-weight:bold">🐾 Los Perrines</div>' +
     '<div style="padding:24px;font-size:15px;line-height:1.55"><h1 style="font-size:22px;margin:0 0 14px">' + titulo + '</h1>' + cuerpo + '</div>' +
     '<div style="padding:16px 24px;border-top:1px solid #D9DCCF;font-size:13px;color:#5E6656">¿Dudas? Escribinos por ' + (wa || 'mail respondiendo este correo') +
-    '.<br>Hecho en San Luis para toda Argentina · <a href="' + c.url_web + '" style="color:#4E5B3A">losperrines.com.ar</a></div></div></div>';
+    '.<br>🇦🇷 Industria argentina · <a href="' + c.url_web + '" style="color:#4E5B3A">losperrines.com.ar</a></div></div></div>';
 }
 function detalle(p, c) {
   var dest = esMano(p) ? detalleEntregaMano() : p.entrega === 'sucursal' ? 'Retiro en sucursal Andreani <b>' + esc(p.sucursal) + '</b>'
@@ -1454,7 +1454,7 @@ function mailPagoTarjeta(p, c) {
 function mailDespacho(p, c) {
   var link = 'https://www.andreani.com/envio/' + p.tracking;
   enviar(p.email, 'Tu pedido de Los Perrines ya está en camino 🐾', plantilla('¡Tu pedido ya salió!',
-    '<p>Hola ' + esc(p.nombre) + ', tu pedido <b>' + p.id + '</b> ya salió de San Luis.</p>' + boton(link, 'Seguí tu envío') +
+    '<p>Hola ' + esc(p.nombre) + ', tu pedido <b>' + p.id + '</b> ya está en camino.</p>' + boton(link, 'Seguí tu envío') +
     '<p style="color:#5E6656;font-size:14px">Número de seguimiento: <b>' + p.tracking + '</b></p>' + detalle(p, c), c), c);
 }
 /* ================= VENDEDORES (16/11/2026) =================
