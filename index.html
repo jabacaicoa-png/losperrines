@@ -544,9 +544,14 @@ h3{font-weight:600}
 .band{background:var(--field)}
 .prod{padding:0 0 28px}
 .prod-g{display:grid;gap:0}
-.pg{position:relative;aspect-ratio:4/3;background:#F1F1EE;margin:0 -20px;overflow:hidden}
+.pg{position:relative;aspect-ratio:1/1;background:#1E2418;margin:0 -20px;overflow:hidden}
 .pg .m-track{position:absolute;inset:0}
-.pg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pg img{position:absolute;inset:0;width:100%;height:100%}
+.pg .pg-img{object-fit:contain}   /* la foto entera, sin recortar */
+.pg .pg-fondo{object-fit:cover;filter:blur(22px) brightness(.75);transform:scale(1.2)}
+.pg iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+.pg-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#1E2418;font-size:2rem;padding-left:6px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+.pg .m-fl{display:block;width:34px;height:34px;font-size:1.4rem;background:rgba(255,255,255,.8)}   /* flechitas también en el celular: avisan que hay más fotos */
 .pg .m-galbadge{top:10px;right:10px;bottom:auto}
 .pi{padding-top:16px}
 .p-cat{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
@@ -591,7 +596,7 @@ h3{font-weight:600}
 @media(min-width:900px){
   .prod{padding:28px 0 40px}
   .prod-g{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:48px;align-items:start}
-  .pg{margin:0;border-radius:6px;position:sticky;top:90px}
+  .pg{margin:0;border-radius:6px;position:sticky;top:90px;aspect-ratio:auto;height:min(540px,calc(100vh - 130px));min-height:380px}   /* en pantallas bajas la foto entra entera */
   .pi{padding-top:0}
   .p-tit{font-size:1.6rem}
   .p-cuo b{font-size:2.3rem}
@@ -1041,22 +1046,28 @@ function pintarModelos(){
 }
 
 /* ---------- página de producto (estilo tienda tradicional, 18/11/2026) ---------- */
-var PSEL=null;
+var PSEL=null, PLIST=[];
 function pintarProducto(){
   var box=$("#prodBox"); if(!box) return;
   var ps=PRODS(); if(!ps.length){ box.innerHTML=""; return; }
   if(!PSEL||!PR(PSEL)){ var ok=ps.filter(function(x){return x.disponible>0;})[0]; PSEL=(ok||ps[0]).id; }
   var p=PR(PSEL), n=Math.max(C.cuotas||1,1), sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
   var i0=INFO[p.id]||{sub:"",det:[]}, det=(p.medidas&&p.medidas.length)?p.medidas:i0.det, sub=p.sub||i0.sub;
-  /* fotos: la portada principal y después las de esa funda */
-  var pp=principalDe("portada"), l=[];
-  if(pp) l.push({m:pp,dest:"portada",i:0});
-  var lp=MED(p.id), ppp=principalDe(p.id); if(ppp) lp=[ppp].concat(lp.filter(function(m){return m.id!==ppp.id;}));
-  lp.forEach(function(m,k){ if(m.tipo==="img") l.push({m:m,dest:p.id,i:k}); });
-  var slides=l.length?l.map(function(x,k){ return '<div class="m-slide" role="button" tabindex="0" data-gal="'+x.dest+'" data-i="'+x.i+'" aria-label="Ver foto '+(k+1)+'"><img src="'+urlImg(x.m.drive,1200)+'" alt="'+esc(p.nombre)+' · foto '+(k+1)+'"'+(k?' loading="lazy"':'')+'></div>'; }).join("")
-    :'<div class="m-slide"><img src="foto-principal.jpg" alt="'+esc(p.nombre)+'" onerror="this.remove()"></div>';
+  /* carrusel (18/11/2026, pedido del dueño): la foto se ve ENTERA sin abrirla (sin recortes: lo que sobra se rellena con la misma
+     foto desenfocada) y los videos se reproducen ahí mismo. Orden: principal de Portada, fotos y videos de la funda elegida,
+     y el resto de Portada. Tocar una foto la abre en grande. */
+  var orden=function(dest){ var l=MED(dest), pr=principalDe(dest); return pr?[pr].concat(l.filter(function(m){return m.id!==pr.id;})):l; };
+  var por=orden("portada"), L=[];
+  if(por.length&&por[0].tipo==="img") L.push(por.shift());
+  L=L.concat(orden(p.id),por);
+  PLIST=L;
+  var fondo=function(src){ return '<img class="pg-fondo" src="'+src+'" alt="" aria-hidden="true" loading="lazy">'; };
+  var slides=L.length?L.map(function(m,k){ var src=urlImg(m.drive,1200);
+      if(m.tipo==="img") return '<div class="m-slide" role="button" tabindex="0" data-pgal="'+k+'" aria-label="Ver foto '+(k+1)+' en grande">'+fondo(src)+'<img class="pg-img" src="'+src+'" alt="'+esc(p.nombre)+' · foto '+(k+1)+'"'+(k?' loading="lazy"':'')+'></div>';
+      return '<div class="m-slide pg-vid" data-vid="'+esc(m.drive)+'">'+fondo(src)+'<img class="pg-img" src="'+src+'" alt="Video de '+esc(p.nombre)+'" loading="lazy" onerror="this.remove()"><button class="pg-play" data-pvid="'+esc(m.drive)+'" aria-label="Reproducir video">▶</button></div>'; }).join("")
+    :'<div class="m-slide"><img class="pg-img" src="foto-principal.jpg" alt="'+esc(p.nombre)+'" onerror="this.remove()"></div>';
   var gal='<div class="pg m-carr"><div class="m-track" data-track>'+slides+'</div>'
-    +(l.length>1?'<button class="m-fl m-fl-prev" data-mfl="-1" aria-label="Foto anterior">‹</button><button class="m-fl m-fl-next" data-mfl="1" aria-label="Foto siguiente">›</button><span class="m-galbadge" data-cnt>1 / '+l.length+'</span><div class="m-dots">'+l.map(function(_,k){return '<i'+(k?'':' class="on"')+'></i>';}).join("")+'</div>':'')+'</div>';
+    +(L.length>1?'<button class="m-fl m-fl-prev" data-mfl="-1" aria-label="Anterior">‹</button><button class="m-fl m-fl-next" data-mfl="1" aria-label="Siguiente">›</button><span class="m-galbadge" data-cnt>1 / '+L.length+'</span><div class="m-dots">'+L.map(function(_,k){return '<i'+(k?'':' class="on"')+'></i>';}).join("")+'</div>':'')+'</div>';
   var wa=C.whatsapp&&C.whatsapp.length>6;
   box.innerHTML=gal+'<div class="pi">'
     +'<p class="p-cat">Funda para auto · Hecha en San Luis</p>'
@@ -1099,6 +1110,7 @@ function fotoCard(p,i,ilus){
 document.addEventListener("scroll",function(e){   // al deslizar: actualiza "2 / 5" y los puntitos
   var t=e.target; if(!t.classList||!t.classList.contains("m-track")) return;
   var k=Math.round(t.scrollLeft/t.clientWidth), f=t.parentNode, c=f.querySelector("[data-cnt]");
+  Array.prototype.forEach.call(t.children,function(sl,j){ if(j!==k&&sl.querySelector("iframe")&&sl.dataset.vid){ var v=sl.dataset.vid, src=urlImg(v,1200); sl.innerHTML='<img class="pg-fondo" src="'+src+'" alt="" aria-hidden="true"><img class="pg-img" src="'+src+'" alt="Video" onerror="this.remove()"><button class="pg-play" data-pvid="'+v+'" aria-label="Reproducir video">▶</button>'; } });
   if(c) c.textContent=(k+1)+" / "+t.children.length;
   f.querySelectorAll(".m-dots i").forEach(function(d,j){ d.classList.toggle("on",j===k); });
 },true);
@@ -1398,6 +1410,8 @@ function enviarDlg(tipo,btn){
 /* ---------- eventos ---------- */
 document.addEventListener("click",function(e){
   var fl=e.target.closest("[data-mfl]"); if(fl){ var tr=fl.parentNode.querySelector("[data-track]"); tr.scrollBy({left:tr.clientWidth*Number(fl.dataset.mfl),behavior:"smooth"}); return; }
+  var pv=e.target.closest("[data-pvid]"); if(pv){ var sl=pv.closest(".m-slide"); sl.innerHTML='<iframe src="https://drive.google.com/file/d/'+pv.dataset.pvid+'/preview?autoplay=1" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>'; return; }
+  var pg=e.target.closest("[data-pgal]"); if(pg){ GAL={lista:PLIST,i:parseInt(pg.dataset.pgal,10)||0}; pintarGaleria(); $("#gal").showModal(); return; }
   var gg=e.target.closest("[data-gal]"); if(gg){ abrirGaleria(gg.dataset.gal,parseInt(gg.dataset.i,10)||0); return; }
   if(e.target.closest("#galPrev")){ if(GAL.i>0){ GAL.i--; pintarGaleria(); } return; }
   if(e.target.closest("#galNext")){ if(GAL.i<GAL.lista.length-1){ GAL.i++; pintarGaleria(); } return; }
