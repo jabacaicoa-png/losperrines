@@ -75,7 +75,12 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 - **Tablero** (Analytics + ventas, solo Argentina) y **Publicidad** (Meta Ads vs ventas reales, por provincia).
 - **Precios y rentabilidad:** prueba precios; fila "Código de vendedor" (−$2.000 −$2.000; `VEND_DESC`, `VEND_COMISION`).
 
-## La web hoy (16/11)
+## La web hoy (18/11)
+
+- **Desde el 18/11: estilo tienda tradicional** (pedido del dueño: "que se vea como una web que la gente está acostumbrada a ver"). Arriba una sola página de producto (`#producto`, `pintarProducto()`): foto, nombre, **cuotas primero y transferencia abajo (nunca el total con tarjeta grande)**, tamaño 2 plazas / 1 plaza (`PSEL`), COMPRAR, envío, confianza y desplegables. Fondo blanco, letra Inter. Las secciones viejas siguen en el HTML con `class="viejo"` (ocultas).
+- **Versión anterior guardada:** commit `ea69f72` (la de las tarjetas de precio). Si pide volver: `git checkout ea69f72 -- index.html`, probar y publicar (no rehacerla). Lo de abajo describe esa versión anterior.
+
+## La web anterior (16/11 a 18/11)
 
 - **Precios (17/11):** Canasto de 2 plazas **$83.400 tarjeta (3 de $27.800) / $75.000 transferencia** (10% off); Canasto de 1 plaza **$60.900 (3 de $20.300) / $55.000** (10% off); el % se calcula solo. Envío cargado ~$13.000 ("te ahorrás"). 1 plaza sin stock.
 - **Celular, primera pantalla** (todo entra sin bajar en su celular): foto de portada 16:10 (recorte calibrado a la foto de los dos perros), título en 2 renglones, píldoras **💧 Impermeable · 🛋️ Acolchada · 💪 Antidesgarro**, tarjetas de precio con **cuotas primero** (17/11: "3 cuotas de $X sin interés" grande en negro, "o $Y por transferencia" en verde; con el % OFF de cada funda al lado de la transferencia (17/11), sin total con tarjeta; clases `.pm-q*`; también en la compu desde el 17/11), circulito con flecha y franja de envío con logo de Andreani + "Llega entre mié… y vie…".
