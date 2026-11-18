@@ -13,7 +13,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%234E5B3A'/%3E%3Cellipse cx='20' cy='25' rx='7' ry='6' fill='%23D9E15A'/%3E%3Ccircle cx='12' cy='16' r='3.2' fill='%23D9E15A'/%3E%3Ccircle cx='18' cy='11.5' r='3.2' fill='%23D9E15A'/%3E%3Ccircle cx='25' cy='12' r='3.2' fill='%23D9E15A'/%3E%3Ccircle cx='29.5' cy='17.5' r='3.2' fill='%23D9E15A'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 
 :root{
@@ -526,6 +526,81 @@ details.m-det[open] summary::after{content:"−"}
   .pm-tj,.pm-llega,.pm-env-t .l1,.pm-env-t .l2,.lead-m{white-space:normal}
   .pm-q1,.pm-q2{flex-wrap:wrap;column-gap:5px;row-gap:0}
 }
+
+/* ===== Estilo de tienda tradicional (18/11/2026, pedido del dueño: "que se vea como una web que la gente está acostumbrada a ver").
+   Una sola página de producto arriba (foto, precio con las cuotas primero, tamaño, COMPRAR, envío, confianza y detalles),
+   fondo blanco, letra Inter, sin tarjetas de colores. Las secciones viejas quedan en el HTML con class="viejo" (ocultas). ===== */
+.viejo{display:none!important}
+:root:not([data-theme="dark"]){--bg:#FFFFFF;--line:#E8E8E3;--field:#F6F6F3}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14170F}}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px}
+h1,h2,h3,.btn,.cart-btn,.brand{font-family:Inter,system-ui,sans-serif}
+h2{font-size:clamp(1.35rem,4.5vw,1.8rem);font-weight:700;letter-spacing:-.01em}
+h3{font-weight:600}
+.btn{border-radius:6px;font-weight:600}
+.cart-btn{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:600}
+.cart-btn b{background:var(--olive);color:#fff}
+.anuncio{background:#2F3822;color:#F2F3EC;font-weight:600}
+.band{background:var(--field)}
+.prod{padding:0 0 28px}
+.prod-g{display:grid;gap:0}
+.pg{position:relative;aspect-ratio:4/3;background:#F1F1EE;margin:0 -20px;overflow:hidden}
+.pg .m-track{position:absolute;inset:0}
+.pg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pg .m-galbadge{top:10px;right:10px;bottom:auto}
+.pi{padding-top:16px}
+.p-cat{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.p-tit{font-family:Inter,sans-serif;font-size:1.35rem;font-weight:600;letter-spacing:0;line-height:1.25;margin:0 0 12px;max-width:none}
+.p-cuo{margin:0;font-size:1rem;color:var(--ink)}
+.p-cuo b{font-size:2rem;font-weight:700;letter-spacing:-.02em;margin:0 4px}
+.p-cuo span{color:var(--muted)}
+.p-tr{margin:4px 0 0;font-size:1rem}
+.p-tr b{color:var(--ok);font-size:1.25rem;font-weight:700}
+.p-tr .off{color:var(--ok);font-weight:700;font-size:.85rem;margin-left:4px}
+.p-mp{margin:6px 0 0;font-size:.82rem;color:var(--muted)}
+.p-lbl{margin:20px 0 8px;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.p-lbl b{text-transform:none;letter-spacing:0;color:var(--ink);font-weight:600}
+.p-op{display:flex;gap:8px;flex-wrap:wrap}
+.p-op button{font:500 .95rem Inter,sans-serif;background:var(--card);color:var(--ink);border:1px solid #CFCFC8;border-radius:4px;padding:9px 14px;cursor:pointer}
+.p-op button.on{border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive);font-weight:600}
+.p-op button small{color:var(--muted);font-weight:400}
+.p-stock{margin:10px 0 0;font-size:.88rem;color:#B5541B;font-weight:600}
+.p-buy{width:100%;margin-top:18px;padding:15px;font-size:1.02rem;text-transform:uppercase;letter-spacing:.04em}
+.p-env{display:flex;gap:12px;align-items:center;margin:18px 0 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:.95rem;line-height:1.4}
+.p-env .andreani-a{width:38px;height:auto;margin:0;flex:none}
+.p-env b{color:var(--ok)}
+.p-env small{display:block;color:var(--muted);font-size:.88rem}
+.p-trust{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:10px;font-size:.92rem}
+.p-trust li{display:flex;gap:10px;align-items:flex-start}
+.p-trust li>span:first-child{font-size:1.1rem;line-height:1.2}
+.p-trust b{display:block;font-weight:600}
+.p-trust small{color:var(--muted);font-size:.86rem}
+.p-auto{margin:14px 0 0;font-size:.9rem}
+.p-desc{margin-top:22px;border-top:1px solid var(--line)}
+.p-desc details{border-bottom:1px solid var(--line)}
+.p-desc summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:600;display:flex;justify-content:space-between}
+.p-desc summary::-webkit-details-marker{display:none}
+.p-desc summary::after{content:"+";color:var(--muted);font-weight:400}
+.p-desc details[open] summary::after{content:"−"}
+.p-desc ul{margin:0 0 14px;padding-left:20px;font-size:.94rem}
+.p-desc li{margin:5px 0}
+.p-desc p{margin:0 0 14px;font-size:.94rem}
+#canasto .cmp.ours{display:none}   /* lo dicen las Características del producto */
+#canasto .fc-h>span:last-child{background:var(--field);color:var(--ink)!important}
+#canasto .fc{border-radius:6px}
+@media(min-width:900px){
+  .prod{padding:28px 0 40px}
+  .prod-g{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:48px;align-items:start}
+  .pg{margin:0;border-radius:6px;position:sticky;top:90px}
+  .pi{padding-top:0}
+  .p-tit{font-size:1.6rem}
+  .p-cuo b{font-size:2.3rem}
+}
+@media(max-width:899px){
+  .prod .wrap{padding-left:16px;padding-right:16px}
+  .pg{margin:0 -16px}
+  .buybar .btn{border-radius:6px}
+}
 </style>
 </head>
 <body>
@@ -554,7 +629,9 @@ details.m-det[open] summary::after{content:"−"}
 </header>
 
 <main id="inicio">
-<section class="hero">
+<section id="producto" class="prod"><div class="wrap prod-g" id="prodBox"></div></section>
+
+<section class="hero viejo">
   <div class="wrap grid">
     <div>
       <h1 class="h1-hero"><span>Salí con tu mascota.</span> <span>El auto queda limpio.</span></h1>
@@ -613,7 +690,7 @@ details.m-det[open] summary::after{content:"−"}
   </div>
 </section>
 
-<section id="modelos">
+<section id="modelos" class="viejo">
   <div class="wrap">
     <h2>Nuestros productos</h2>
     <p class="sub">La misma tela y la misma calidad, en dos tamaños. Elegí el que va con tu auto y tu mascota.</p>
@@ -622,7 +699,7 @@ details.m-det[open] summary::after{content:"−"}
 </section>
 
 
-<section class="beneficios">
+<section class="beneficios viejo">
   <div class="wrap grid4">
     <div class="ben dest"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="11" width="21" height="15" rx="2" fill="#D9E15A"/><path d="M24 15h7l5 6v5H24z" fill="#D9E15A"/><circle cx="11" cy="29" r="4" fill="#F2F3EC" stroke="#4E5B3A" stroke-width="2"/><circle cx="30" cy="29" r="4" fill="#F2F3EC" stroke="#4E5B3A" stroke-width="2"/></svg><div><b>Envío gratis por Andreani</b><small>A toda Argentina, a tu casa o a una sucursal</small></div></div>
     <div class="ben"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 35 11v18L20 36 5 29V11z" fill="#4E5B3A"/><path d="M5 11l15 7 15-7M20 18v18" stroke="#D9E15A" stroke-width="2.5" fill="none"/></svg><div><b>Garantía de fábrica</b><small>Si algo falla por la fabricación, lo reparamos o la cambiamos</small></div></div>
@@ -657,7 +734,7 @@ details.m-det[open] summary::after{content:"−"}
   </div>
 </section>
 
-<section class="tela">
+<section class="tela viejo">
   <div class="wrap">
     <h2>No es una tela cualquiera</h2><span class="desliza">Deslizá para ver más →</span>
     <p class="sub">Está hecha con una tela técnica, acolchada y con las dos caras terminadas, pensada para el uso diario con mascotas.</p>
@@ -670,7 +747,7 @@ details.m-det[open] summary::after{content:"−"}
   </div>
 </section>
 
-<section class="hecho">
+<section class="hecho viejo">
   <div class="wrap">
     <h2>Hecha acá, pensada para durar</h2><span class="desliza">Deslizá para ver más →</span>
     <p class="sub">Cada funda se diseña y se confecciona en San Luis. Eso se nota en los detalles y en cómo te respondemos.</p>
@@ -683,7 +760,7 @@ details.m-det[open] summary::after{content:"−"}
   </div>
 </section>
 
-<section id="fotos" hidden>
+<section id="fotos" class="viejo" hidden>
   <div class="wrap">
     <h2>Así queda</h2>
     <div class="gallery" id="gallery">
@@ -696,7 +773,7 @@ details.m-det[open] summary::after{content:"−"}
   </div>
 </section>
 
-<section>
+<section class="viejo">
   <div class="wrap">
     <h2>Hecho para el uso de todos los días</h2><span class="desliza">Deslizá para ver más →</span>
     <div class="features">
@@ -719,7 +796,7 @@ details.m-det[open] summary::after{content:"−"}
   </div>
 </section>
 
-<section class="band">
+<section class="band viejo">
   <div class="wrap measures">
     <div>
       <h2>Medidas</h2>
@@ -746,7 +823,7 @@ details.m-det[open] summary::after{content:"−"}
   </div>
 </section>
 
-<section>
+<section class="viejo">
   <div class="wrap">
     <h2>Cómo se coloca</h2>
     <ol class="steps">
@@ -786,7 +863,7 @@ details.m-det[open] summary::after{content:"−"}
 <div class="buybar" id="buybar">
   <a class="wa wa-in" href="#" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm0 23.6c-2 0-3.9-.5-5.6-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.6 10.6 0 1 1 16 26.6zm5.8-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7.1-.2 0-.4 0-.5l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.2 3.2 0 0 0 2.1-1.5 2.6 2.6 0 0 0 .2-1.5c-.1-.1-.3-.2-.6-.4z"/></svg></a>
   <div class="p" id="bbTxt"><strong>Elegí tu funda</strong> <small><b class="gratis">Envío gratis</b> a todo el país</small></div>
-  <button class="btn btn-main" id="bbCta" data-add>Ver productos</button>
+  <button class="btn btn-main" id="bbCta" data-add>Comprar</button>
 </div>
 <a class="wa" href="#" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp">
   <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm0 23.6c-2 0-3.9-.5-5.6-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.6 10.6 0 1 1 16 26.6zm5.8-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7.1-.2 0-.4 0-.5l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.2 3.2 0 0 0 2.1-1.5 2.6 2.6 0 0 0 .2-1.5c-.1-.1-.3-.2-.6-.4z"/></svg>
@@ -940,6 +1017,7 @@ var INFO={
 var DET_ABIERTO={};   /* las medidas plegadas recuerdan si las abriste (la tarjeta se redibuja al cambiar el stock) */
 document.addEventListener("toggle",function(e){ var t=e.target; if(t&&t.id&&/^det-/.test(t.id)) DET_ABIERTO[t.id.slice(4)]=t.open; },true);
 function pintarModelos(){
+  pintarProducto();
   var sd=$("#specDyn"); if(sd) sd.innerHTML=PRODS().map(function(p){ var i0=INFO[p.id]||{det:[]}, det=(p.medidas&&p.medidas.length)?p.medidas:i0.det; return '<dt>'+esc(p.nombre)+'</dt><dd>'+det.map(esc).join('<br>')+'</dd>'; }).join("");
   var g=$("#modelosGrid"); if(!g) return;
   var ps=PRODS(); $("#modelos").hidden=!ps.length;
@@ -960,6 +1038,49 @@ function pintarModelos(){
       +'<details class="m-det" id="det-'+p.id+'"'+(DET_ABIERTO[p.id]?' open':'')+'><summary class="m-det-t">Medidas y detalles</summary><ul>'+i.det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>'
       +'</div></article>';
   }).join("");
+}
+
+/* ---------- página de producto (estilo tienda tradicional, 18/11/2026) ---------- */
+var PSEL=null;
+function pintarProducto(){
+  var box=$("#prodBox"); if(!box) return;
+  var ps=PRODS(); if(!ps.length){ box.innerHTML=""; return; }
+  if(!PSEL||!PR(PSEL)){ var ok=ps.filter(function(x){return x.disponible>0;})[0]; PSEL=(ok||ps[0]).id; }
+  var p=PR(PSEL), n=Math.max(C.cuotas||1,1), sin=p.disponible<=0, d=Math.round((1-p.precio_transferencia/p.precio_tarjeta)*100);
+  var i0=INFO[p.id]||{sub:"",det:[]}, det=(p.medidas&&p.medidas.length)?p.medidas:i0.det, sub=p.sub||i0.sub;
+  /* fotos: la portada principal y después las de esa funda */
+  var pp=principalDe("portada"), l=[];
+  if(pp) l.push({m:pp,dest:"portada",i:0});
+  var lp=MED(p.id), ppp=principalDe(p.id); if(ppp) lp=[ppp].concat(lp.filter(function(m){return m.id!==ppp.id;}));
+  lp.forEach(function(m,k){ if(m.tipo==="img") l.push({m:m,dest:p.id,i:k}); });
+  var slides=l.length?l.map(function(x,k){ return '<div class="m-slide" role="button" tabindex="0" data-gal="'+x.dest+'" data-i="'+x.i+'" aria-label="Ver foto '+(k+1)+'"><img src="'+urlImg(x.m.drive,1200)+'" alt="'+esc(p.nombre)+' · foto '+(k+1)+'"'+(k?' loading="lazy"':'')+'></div>'; }).join("")
+    :'<div class="m-slide"><img src="foto-principal.jpg" alt="'+esc(p.nombre)+'" onerror="this.remove()"></div>';
+  var gal='<div class="pg m-carr"><div class="m-track" data-track>'+slides+'</div>'
+    +(l.length>1?'<button class="m-fl m-fl-prev" data-mfl="-1" aria-label="Foto anterior">‹</button><button class="m-fl m-fl-next" data-mfl="1" aria-label="Foto siguiente">›</button><span class="m-galbadge" data-cnt>1 / '+l.length+'</span><div class="m-dots">'+l.map(function(_,k){return '<i'+(k?'':' class="on"')+'></i>';}).join("")+'</div>':'')+'</div>';
+  var wa=C.whatsapp&&C.whatsapp.length>6;
+  box.innerHTML=gal+'<div class="pi">'
+    +'<p class="p-cat">Funda para auto · Hecha en San Luis</p>'
+    +'<h1 class="p-tit">'+esc(p.nombre||"Funda canasto")+'</h1>'
+    /* precio: las cuotas primero y después la transferencia (pedido del dueño, 18/11/2026: no mostrar el total con tarjeta grande) */
+    +'<p class="p-cuo">'+(n>1?n+' cuotas sin interés de<br><b>'+money(p.precio_tarjeta/n)+'</b>':'<b>'+money(p.precio_tarjeta)+'</b> <span>con tarjeta</span>')+'</p>'
+    +(p.precio_transferencia<p.precio_tarjeta?'<p class="p-tr">o <b>'+money(p.precio_transferencia)+'</b> por transferencia<span class="off">'+d+'% OFF</span></p>':'')
+    +'<p class="p-mp">Tarjeta de crédito o débito con Mercado Pago, o transferencia.</p>'
+    +(ps.length>1?'<p class="p-lbl">Tamaño: <b>'+esc(sub||p.nombre)+'</b></p><div class="p-op" role="group" aria-label="Tamaño">'+ps.map(function(x){ return '<button type="button" data-psel="'+x.id+'"'+(x.id===p.id?' class="on" aria-pressed="true"':' aria-pressed="false"')+'>'+(x.id==="individual"?"1 plaza":"2 plazas")+(x.disponible<=0?' <small>· sin stock</small>':'')+'</button>'; }).join("")+'</div>':'')
+    +(sin?'<p class="p-stock">Sin stock por el momento. Dejanos tu mail y te avisamos cuando vuelva.</p>':(p.disponible<=5?'<p class="p-stock">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
+    +'<button class="btn btn-main p-buy" id="pBuy" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'Comprar')+'</button>'
+    +'<div class="p-env">'+ANDREANI_LOGO+'<span>🚚 <b>Envío gratis</b> a todo el país'+(C.valor_envio?' · te ahorrás '+money(C.valor_envio):'')+(sin?'':'<small>'+llegaTxt()+'</small>')+'</span></div>'
+    +'<ul class="p-trust"><li><span>🔒</span><span><b>Compra protegida</b><small>Pagás con Mercado Pago o por transferencia.</small></span></li>'
+    +'<li><span>🛡️</span><span><b>Garantía de fábrica</b><small>Si falla por la confección, la reparamos o la cambiamos. <a href="#garantia">Condiciones</a></small></span></li>'
+    +'<li><span>↩️</span><span><b>10 días para arrepentirte</b><small>Desde que la recibís.</small></span></li>'
+    +'<li><span>📦</span><span><b>Seguimiento de Andreani</b><small>Te mandamos el número por mail.</small></span></li></ul>'
+    +(wa?'<p class="p-auto">¿Dudás si entra en tu auto? <a target="_blank" rel="noopener" href="https://wa.me/'+C.whatsapp+'?text='+encodeURIComponent("¡Hola! Quiero saber si el "+(p.nombre||"canasto")+" entra en mi auto. Te mando una foto del asiento trasero.")+'">Mandanos una foto del asiento por WhatsApp</a></p>':'')
+    +'<div class="p-desc">'
+    +'<details open><summary>Características</summary><ul><li><b>Impermeable:</b> el agua, el barro y los pelos no llegan al tapizado. Se limpia con un trapo húmedo.</li><li><b>Acolchada y antidesgarro:</b> tela trucker matelaseada, resistente a las uñas.</li><li><b>Canasto cerrado:</b> cubre el respaldo, el asiento y la parte de atrás de los asientos delanteros, y los laterales tapan las puertas.</li><li><b>Cierres en las cuatro esquinas:</b> para que tu mascota suba, abrís los de un lado y el lateral baja.</li><li><b>Abertura para el cinturón</b> de seguridad, con abrojo.</li><li>Viene en su <b>estuche</b> para guardarla.</li></ul></details>'
+    +'<details><summary>Medidas</summary><ul>'+det.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>'
+    +'<details><summary>Cómo se coloca</summary><ul><li>Enganchá las correas a los apoyacabezas de atrás y de adelante, y ajustalas con la hebilla.</li><li>Pasá el cinturón por la abertura y meté los anclajes entre el respaldo y el asiento.</li><li>Levantá los laterales contra las puertas y cerrá los cierres de las esquinas.</li></ul></details>'
+    +'<details><summary>Tela y lavado</summary><p>Trucker matelaseado impermeable, con forro. Se lava a mano o en lavarropas con programa delicado y agua fría; secar a la sombra.</p></details>'
+    +'</div></div>';
+  if(window.BBIO){ BBIO.disconnect(); BB.hero=false; BBIO.observe($("#pBuy")); }
 }
 /* Foto de la tarjeta del producto. Con varias fotos se deslizan con el dedo ahí mismo (carrusel);
    tocar una la abre en grande en esa misma foto. */
@@ -1034,12 +1155,12 @@ function bbUpdate(){   // el texto de al lado del WhatsApp es siempre el mismo (
   txt.innerHTML='<strong>Elegí tu funda</strong> <small>'+(innerWidth<900?'<b class="gratis">Envío gratis</b> · <span data-p="ncuotas">'+((typeof C!=="undefined"&&C&&C.cuotas)||3)+'</span> cuotas':'<b class="gratis">Envío gratis</b> a todo el país')+'</small>';
   var n=typeof totQ==="function"?totQ():0;
   if(n>0){ cta.hidden=false; cta.removeAttribute("data-add"); cta.textContent="Ver carrito ("+n+")"; cta.onclick=function(){ $("#openCart").click(); }; return; }
-  cta.onclick=null; cta.setAttribute("data-add",""); cta.textContent="Ver productos";
+  cta.onclick=null; cta.setAttribute("data-add",""); cta.textContent="Comprar";
   cta.hidden=!!(BB.modelos||BB.hero);
 }
 if("IntersectionObserver" in window) window.addEventListener("load",function(){
-  var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.target.id==="modelos") BB.modelos=e.isIntersecting; else BB.hero=e.isIntersecting; }); bbUpdate(); },{rootMargin:"-60px 0px -90px 0px"});
-  var m=$("#modelos"), h=$(".hero .buy-row"); if(m) io.observe(m); if(h) io.observe(h);
+  var io=window.BBIO=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.target.id==="modelos") BB.modelos=e.isIntersecting; else BB.hero=e.isIntersecting; }); bbUpdate(); },{rootMargin:"-60px 0px -90px 0px"});
+  var h=$("#pBuy"); if(h) io.observe(h);
 });
 function render(){
   if(step==="cart"){
@@ -1281,7 +1402,9 @@ document.addEventListener("click",function(e){
   if(e.target.closest("#galPrev")){ if(GAL.i>0){ GAL.i--; pintarGaleria(); } return; }
   if(e.target.closest("#galNext")){ if(GAL.i<GAL.lista.length-1){ GAL.i++; pintarGaleria(); } return; }
   var t=e.target.closest("button,a"); if(!t) return;
-  if(t.hasAttribute("data-add")){ var m=$("#modelos"); if(m&&!m.hidden){ m.scrollIntoView({behavior:"smooth",block:"start"}); return; } t.setAttribute("data-addp","doble"); }
+  if(t.dataset.psel){ PSEL=t.dataset.psel; pintarProducto(); return; }
+  if(t.hasAttribute("data-add")&&PSEL&&t.id==="bbCta"){ t.removeAttribute("data-add"); t.dataset.addp=PSEL; setTimeout(bbUpdate,0); }   /* la barra de abajo agrega directo el tamaño elegido */
+  if(t.hasAttribute("data-add")){ var m=$("#producto"); if(m){ m.scrollIntoView({behavior:"smooth",block:"start"}); return; } t.setAttribute("data-addp","doble"); }
   if(t.dataset.addp){ var id=t.dataset.addp, pr=PR(id); if(!pr) return; if(pr.disponible<=0){ abrirDlg("aviso"); return; }
     Q[id]=Math.max(1,Math.min(maxQ(id),(Q[id]||0)+1)); setCount(); step="cart"; abrir(); trk("add",{items:[{id:id,q:1}]}); return; }
   else if(t.id==="openCart"){ if(step==="ok"){ step="cart"; } abrir(); }
