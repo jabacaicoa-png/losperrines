@@ -77,7 +77,7 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 
 ## La web hoy (18/11)
 
-- **Desde el 18/11: estilo tienda tradicional** (pedido del dueño: "que se vea como una web que la gente está acostumbrada a ver"). Arriba una sola página de producto (`#producto`, `pintarProducto()`): foto, nombre, **cuotas primero y transferencia abajo (nunca el total con tarjeta grande)**, tamaño 2 plazas / 1 plaza (`PSEL`), COMPRAR, envío, confianza y desplegables. Fondo blanco, letra Inter. Las secciones viejas siguen en el HTML con `class="viejo"` (ocultas).
+- **Desde el 18/11: estilo tienda tradicional** (pedido del dueño: "que se vea como una web que la gente está acostumbrada a ver"). Arriba una sola página de producto (`#producto`, `pintarProducto()`): foto, nombre, **cuotas primero y transferencia abajo (nunca el total con tarjeta grande)**, tamaño 2 plazas / 1 plaza (`PSEL`), COMPRAR, envío, confianza y desplegables. Fondo blanco, letra Inter. Las secciones viejas siguen en el HTML con `class="viejo"` (ocultas). Carrusel: foto entera sin recortar (fondo desenfocado), orden principal de Portada → fotos/videos de la funda → resto de Portada; videos con el reproductor de Drive (su menú no se puede ocultar; para video sin menú hay que alojarlo en la web y el dueño prefirió dejarlo así, 18/11). Hay 3 fotos "Gemini_Generated_Image" (IA) en la carpeta de la web: se le recomendó sacarlas.
 - **Versión anterior guardada:** commit `ea69f72` (la de las tarjetas de precio). Si pide volver: `git checkout ea69f72 -- index.html`, probar y publicar (no rehacerla). Lo de abajo describe esa versión anterior.
 
 ## La web anterior (16/11 a 18/11)
