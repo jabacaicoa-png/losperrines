@@ -551,6 +551,7 @@ h3{font-weight:600}
 .pg .pg-fondo{object-fit:cover;filter:blur(22px) brightness(.75);transform:scale(1.2)}
 @keyframes pgIn{from{opacity:.15;transform:scale(.97)}to{opacity:1;transform:none}}
 .pg-cambio .m-track{animation:pgIn .45s ease-out}   /* al cambiar de tamaño, la foto nueva entra con un fundido para que se note */
+.pg-yt iframe{pointer-events:none}   /* sin menú y se puede seguir deslizando con el dedo encima */
 .pg iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .pg-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#1E2418;font-size:2rem;padding-left:6px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 .pg .m-fl{display:block;width:34px;height:34px;font-size:1.4rem;background:rgba(255,255,255,.8)}   /* flechitas también en el celular: avisan que hay más fotos */
@@ -1072,6 +1073,7 @@ function pintarProducto(){
   var fondo=function(src){ return '<img class="pg-fondo" src="'+src+'" alt="" aria-hidden="true" loading="lazy">'; };
   var slides=L.length?L.map(function(m,k){ var src=urlImg(m.drive,1200);
       if(m.tipo==="img") return '<div class="m-slide" role="button" tabindex="0" data-pgal="'+k+'" aria-label="Ver foto '+(k+1)+' en grande">'+fondo(src)+'<img class="pg-img" src="'+src+'" alt="'+esc(p.nombre)+' · foto '+(k+1)+'"'+(k?' loading="lazy"':'')+'></div>';
+      if(m.tipo==="yt"){ var th=ytThumb(m.drive); return '<div class="m-slide pg-yt" data-yt="'+esc(m.drive)+'">'+fondo(th)+'<img class="pg-img" src="'+th+'" alt="Video de '+esc(p.nombre)+'" loading="lazy"></div>'; }
       return '<div class="m-slide pg-vid" data-vid="'+esc(m.drive)+'">'+fondo(src)+'<img class="pg-img" src="'+src+'" alt="Video de '+esc(p.nombre)+'" loading="lazy" onerror="this.remove()"><button class="pg-play" data-pvid="'+esc(m.drive)+'" aria-label="Reproducir video">▶</button></div>'; }).join("")
     :'<div class="m-slide"><img class="pg-img" src="foto-principal.jpg" alt="'+esc(p.nombre)+'" onerror="this.remove()"></div>';
   var gal='<div class="pg m-carr"><div class="m-track" data-track>'+slides+'</div>'
@@ -1100,6 +1102,7 @@ function pintarProducto(){
     +'<details><summary>Tela y lavado</summary><p>Trucker matelaseado impermeable, con forro. Se lava a mano o en lavarropas con programa delicado y agua fría; secar a la sombra.</p></details>'
     +'</div></div>';
   if(window.BBIO){ BBIO.disconnect(); BB.hero=false; BBIO.observe($("#pBuy")); }
+  ytActivar(box.querySelector(".pg [data-track]"));
 }
 /* Foto de la tarjeta del producto. Con varias fotos se deslizan con el dedo ahí mismo (carrusel);
    tocar una la abre en grande en esa misma foto. */
@@ -1118,6 +1121,7 @@ function fotoCard(p,i,ilus){
 document.addEventListener("scroll",function(e){   // al deslizar: actualiza "2 / 5" y los puntitos
   var t=e.target; if(!t.classList||!t.classList.contains("m-track")) return;
   var k=Math.round(t.scrollLeft/t.clientWidth), f=t.parentNode, c=f.querySelector("[data-cnt]");
+  ytActivar(t);
   Array.prototype.forEach.call(t.children,function(sl,j){ if(j!==k&&sl.querySelector("iframe")&&sl.dataset.vid){ var v=sl.dataset.vid, src=urlImg(v,1200); sl.innerHTML='<img class="pg-fondo" src="'+src+'" alt="" aria-hidden="true"><img class="pg-img" src="'+src+'" alt="Video" onerror="this.remove()"><button class="pg-play" data-pvid="'+v+'" aria-label="Reproducir video">▶</button>'; } });
   if(c) c.textContent=(k+1)+" / "+t.children.length;
   f.querySelectorAll(".m-dots i").forEach(function(d,j){ d.classList.toggle("on",j===k); });
@@ -1125,6 +1129,10 @@ document.addEventListener("scroll",function(e){   // al deslizar: actualiza "2 /
 function MED(dest){ return (C.media||[]).filter(function(m){return m.destino===dest;}).sort(function(a,b){return a.orden-b.orden;}); }
 function principalDe(dest){ var l=MED(dest); return l.filter(function(m){return m.principal&&m.tipo==="img";})[0]||l.filter(function(m){return m.tipo==="img";})[0]||null; }
 function urlImg(id,w){ return "https://lh3.googleusercontent.com/d/"+id+"=w"+(w||1600); }
+function ytThumb(id){ return "https://i.ytimg.com/vi/"+id+"/hqdefault.jpg"; }
+/* video de YouTube en el carrusel: arranca solo, sin sonido, en bucle y casi sin menú (18/11/2026) */
+function ytFrame(id,ctl){ return '<iframe src="https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&mute=1&loop=1&playlist='+id+'&controls='+(ctl?1:0)+'&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&fs=0" allow="autoplay; encrypted-media; picture-in-picture" title="Video" loading="lazy"></iframe>'; }
+function ytActivar(track){ if(!track) return; var k=Math.round(track.scrollLeft/Math.max(track.clientWidth,1)); Array.prototype.forEach.call(track.children,function(sl,j){ if(!sl.dataset.yt) return; var on=sl.querySelector("iframe"); if(j===k&&!on){ sl.insertAdjacentHTML("beforeend",ytFrame(sl.dataset.yt)); } else if(j!==k&&on){ on.remove(); } }); }
 function fotos(){
   var hero=document.createElement("img"); hero.className="foto"; hero.alt="Funda tipo canasto colocada en el asiento trasero";
   var pp=principalDe("portada");
@@ -1152,7 +1160,7 @@ function abrirGaleria(dest,i){
 }
 function pintarGaleria(){
   var m=GAL.lista[GAL.i], box=$("#galBox");
-  box.innerHTML=m.tipo==="img"?'<img src="'+urlImg(m.drive,1600)+'" alt="Foto '+(GAL.i+1)+'">':'<iframe src="https://drive.google.com/file/d/'+m.drive+'/preview" allow="autoplay" title="Video"></iframe>';
+  box.innerHTML=m.tipo==="yt"?ytFrame(m.drive,true):m.tipo==="img"?'<img src="'+urlImg(m.drive,1600)+'" alt="Foto '+(GAL.i+1)+'">':'<iframe src="https://drive.google.com/file/d/'+m.drive+'/preview" allow="autoplay" title="Video"></iframe>';
   $("#galN").textContent=(GAL.i+1)+" / "+GAL.lista.length;
   $("#galPrev").disabled=GAL.i===0; $("#galNext").disabled=GAL.i===GAL.lista.length-1;
 }

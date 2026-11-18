@@ -49,6 +49,7 @@ node dev/test-tablero.js     # Tablero y Analytics simulado
 node dev/test-avisos.js      # Avisame cuando vuelva
 node dev/test-actualizar.js  # Actualizar el sistema desde el panel
 node dev/test-venta.js       # Nueva venta (por fuera de la web)
+node dev/test-youtube.js     # Videos de YouTube por link
 node dev/test-cupones.js     # Códigos (% o $ por funda) y vendedores: aviso, comisión fija, pagos, recordatorio
 node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tienda de ejemplo (sin recetas)
 ```
@@ -77,7 +78,7 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 
 ## La web hoy (18/11)
 
-- **Desde el 18/11: estilo tienda tradicional** (pedido del dueño: "que se vea como una web que la gente está acostumbrada a ver"). Arriba una sola página de producto (`#producto`, `pintarProducto()`): foto, nombre, **cuotas primero y transferencia abajo (nunca el total con tarjeta grande)**, tamaño 2 plazas / 1 plaza (`PSEL`), COMPRAR, envío, confianza y desplegables. Fondo blanco, letra Inter. Las secciones viejas siguen en el HTML con `class="viejo"` (ocultas). Carrusel: foto entera sin recortar (fondo desenfocado), orden **fotos/videos de la funda elegida (★ primero) → Portada** (si la funda no tiene fotos, arranca con la principal de Portada); al cambiar de tamaño la foto entra con un fundido; videos con el reproductor de Drive (su menú no se puede ocultar; para video sin menú hay que alojarlo en la web y el dueño prefirió dejarlo así, 18/11). **No decir "San Luis" en la web** (18/11, el dueño: no le importa a nadie): usar "🇦🇷 Industria argentina". Hay 3 fotos "Gemini_Generated_Image" (IA) en la carpeta de la web: se le recomendó sacarlas.
+- **Desde el 18/11: estilo tienda tradicional** (pedido del dueño: "que se vea como una web que la gente está acostumbrada a ver"). Arriba una sola página de producto (`#producto`, `pintarProducto()`): foto, nombre, **cuotas primero y transferencia abajo (nunca el total con tarjeta grande)**, tamaño 2 plazas / 1 plaza (`PSEL`), COMPRAR, envío, confianza y desplegables. Fondo blanco, letra Inter. Las secciones viejas siguen en el HTML con `class="viejo"` (ocultas). Carrusel: foto entera sin recortar (fondo desenfocado), orden **fotos/videos de la funda elegida (★ primero) → Portada** (si la funda no tiene fotos, arranca con la principal de Portada); al cambiar de tamaño la foto entra con un fundido; videos: **mejor por YouTube (No listado)**: arrancan solos, sin sonido, en bucle y sin menú (`ytFrame`/`ytActivar`, solo se carga el del slide visible); los de Drive siguen con su menú. **No decir "San Luis" en la web** (18/11, el dueño: no le importa a nadie): usar "🇦🇷 Industria argentina". Hay 3 fotos "Gemini_Generated_Image" (IA) en la carpeta de la web: se le recomendó sacarlas.
 - **Versión anterior guardada:** commit `ea69f72` (la de las tarjetas de precio). Si pide volver: `git checkout ea69f72 -- index.html`, probar y publicar (no rehacerla). Lo de abajo describe esa versión anterior.
 
 ## La web anterior (16/11 a 18/11)
@@ -90,7 +91,7 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 
 ## Estado y pendientes (actualizar al cerrar cada tema)
 
-- **Instalado:** `Codigo.gs` **16/11/2026 · 3**; **falta que toque "Actualizar ahora" para la 18/11/2026 · 1** (mails sin "San Luis": pie "🇦🇷 Industria argentina", despacho "ya está en camino"). Panel **16/11 · 6**. Listo para arrancar con vendedores.
+- **Instalado:** `Codigo.gs` **16/11/2026 · 3**; **falta que toque "Actualizar ahora" para la 18/11/2026 · 2** (mails sin "San Luis" y videos de YouTube por link: acción `linkMedia`, tipo `yt` en Media con el código en `drive_id`). Panel **18/11 · 1** (botón "＋ Pegar link de YouTube" en Fotos y videos). Listo para arrancar con vendedores.
 - **Vendedores:** EMILIANO creado ($2.000 por funda). Mensajes en `vendedores-mensajes.md` (comisión $2.000; **EMILIANO hay que recrearlo con comisión 2000**) y placa `estado-en-blanco.png` (el vendedor escribe su código encima). Para cada vendedor nuevo: crear código con mail y comisión.
 - **Susana (16/11):** las 6 de 1 plaza salieron **mal**; dejó de trabajar y el dueño retiró el material de las 15 dobles. **Decidió no pagarle** (tema cerrado) y usar esa plata para **arreglar las 6**. Pasos dados en el panel: editar la tanda a 8 dobles (libera el material de las 15) y dejar pendientes las 6 chicas; cuando estén arregladas, recibirlas con confección **$0** y cargar el arreglo como gasto del costurero nuevo. Cuenta saldada: los $80.000 adelantados pagaron justo las 8 dobles; no se le debe nada. El dueño **siempre paga contra entrega** (con Susana fue la excepción).
 - **Costurero nuevo (16/11):** está haciendo **una funda de prueba**; después charlan precio y condiciones. Cuando arranque: cargarlo como proveedor y nueva tanda.

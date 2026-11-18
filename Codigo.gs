@@ -88,7 +88,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '18/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '18/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -185,6 +185,7 @@ function rutear(r) {
     case 'pagos': return {pagos: leerDoc('Pagos')};
     case 'guardarPagos': return guardarDoc('Pagos', r.data);
     case 'subirMedia': return subirMedia(r);
+    case 'linkMedia': return conLock(function () { return linkMedia(r); });
     case 'borrarMedia': return conLock(function () { return borrarMedia(r.id); });
     case 'ordenMedia': return conLock(function () { return ordenMedia(r.id, r.dir); });
     case 'principalMedia': return conLock(function () { return principalMedia(r.id); });
@@ -1612,10 +1613,29 @@ function subirMedia(r) {
   agregar(H.media, {id: id, fecha: ahora(), destino: destino, tipo: tipo, nombre: blob.getName(), orden: orden, principal: principal, drive_id: f.getId()});
   return {id: id, drive: f.getId()};
 }
+/* Video de YouTube por link (18/11/2026, pedido del dueño): en la web arranca solo, sin sonido y casi sin menú
+   (con Drive el menú del reproductor tapaba el video). Se guarda como tipo 'yt' con el código del video en drive_id. */
+function idYoutube(u) {
+  u = String(u || '').trim();
+  var m = u.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/|v\/))([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  return /^[A-Za-z0-9_-]{11}$/.test(u) ? u : '';
+}
+function linkMedia(r) {
+  asegurarHoja(H.media);
+  var yt = idYoutube(r.url);
+  if (!yt) throw new Error('No reconozco ese link. Copiá el link del video de YouTube (por ejemplo https://youtu.be/...).');
+  var destino = limpiar(r.destino, 30) || 'portada';
+  var actuales = listaMedia().filter(function (m) { return m.destino === destino; });
+  var orden = actuales.reduce(function (a, m) { return Math.max(a, m.orden); }, 0) + 1;
+  var id = Utilities.getUuid().slice(0, 8);
+  agregar(H.media, {id: id, fecha: ahora(), destino: destino, tipo: 'yt', nombre: 'YouTube ' + yt, orden: orden, principal: 'NO', drive_id: yt});
+  return {id: id, yt: yt};
+}
 function filaMedia(id) { var m = filas(H.media).filter(function (x) { return String(x.id) === String(id); })[0]; if (!m) throw new Error('No encontré ese archivo.'); return m; }
 function borrarMedia(id) {
   var m = filaMedia(id);
-  try { DriveApp.getFileById(String(m.drive_id)).setTrashed(true); } catch (e) {}
+  if (String(m.tipo) !== 'yt') { try { DriveApp.getFileById(String(m.drive_id)).setTrashed(true); } catch (e) {} }
   hoja(H.media).deleteRow(m._fila);
   if (m.principal === 'SI') { var otra = listaMedia().filter(function (x) { return x.destino === String(m.destino) && x.tipo === 'img'; })[0]; if (otra) principalMedia(otra.id); }
   return {};

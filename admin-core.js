@@ -249,11 +249,11 @@ function vFotos(d){
   var lista=(d.media||[]).filter(function(m){return m.destino===MED_DEST;});
   var h='<div class="ph"><div><h2>Fotos y videos</h2><p class="sub">Elegí dónde van, subilos y ordenalos. La foto marcada con ★ es la principal (la que se ve primero).</p></div></div>'
     +'<div class="filters">'+dest.map(function(x){ var n=(d.media||[]).filter(function(m){return m.destino===x[0];}).length; return '<button class="chip" data-med="'+x[0]+'" aria-pressed="'+(MED_DEST===x[0])+'">'+esc(x[1])+(n?' ('+n+')':'')+'</button>'; }).join("")+'</div>'
-    +'<div class="block" style="margin-top:0"><label class="btn main" style="cursor:pointer">＋ Subir fotos o videos<input type="file" id="medFile" accept="image/*,video/*" multiple hidden></label>'
-    +'<p class="muted small" style="margin:10px 0 0">Las fotos se achican solas para que la web cargue rápido. Videos: cortos, hasta 25 MB.</p><div id="medProg" class="muted small" style="margin:8px 0 0"></div></div>';
+    +'<div class="block" style="margin-top:0"><label class="btn main" style="cursor:pointer">＋ Subir fotos o videos<input type="file" id="medFile" accept="image/*,video/*" multiple hidden></label>'+' <button class="btn ghost" data-a="mYt">＋ Pegar link de YouTube</button>'
+    +'<p class="muted small" style="margin:10px 0 0">Las fotos se achican solas para que la web cargue rápido. Videos: mejor por YouTube (subilo como <b>No listado</b> y pegá el link): en la web arranca solo, sin sonido y sin el menú que pone Drive.</p><div id="medProg" class="muted small" style="margin:8px 0 0"></div></div>';
   if(!lista.length) return h+'<div class="empty" style="margin-top:14px">Todavía no hay fotos ni videos acá.</div>';
   h+='<div class="medgrid" style="margin-top:14px">'+lista.map(function(m,i){
-    var prev=m.tipo==="img"?'<img src="'+urlImg(m.drive,400)+'" alt="'+esc(m.nombre)+'" loading="lazy">':'<div class="medvid">▶<small>Video</small></div>';
+    var prev=m.tipo==="img"?'<img src="'+urlImg(m.drive,400)+'" alt="'+esc(m.nombre)+'" loading="lazy">':m.tipo==="yt"?'<div class="medvid" style="background:#000 url(https://i.ytimg.com/vi/'+esc(m.drive)+'/hqdefault.jpg) center/cover">▶<small>YouTube</small></div>':'<div class="medvid">▶<small>Video</small></div>';
     return '<div class="medcard">'+prev+(m.principal?'<span class="medbadge">★ Principal</span>':'')
       +'<div class="medacts"><button class="btn ghost" data-a="mOrd" data-id="'+esc(m.id)+'" data-dir="-1" aria-label="Mover antes"'+(i===0?' disabled':'')+'>◀</button>'
       +'<button class="btn ghost" data-a="mOrd" data-id="'+esc(m.id)+'" data-dir="1" aria-label="Mover después"'+(i===lista.length-1?' disabled':'')+'>▶</button>'
@@ -377,7 +377,8 @@ document.addEventListener("click",function(e){
   else if(a==="avisar") accion("avisar",{},null,t).then(function(r){ if(r) toast("Avisos enviados: "+r.avisados+(r.faltan?". Faltan "+r.faltan+" por el límite diario de mails: probá mañana.":""),6000); });
   else if(a==="mOrd") accion("ordenMedia",{id:id,dir:t.dataset.dir},null,t);
   else if(a==="mPri") accion("principalMedia",{id:id},"Foto principal actualizada",t);
-  else if(a==="mDel"){ if(confirm("¿Borrar este archivo? Se va a la papelera de tu Drive.")) accion("borrarMedia",{id:id},"Archivo borrado",t); }
+  else if(a==="mYt"){ var u=prompt("Pegá el link del video de YouTube (subilo como «No listado»):"); if(u&&u.trim()) accion("linkMedia",{destino:MED_DEST,url:u.trim()},"Video agregado",t); }
+  else if(a==="mDel"){ if(confirm("¿Borrar este archivo de la web? (Si es un video de YouTube, sigue en tu canal.)")) accion("borrarMedia",{id:id},"Archivo borrado",t); }
   else if(a==="rcEnviar"){
     var ems=Object.keys(RCsel).filter(function(k){return RCsel[k];});
     if(!ems.length){ toast("Elegí al menos un cliente."); return; }
