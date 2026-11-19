@@ -86,8 +86,8 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 
 ## Estado y pendientes (al 19/11/2026; actualizar al cerrar cada tema)
 
-- **Instalado:** `Codigo.gs` **19/11/2026 · 1** (actualizado por el dueño el 19/11: mails sin "San Luis", videos de YouTube por link, formulario mayorista). Falta: que mande una consulta mayorista de prueba y verifique el mail. Panel **19/11 · 1**.
-- **Primera venta web (19/11).** Se le pidió: confirmar pago y despachar desde Hoy; si pagó con tarjeta y no quedó "pagado" solo, el webhook de Mercado Pago no llega (revisar); pedirle al cliente foto del perro + opinión; preguntar de dónde vino.
+- **Instalado:** `Codigo.gs` **19/11/2026 · 1** (actualizado por el dueño el 19/11: mails sin "San Luis", videos de YouTube por link, formulario mayorista). Consulta mayorista de prueba OK (llega el mail). Panel **19/11 · 1**.
+- **Primera venta web (19/11):** pago confirmado y despachada. Falta saber si se marcó "pagado" sola (si fue con tarjeta y no, revisar el webhook de Mercado Pago); cuando le llegue, pedirle al cliente foto del perro + opinión y de dónde vino.
 - **Mayorista (19/11):** precios definidos con el dueño (están solo en su panel, `lp_mayorista`; **no escribirlos en el repo**). Mínimo 10 combinables, envío incluido, pago por transferencia antes del despacho, precio sugerido = web contado, válidos 30 días. Propuesta en PDF desde Precios y rentabilidad → Venta mayorista → Imprimir propuesta. Consultas por el formulario de la web (hoja Mayoristas + mail). Ofrecido: ver las consultas en el panel.
 - **Fotos:** subió fotos reales de la 1 plaza (★ = perrito en la funda). La del golden (portada) es una **funda hamaca, no su canasto**, y hay 3 imágenes hechas con IA: se le recomendó reemplazarlas por fotos reales de la doble. Videos: mejor por YouTube "No listado" (en la web van sin sonido).
 - **Videos/Reels:** Reel 1 plaza hecho (`dev/video/reel-una-plaza.py`) y versión con textos sobre su edición. Video de presentación de 50 s (sobre el capó, con subtítulos). No prometer "viaja seguro" en textos (no es protección ante choques).
