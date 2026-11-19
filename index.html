@@ -654,12 +654,12 @@ h3{font-weight:600}
 <div class="preview-bar" id="previewBar" hidden>Vista previa: la tienda está cerrada al público. Las compras que hagas son reales.</div>
 <header class="top">
   <div class="anuncio"><span class="andreani-slot"></span>ENVÍO GRATIS <span class="d-only">POR ANDREANI A TODA ARGENTINA</span><span class="m-only">A TODO EL PAÍS</span> <span>· <span data-p="desc">10</span>% off por transferencia</span></div>
+  <a class="anuncio-my" href="#mayorista">🏪 ¿Tenés pet shop o veterinaria? <b>Consultá precios por mayor ›</b></a>
   <div class="wrap">
     <a class="logo" href="#inicio" aria-label="Los Perrines, inicio"><img class="logoimg" src="logo.png" alt="" width="44" height="44" onerror="this.style.display='none'"> Los Perrines</a>
     <button class="cart-btn" id="openCart" aria-label="Abrir carrito">Carrito <b id="cartCount">0</b></button>
   </div>
 </header>
-<a class="anuncio-my" href="#mayorista">🏪 ¿Tenés pet shop o veterinaria? <b>Consultá precios por mayor ›</b></a>
 
 <main id="inicio">
 <section id="producto" class="prod"><div class="wrap prod-g" id="prodBox"></div></section>
@@ -1017,6 +1017,8 @@ function trk(ev,datos){
 }
 function carritoItems(){ return PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){return {id:p.id,q:Q[p.id]};}); }
 
+function topOcultar(){ var h=$("header.top"), a=$("header.top .anuncio"), m=$("header.top .anuncio-my"); if(!h||!a) return; var n=a.offsetHeight+(m?m.offsetHeight:0); h.style.top="calc(env(safe-area-inset-top,0px) - "+n+"px)"; }
+window.addEventListener("resize",topOcultar); window.addEventListener("load",topOcultar);
 function show(id){ $("#loading").hidden=true; $("#pronto").hidden=id!=="pronto"; $("#tienda").hidden=id!=="tienda"; }
 
 /* ---------- arranque ---------- */
@@ -1028,7 +1030,7 @@ if(!/^https:\/\/script\.google\.com\//.test(API)){ show("pronto"); return; }
 api("config").then(function(c){
   C=c;
   if(!c.abierta){ show("pronto"); return; }   /* con la tienda cerrada solo se registra la visita */
-  show("tienda"); $("#previewBar").hidden=!c.vista||c.publica===true;
+  show("tienda"); topOcultar(); $("#previewBar").hidden=!c.vista||c.publica===true;
   pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
   if(c.whatsapp && c.whatsapp.length>6){ $$(".wa").forEach(function(a){a.href="https://wa.me/"+c.whatsapp;}); } else { $$(".wa").forEach(function(a){a.hidden=true;}); }
   var fm=$("#fMay"); if(fm) fm.addEventListener("submit",function(e){ e.preventDefault(); var g=function(n){return (fm.elements[n].value||"").trim();}, er=$("#myErr"), bt=$("#myBtn");
