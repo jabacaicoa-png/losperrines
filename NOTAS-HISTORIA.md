@@ -197,3 +197,23 @@ El dueño puede exportar sus datos del taller (sin datos de clientes) con el bot
 - Segunda revisión del taller (9/11/2026, el dueño dijo "no hagamos nada por ahora"): la bolsa de guardado de la doble usa un insumo de tela que ya no existe (`IN-752EE035`, no afecta mientras esté desactivada); en la 1 plaza el matelaseado estaba a mano en vez de automático; preguntar si el precio cargado del matelaseado coincide con lo pagado. (Laterales: ya quedaron iguales en las dos fundas.)
 - **Laterales** (10/11/2026): `la` = largo del lateral **junto al asiento** (se cose al asiento), `lb` = **alto** (en sus dos bordes van los cierres que lo unen con los respaldos; el borde de arriba lleva gross). Las dos fundas: 42 (asiento) × 40 (alto) → se corta 42 × 41 con 1 cm. El panel tenía las etiquetas cruzadas ("alto"/"ancho"); se corrigieron en panel y plano.
 - Ojo al revisar exportaciones: los textos de `medidas1`/`medidas2` en `CONFIG_DEF` son solo los de la instalación; lo que ve el cliente está en la hoja Config. Y la exportación omite las medidas que coinciden con `MED_DEF`.
+
+
+## Sesión del 16 al 19/11/2026 (resumen)
+
+- **Vendedores:** comisión bajó a $2.000 por funda (`VEND_COMISION`); mensajes en `vendedores-mensajes.md`; el % de los códigos arranca vacío (0 en gris).
+- **Precios:** 2 plazas $83.400 / $75.000; 1 plaza $60.900 / $55.000 (cuotas redondas). Se descartaron los precios tachados.
+- **Web:** primero se ajustaron las tarjetas de precio (cuotas primero, % OFF al lado de la transferencia, compu sin espacio vacío); el 18/11 se pasó a **estilo tienda tradicional** (`pintarProducto()`, `#producto`, Inter, fondo blanco; secciones viejas con `class="viejo"`), carrusel con foto entera (fondo desenfocado), fotos de la funda elegida primero, videos de YouTube sin menú (`ytFrame`/`ytActivar`, acción `linkMedia`), cuota en una línea y COMPRAR en la primera pantalla (foto 4:3, 3:2 en ≤389 px), "Industria argentina" en vez de "San Luis" (web y mails), sección y formulario **Venta por mayor** (acción `mayorista`, hoja Mayoristas, tope 20/hora, campo trampa `web`) y línea `.anuncio-my` en el encabezado (`topOcultar()` esconde franja + línea al bajar).
+- **Panel:** botón "＋ Pegar link de YouTube" (Fotos y videos); **Venta mayorista** en Precios y rentabilidad (`mayoristaBlock`, `mayCalc`, `mayImprimir`; costo mayorista = costo de ficha − envío de la ficha + envío del pedido ÷ mínimo).
+- **Videos:** `dev/video/reel-una-plaza.py` (fotos con zoom, textos y placa final). El dueño edita en la app Edits (exporta en 2K/4K: para mandar, HD 30 fps o por WhatsApp).
+- **Primera venta web:** 19/11.
+
+## La web anterior (16/11 a 18/11, commit ea69f72)
+
+- **Precios (17/11):** Canasto de 2 plazas **$83.400 tarjeta (3 de $27.800) / $75.000 transferencia** (10% off); Canasto de 1 plaza **$60.900 (3 de $20.300) / $55.000** (10% off); el % se calcula solo. Envío cargado ~$13.000 ("te ahorrás"). 1 plaza sin stock.
+- **Celular, primera pantalla** (todo entra sin bajar en su celular): foto de portada 16:10 (recorte calibrado a la foto de los dos perros), título en 2 renglones, píldoras **💧 Impermeable · 🛋️ Acolchada · 💪 Antidesgarro**, tarjetas de precio con **cuotas primero** (17/11: "3 cuotas de $X sin interés" grande en negro, "o $Y por transferencia" en verde; con el % OFF de cada funda al lado de la transferencia (17/11), sin total con tarjeta; clases `.pm-q*`; también en la compu desde el 17/11), circulito con flecha y franja de envío con logo de Andreani + "Llega entre mié… y vie…".
+- **Tarjeta de cada funda en el celular** (al tocar el precio): entra en una pantalla con COMPRAR a la vista; precio por transferencia + 10% OFF y abajo "💳 3 cuotas sin interés de $X" en verde (17/11: sin "o $X con tarjeta", también en la compu); cartel 💧 IMPERMEABLE sobre la foto; garantías debajo del botón, fuera de la pantalla. Recuadro de envío: "🚚 ENVÍO GRATIS / Llega entre… / Te ahorrás $X" (sin "A todo el país por Andreani").
+- **Cuándo llega:** "Llega entre el X y el Y" = 2 a 4 días hábiles desde el día siguiente, **corte a las 17 h**, saltea fines de semana y `FERIADOS` (en `index.html`; **agregar los de 2027 trasladables y puentes** cuando salgan).
+- **Compu, primera pantalla (17/11):** pensada para su pantalla (~1345 × 600): título en 2 renglones, píldoras, las 2 fundas lado a lado (sin botón Ver; si no entran, una debajo de otra), franja de envío con Andreani y "Llega entre", sello y botones; sin el párrafo ni el recuadro de abajo; foto a la derecha a todo el alto (recortada a los costados). Bloque `@media(min-width:900px)` después de "Celular: cuotas primero". Detalle de clases y medidas: NOTAS-HISTORIA.md.
+
+
