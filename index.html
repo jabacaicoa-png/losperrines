@@ -613,6 +613,15 @@ h3{font-weight:600}
   .p-tit{font-size:1.2rem;margin-bottom:4px}
   .p-cuo b{font-size:1.6rem}
 }
+
+/* venta por mayor (19/11/2026) */
+.mayor{padding:28px 0}
+.my-box{border:1px solid var(--line);border-radius:8px;padding:20px;display:grid;gap:14px;align-items:center;background:var(--card)}
+.my-k{margin:0 0 4px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.my-box h2{margin:0 0 6px;font-size:clamp(1.2rem,4.4vw,1.5rem)}
+.my-box .sub{margin:0;font-size:.95rem}
+.my-btn{width:100%}
+@media(min-width:900px){.my-box{grid-template-columns:1fr auto;gap:28px;padding:24px 28px}.my-btn{width:auto}}
 </style>
 </head>
 <body>
@@ -846,6 +855,17 @@ h3{font-weight:600}
   </div>
 </section>
 
+<!-- venta por mayor (19/11/2026, pedido del dueño). Sin precios: se piden por WhatsApp (la propuesta sale del panel) -->
+<section class="mayor" id="mayorista">
+  <div class="wrap">
+    <div class="my-box">
+      <div><p class="my-k">Venta por mayor</p><h2>¿Tenés pet shop, veterinaria o tienda?</h2>
+      <p class="sub">Vendé nuestras fundas canasto en tu negocio. Precios especiales desde <b>10 unidades</b> (podés combinar los dos tamaños), <b>envío incluido</b> por Andreani y buen margen de reventa.</p></div>
+      <a class="btn btn-main my-btn wa-may" href="#" target="_blank" rel="noopener">Pedí la propuesta por WhatsApp</a>
+    </div>
+  </div>
+</section>
+
 <section class="band faq">
   <div class="wrap">
     <h2>Preguntas frecuentes</h2>
@@ -989,6 +1009,7 @@ api("config").then(function(c){
   show("tienda"); $("#previewBar").hidden=!c.vista||c.publica===true;
   pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
   if(c.whatsapp && c.whatsapp.length>6){ $$(".wa").forEach(function(a){a.href="https://wa.me/"+c.whatsapp;}); } else { $$(".wa").forEach(function(a){a.hidden=true;}); }
+  var wm=$(".wa-may"); if(wm){ if(c.whatsapp && c.whatsapp.length>6) wm.href="https://wa.me/"+c.whatsapp+"?text="+encodeURIComponent("¡Hola! Tengo un negocio y me interesa vender las fundas Los Perrines. ¿Me pasás la propuesta por mayor?"); else $("#mayorista").hidden=true; }
   if(qs.get("pedido")) volvioDeMP();
   else if(qs.get("carrito")){ String(qs.get("carrito")).split(",").forEach(function(x){ var p=x.split(":"), id=p[0]==="individual"?"individual":"doble", q=parseInt(p[1],10)||0; if(PR(id)&&q>0) Q[id]=Math.min(maxQ(id),q); }); setCount(); history.replaceState(null,"",location.pathname); if(totQ()){ step="cart"; abrir(); } }
 }).catch(function(){ show("pronto"); });
