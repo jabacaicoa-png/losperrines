@@ -16,7 +16,7 @@
  */
 
 var TZ = 'America/Argentina/Buenos_Aires';
-var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores'};
+var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores', mayoristas: 'Mayoristas'};
 var COLS = {
   Pedidos: ['id','fecha','estado','pago','cantidad','total','nombre','apellido','dni','email','cel_cod','cel_num',
             'entrega','calle','numero','piso','depto','prov_loc_cp','sucursal','observaciones','vence',
@@ -30,6 +30,7 @@ var COLS = {
   Cupones: ['codigo','porcentaje','vence','unico','activo','creado','monto','email','comision'],   // monto: descuento fijo en $ por funda (manda sobre el %); email/comision: vendedor y lo que cobra por funda (16/11/2026)
   PagosVendedores: ['fecha','codigo','monto','fundas','pedidos','notas'],   // cada pago de comisiones (los viernes); pedidos = IDs pagados, separados por coma
   Bajas: ['fecha','email'],
+  Mayoristas: ['fecha','nombre','apellido','negocio','localidad','whatsapp','email','doble','individual','mensaje','estado'],   // consultas de venta por mayor desde la web (19/11/2026)
   Config: ['clave','valor','descripcion'],
   TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
   TallerInsumos: ['id','nombre','descripcion','proveedor','envase','contenido','unidad','precio','minimo','activo','actualizado'],
@@ -88,7 +89,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '18/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '19/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -148,6 +149,7 @@ function rutear(r) {
     case 'reintentar': return conLock(function () { return reintentar(r); });
     case 'estado': return estadoPedido(r);
     case 'aviso': return guardarAviso(r);
+    case 'mayorista': return conLock(function () { return consultaMayorista(r); });
     case 'arrepentimiento': return arrepentimiento(r);
     case 'login': return login(r);
     case 'carrito': return conLock(function () { return guardarCarrito(r); });
@@ -507,6 +509,36 @@ function guardarAviso(r) {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error('El email no es válido.');
   var ya = filas(H.avisos).some(function (a) { return a.email === e && a.avisado !== 'SI'; });
   if (!ya) agregar(H.avisos, {fecha: ahora(), email: e, avisado: 'NO'});
+  return {};
+}
+
+/* Consulta de venta por mayor desde la web (19/11/2026, pedido del dueño: que le llegue por mail y quede registro,
+   en vez de tener que contestar al toque por WhatsApp). Se guarda en la hoja Mayoristas y le llega un mail;
+   respondiendo ese mail le contesta al negocio (si dejó su mail). */
+function consultaMayorista(r) {
+  if (limpiar(r.web, 50)) return {};   // campo trampa: lo completan solo los robots
+  var cache = CacheService.getScriptCache(), n = num(cache.get('mayoristas_hora'));
+  if (n >= 20) throw new Error('Recibimos muchas consultas seguidas. Probá de nuevo en un rato o escribinos por WhatsApp.');
+  var d = {nombre: limpiar(r.nombre, 60), apellido: limpiar(r.apellido, 60), negocio: limpiar(r.negocio, 80), localidad: limpiar(r.localidad, 80),
+    whatsapp: limpiar(r.whatsapp, 30), email: limpiar(r.email, 100).toLowerCase(), doble: Math.max(0, Math.floor(num(r.doble))), individual: Math.max(0, Math.floor(num(r.individual))),
+    mensaje: limpiar(r.mensaje, 600)};
+  if (!d.nombre) throw new Error('Poné tu nombre.');
+  if (String(d.whatsapp).replace(/\D/g, '').length < 8) throw new Error('Poné un WhatsApp válido, con característica.');
+  if (d.email && !emailOk(d.email)) throw new Error('El email no es válido.');
+  if (d.doble + d.individual < 1) throw new Error('Decinos cuántas fundas te interesan.');
+  cache.put('mayoristas_hora', String(n + 1), 3600);
+  asegurarHoja(H.mayoristas);
+  agregar(H.mayoristas, Object.assign({fecha: ahora(), estado: 'nueva'}, d));
+  var c = cfg();
+  if (emailOk(c.email_aviso) && MailApp.getRemainingDailyQuota() > 0) {
+    var wa = waNorm(d.whatsapp), tot = d.doble + d.individual;
+    var cuerpo = '<p><b>' + esc(d.nombre + ' ' + d.apellido) + '</b>' + (d.negocio ? ' · ' + esc(d.negocio) : '') + (d.localidad ? ' · ' + esc(d.localidad) : '') + '</p>'
+      + '<p>Quiere <b>' + tot + ' funda' + (tot > 1 ? 's' : '') + '</b>: ' + d.doble + ' de 2 plazas y ' + d.individual + ' de 1 plaza.</p>'
+      + (d.mensaje ? '<p>Mensaje: ' + esc(d.mensaje) + '</p>' : '')
+      + '<p>WhatsApp: ' + (wa ? '<a href="https://wa.me/' + wa + '" style="color:#4E5B3A">' + esc(d.whatsapp) + '</a>' : esc(d.whatsapp)) + (d.email ? '<br>Email: ' + esc(d.email) + ' (respondé este mail y le llega a él)' : '') + '</p>'
+      + '<p>La propuesta para mandarle sale del panel: Precios y rentabilidad → Venta mayorista → Imprimir propuesta. Todas las consultas quedan en la hoja Mayoristas.</p>';
+    MailApp.sendEmail({to: c.email_aviso, subject: 'Consulta por mayor: ' + (d.negocio || d.nombre) + ' (' + tot + ' fundas)', htmlBody: plantilla('Consulta por mayor', cuerpo, c), name: 'Los Perrines', replyTo: d.email || c.email_aviso});
+  }
   return {};
 }
 

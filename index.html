@@ -606,12 +606,13 @@ h3{font-weight:600}
 }
 @media(max-width:899px){
   .prod .wrap{padding-left:16px;padding-right:16px}
-  .pg{margin:0 -16px;aspect-ratio:5/4}   /* un poco más baja que cuadrada: el botón COMPRAR entra en la primera pantalla (18/11/2026) */
+  .pg{margin:0 -16px;aspect-ratio:4/3}   /* un poco más baja que cuadrada: el botón COMPRAR entra en la primera pantalla (18/11/2026) */
   .buybar .btn{border-radius:6px}
 }
 @media(max-width:389px){
   .p-tit{font-size:1.2rem;margin-bottom:4px}
   .p-cuo b{font-size:1.6rem}
+  .pg{aspect-ratio:3/2}
 }
 
 /* venta por mayor (19/11/2026) */
@@ -621,7 +622,17 @@ h3{font-weight:600}
 .my-box h2{margin:0 0 6px;font-size:clamp(1.2rem,4.4vw,1.5rem)}
 .my-box .sub{margin:0;font-size:.95rem}
 .my-btn{width:100%}
-@media(min-width:900px){.my-box{grid-template-columns:1fr auto;gap:28px;padding:24px 28px}.my-btn{width:auto}}
+@media(min-width:900px){.my-box{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:32px;padding:24px 28px;align-items:start}}
+.my-form{display:grid;gap:2px}
+.my-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.my-form .f{display:block;margin:0 0 10px;font-size:.88rem;font-weight:600;color:var(--ink)}
+.my-form .f small{font-weight:400;color:var(--muted)}
+.my-form input,.my-form textarea{display:block;width:100%;margin-top:4px;font:400 16px Inter,sans-serif;padding:10px 12px;border:1px solid #CFCFC8;border-radius:6px;background:var(--card);color:var(--ink)}
+.my-alt{margin:8px 0 0;font-size:.88rem;color:var(--muted);text-align:center}
+.my-ok{background:#E6F2E2;border:1px solid #BFDDB7;border-radius:8px;padding:16px;font-size:.98rem}
+.anuncio-my{display:block;text-align:center;font-size:.86rem;color:var(--ink);background:var(--field);border-bottom:1px solid var(--line);padding:5px 10px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.anuncio-my b{color:var(--olive)}
+@media(max-width:899px){.anuncio-my{font-size:min(.8rem,3.1vw);padding:4px 8px}}
 </style>
 </head>
 <body>
@@ -648,6 +659,7 @@ h3{font-weight:600}
     <button class="cart-btn" id="openCart" aria-label="Abrir carrito">Carrito <b id="cartCount">0</b></button>
   </div>
 </header>
+<a class="anuncio-my" href="#mayorista">🏪 ¿Tenés pet shop o veterinaria? <b>Consultá precios por mayor ›</b></a>
 
 <main id="inicio">
 <section id="producto" class="prod"><div class="wrap prod-g" id="prodBox"></div></section>
@@ -860,8 +872,18 @@ h3{font-weight:600}
   <div class="wrap">
     <div class="my-box">
       <div><p class="my-k">Venta por mayor</p><h2>¿Tenés pet shop, veterinaria o tienda?</h2>
-      <p class="sub">Vendé nuestras fundas canasto en tu negocio. Precios especiales desde <b>10 unidades</b> (podés combinar los dos tamaños), <b>envío incluido</b> por Andreani y buen margen de reventa.</p></div>
-      <a class="btn btn-main my-btn wa-may" href="#" target="_blank" rel="noopener">Pedí la propuesta por WhatsApp</a>
+      <p class="sub">Vendé nuestras fundas canasto en tu negocio. Precios especiales desde <b>10 unidades</b> (podés combinar los dos tamaños), <b>envío incluido</b> por Andreani y buen margen de reventa. Dejanos tus datos y te mandamos la propuesta.</p></div>
+      <form class="my-form" id="fMay" novalidate>
+        <div class="my-g2"><label class="f">Nombre<input name="nombre" autocomplete="given-name"></label><label class="f">Apellido<input name="apellido" autocomplete="family-name"></label></div>
+        <div class="my-g2"><label class="f">Negocio<input name="negocio" autocomplete="organization" placeholder="Nombre del local"></label><label class="f">Localidad<input name="localidad" autocomplete="address-level2"></label></div>
+        <div class="my-g2"><label class="f">WhatsApp<input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej. 266 4123456"></label><label class="f">Email <small>(opcional)</small><input name="email" type="email" inputmode="email" autocomplete="email"></label></div>
+        <div class="my-g2"><label class="f">Canasto de 2 plazas<input name="doble" type="number" min="0" inputmode="numeric" placeholder="Cantidad"></label><label class="f">Canasto de 1 plaza<input name="individual" type="number" min="0" inputmode="numeric" placeholder="Cantidad"></label></div>
+        <label class="f">Comentario <small>(opcional)</small><textarea name="mensaje" rows="2"></textarea></label>
+        <input name="web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
+        <p class="err" id="myErr" role="alert"></p>
+        <button class="btn btn-main my-btn" type="submit" id="myBtn">Pedir la propuesta</button>
+        <p class="my-alt">¿Preferís hablar ya? <a class="wa-may" href="#" target="_blank" rel="noopener">Escribinos por WhatsApp</a></p>
+      </form>
     </div>
   </div>
 </section>
@@ -1009,7 +1031,15 @@ api("config").then(function(c){
   show("tienda"); $("#previewBar").hidden=!c.vista||c.publica===true;
   pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
   if(c.whatsapp && c.whatsapp.length>6){ $$(".wa").forEach(function(a){a.href="https://wa.me/"+c.whatsapp;}); } else { $$(".wa").forEach(function(a){a.hidden=true;}); }
-  var wm=$(".wa-may"); if(wm){ if(c.whatsapp && c.whatsapp.length>6) wm.href="https://wa.me/"+c.whatsapp+"?text="+encodeURIComponent("¡Hola! Tengo un negocio y me interesa vender las fundas Los Perrines. ¿Me pasás la propuesta por mayor?"); else $("#mayorista").hidden=true; }
+  var fm=$("#fMay"); if(fm) fm.addEventListener("submit",function(e){ e.preventDefault(); var g=function(n){return (fm.elements[n].value||"").trim();}, er=$("#myErr"), bt=$("#myBtn");
+    var d={nombre:g("nombre"),apellido:g("apellido"),negocio:g("negocio"),localidad:g("localidad"),whatsapp:g("whatsapp"),email:g("email"),doble:g("doble"),individual:g("individual"),mensaje:g("mensaje"),web:g("web")};
+    if(!d.nombre){ er.textContent="Poné tu nombre."; return; } if(d.whatsapp.replace(/\D/g,"").length<8){ er.textContent="Poné un WhatsApp válido, con característica."; return; }
+    if((parseInt(d.doble,10)||0)+(parseInt(d.individual,10)||0)<1){ er.textContent="Decinos cuántas fundas te interesan."; return; }
+    er.textContent=""; bt.disabled=true; bt.textContent="Enviando…";
+    api("mayorista",d).then(function(){ fm.outerHTML='<div class="my-ok"><b>¡Gracias, '+esc(d.nombre)+'!</b><br>Recibimos tu consulta. Te mandamos la propuesta por WhatsApp'+(d.email?' o por mail':'')+' a la brevedad.</div>'; })
+      .catch(function(x){ er.textContent=x.message||"No se pudo enviar. Probá de nuevo."; bt.disabled=false; bt.textContent="Pedir la propuesta"; });
+  });
+  var wm=$(".wa-may"); if(wm){ if(c.whatsapp && c.whatsapp.length>6) wm.href="https://wa.me/"+c.whatsapp+"?text="+encodeURIComponent("¡Hola! Tengo un negocio y me interesa vender las fundas Los Perrines. ¿Me pasás la propuesta por mayor?"); else wm.parentNode.hidden=true; }
   if(qs.get("pedido")) volvioDeMP();
   else if(qs.get("carrito")){ String(qs.get("carrito")).split(",").forEach(function(x){ var p=x.split(":"), id=p[0]==="individual"?"individual":"doble", q=parseInt(p[1],10)||0; if(PR(id)&&q>0) Q[id]=Math.min(maxQ(id),q); }); setCount(); history.replaceState(null,"",location.pathname); if(totQ()){ step="cart"; abrir(); } }
 }).catch(function(){ show("pronto"); });
