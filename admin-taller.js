@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "18/11 · 1";
+window.PANEL_VERSION = "19/11 · 1";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -629,6 +629,7 @@ function vRentabilidad() {
     + '<span class="muted small" style="max-width:260px">' + "Se usa el % que guardaste." + (RS.mixReal != null ? " Según tus ventas registradas sería " + RS.mixReal + "% (" + RS.ventas + " fundas, incluye pedidos de prueba). " + (String(RS.mixReal) !== RS.mix ? '<button class="linkb" data-a="rsMixReal">Usar ese</button>' : "") : "") + "</span></div>"
     + '<div class="acts" style="margin-top:12px"><button class="btn ghost sm" data-a="rsGuardarParams">Guardar comisión, objetivo y mezcla</button></div></div>';
   h += '<div class="cols2" style="margin-top:14px" id="rsCards">' + PRODS.map(p => rentCard(p, obj)).join("") + "</div>";
+  h += mayoristaBlock(obj);
   const cambios = PRODS.some(p => { const k = p === "doble" ? ["precio_tarjeta", "precio_transferencia"] : ["precio2_tarjeta", "precio2_transferencia"]; return String(nm(RS.precios[p].t)) !== String(nm(c[k[0]])) || String(nm(RS.precios[p].x)) !== String(nm(c[k[1]])); });
   h += '<div class="block acts" style="justify-content:space-between">' + (cambios ? "<b>Estos precios son distintos a los de la web.</b>" : '<span class="muted">Son los precios que está mostrando la web.</span>')
     + '<span class="acts"><button class="btn ghost" data-a="rsReset"' + (cambios ? "" : " disabled") + '>Volver a los de la web</button><button class="btn main" data-a="rsAplicar"' + (cambios ? "" : " disabled") + ">Aplicar precios a la web</button></span></div>";
@@ -654,6 +655,79 @@ function rentCard(p, obj) {
     + "<tr class='tot'><td>Mezcla (" + esc(RS.mix) + "% tarjeta)</td><td class='n'></td><td class='n'>" + money(r.gMix) + "</td><td class='n'>" + pillR(r.rMix, obj) + "</td></tr></tbody></table></div>"
     + '<div class="note ' + (r.rMix >= obj ? "ok" : "warn") + '">' + (r.rMix >= obj ? "Con esta mezcla llegás al " + esc(RS.objetivo) + "%." : "Para llegar al " + esc(RS.objetivo) + "% con esta mezcla, el precio con tarjeta tendría que ser <b>" + money(Math.ceil(r.minLista / 100) * 100) + "</b> (manteniendo " + q(r.d * 100) + "% menos por transferencia)"
       + (r.minTransf != null && r.minTransf < 1 ? ", o vender al menos <b>" + Math.ceil(r.minTransf * 100) + "%</b> por transferencia" : "") + ".") + "</div></div>";
+}
+
+/* ================= VENTA MAYORISTA (19/11/2026, pedido del dueño) =================
+   Calculadora y propuesta para imprimir. Los precios mayoristas se guardan solo en este aparato
+   (localStorage), NO en el código: el repositorio es público. Costo mayorista = costo de la ficha
+   − envío gratis de una venta común + envío del pedido mayorista repartido entre las unidades. */
+const MAY_KEY = "lp_mayorista";
+function mayLeer() { let m = null; try { m = JSON.parse(localStorage.getItem(MAY_KEY) || "null"); } catch (e) {} m = m || {}; m.min = m.min || "10"; m.envio = m.envio != null ? m.envio : "20000"; m.precio = m.precio || {}; m.validez = m.validez || "30"; return m; }
+function mayGuardar(m) { try { localStorage.setItem(MAY_KEY, JSON.stringify(m)); } catch (e) {} }
+function mayCalc(p, m, obj) {
+  const f = fichaGuardada(p), c = costo(f), n = Math.max(1, nd(m.min) || 1), envU = nm(m.envio) / n;
+  const C = c.total - c.envio + envU, pv = nm(RS.precios[p].x), pm = nm(m.precio[p]);
+  const gan = pm - C, rent = C > 0 ? gan / C : 0, rev = pv - pm, revR = pm > 0 ? rev / pm : 0;
+  return {f: f, C: C, envFicha: c.envio, envU: envU, pv: pv, pm: pm, gan: gan, rent: rent, rev: rev, revR: revR, piso: Math.ceil(C * (1 + obj) / 100) * 100};
+}
+function mayoristaBlock(obj) {
+  const m = mayLeer();
+  let h = '<div class="block"><h3 style="margin-top:0">Venta mayorista</h3><p class="muted small" style="margin:-4px 0 10px">Para pet shops, veterinarias o revendedores. El costo se calcula sin el envío gratis de una venta común y con el envío del pedido repartido entre las unidades. Los precios mayoristas se guardan solo en este celular o compu.</p>'
+    + '<div class="g3"><label class="f">Pedido mínimo (unidades)<input id="my-min" data-in="mayF" data-k="min" inputmode="numeric" value="' + esc(m.min) + '"></label>'
+    + '<label class="f">Envío de todo el pedido<input id="my-env" data-in="mayF" data-k="envio" inputmode="numeric" value="' + esc(m.envio) + '"></label>'
+    + '<label class="f">Precios válidos por (días)<input id="my-val" data-in="mayF" data-k="validez" inputmode="numeric" value="' + esc(m.validez) + '"></label></div>'
+    + '<div class="cols2" id="mayCards">' + PRODS.map(p => mayCard(p, m, obj)).join("") + "</div>"
+    + '<div class="acts" style="margin-top:12px"><button class="btn main" data-a="mayImprimir">🖨 Imprimir propuesta</button><span class="muted small">Se abre la propuesta en una hoja: elegí "Guardar como PDF" para mandarla por WhatsApp.</span></div></div>';
+  return h;
+}
+function mayCard(p, m, obj) {
+  const f = fichaGuardada(p);
+  if (f._nueva) return '<div class="block" style="margin-top:0"><h3>' + esc(nombreP(p)) + '</h3><p class="muted">Cargá la receta para calcular el costo.</p></div>';
+  const r = mayCalc(p, m, obj);
+  return '<div class="block" style="margin-top:0"><h3>' + esc(nombreP(p)) + '</h3>'
+    + '<label class="f">Precio mayorista por unidad<input id="my-p-' + p + '" data-in="mayP" data-p="' + p + '" inputmode="numeric" placeholder="Ej. ' + money(r.piso) + '" value="' + esc(m.precio[p] || "") + '"></label>'
+    + mayFila("Costo por unidad", money(r.C), "sin el envío gratis (" + money(r.envFicha) + ") y con " + money(r.envU) + " de envío mayorista")
+    + (r.pm ? mayFila("Ganás por unidad", "<b>" + money(r.gan) + "</b> " + pillR(r.rent, obj))
+      + mayFila("Pedido de " + esc(m.min), "ganás <b>" + money(r.gan * (nd(m.min) || 1)) + "</b>", "cobrás " + money(r.pm * (nd(m.min) || 1)))
+      + mayFila("El revendedor gana", money(r.rev) + " <span class='muted small'>(" + pct(r.revR) + ")</span>", "vendiendo a " + money(r.pv) + ", de contado como la web") : "")
+    + '<div class="note ' + (r.pm && r.rent >= obj ? "ok" : r.pm ? "warn" : "") + '">Para llegar al ' + esc(RS.objetivo) + "% el precio mínimo es <b>" + money(r.piso) + "</b>." + (r.pm && r.revR < 0.3 ? " Ojo: al revendedor le queda menos del 30%, puede parecerle poco." : "") + "</div></div>";
+}
+function mayFila(t, v, sub) { return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span>' + t + (sub ? '<br><span class="muted small">' + sub + "</span>" : "") + '</span><span style="text-align:right;white-space:nowrap">' + v + "</span></div>"; }
+function mayImprimir() {
+  const m = mayLeer(), med = (S.data && S.data.media) || [], cfg = cfgTienda(), base = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "");
+  const foto = p => { const l = med.filter(x => x.destino === p && x.tipo === "img"), pr = l.find(x => x.principal) || l[0] || med.find(x => x.destino === "portada" && x.principal && x.tipo === "img"); return pr ? "https://lh3.googleusercontent.com/d/" + pr.drive + "=w900" : ""; };
+  const sub = {doble: cfg.sub1 || "Asiento trasero completo", individual: cfg.sub2 || "Un solo asiento, el otro queda libre"};
+  const prods = PRODS.filter(p => nm(m.precio[p]) > 0);
+  if (!prods.length) { L.toast("Poné el precio mayorista de al menos una funda."); return; }
+  const card = p => { const pm = nm(m.precio[p]), pv = nm(RS.precios[p].x), fo = foto(p);
+    return '<div class="card"><div class="ph">' + (fo ? '<img class="bg" src="' + fo + '"><img class="fg" src="' + fo + '">' : "") + '</div><div class="b"><h2>' + esc(nombreP(p)) + '</h2><p class="sub">' + esc(sub[p]) + "</p>"
+      + '<div class="big"><span>Precio mayorista c/u</span><b>' + money(pm) + "</b></div>"
+      + '<div class="row"><span>Precio sugerido de venta (contado)</span><b>' + money(pv) + "</b></div>"
+      + '<div class="row"><span>Tu ganancia por unidad</span><b class="gan">' + money(pv - pm) + "</b></div></div></div>"; };
+  const html = '<!doctype html><html><head><meta charset="utf-8"><title>Los Perrines · Propuesta mayorista</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"><style>'
+    + "@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;font:400 11.5pt/1.45 Inter,sans-serif;color:#1E2418;-webkit-print-color-adjust:exact;print-color-adjust:exact}"
+    + ".page{width:210mm;min-height:297mm;padding:14mm 15mm 12mm;display:flex;flex-direction:column;margin:0 auto}"
+    + ".head{display:flex;align-items:center;gap:14px;border-bottom:3px solid #2F3822;padding-bottom:10px}.head img{width:58px;height:58px;border-radius:50%}.head h1{margin:0;font-size:22pt;font-weight:800}.head p{margin:2px 0 0;color:#5E6656}"
+    + ".tag{margin-left:auto;background:#2F3822;color:#F2F3EC;font-weight:700;font-size:10pt;padding:6px 12px;border-radius:999px}.intro{margin:12px 0 10px}"
+    + ".prods{display:grid;grid-template-columns:repeat(" + prods.length + ",1fr);gap:12px}.card{border:1px solid #D9DCCF;border-radius:10px;overflow:hidden}"
+    + ".ph{height:62mm;background:#1E2418;position:relative;overflow:hidden}.ph img{position:absolute;inset:0;width:100%;height:100%}.ph .bg{object-fit:cover;filter:blur(14px) brightness(.7);transform:scale(1.2)}.ph .fg{object-fit:contain}"
+    + ".b{padding:10px 12px 12px}h2{margin:0;font-size:14pt}.sub{margin:1px 0 8px;color:#5E6656;font-size:10pt}"
+    + ".big{background:#F4F6DA;border:1px solid #DDE29A;border-radius:8px;padding:8px 10px;margin:4px 0 6px;display:flex;justify-content:space-between;align-items:baseline}.big span{font-size:10pt;font-weight:600}.big b{font-size:19pt;font-weight:800}"
+    + ".row{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #EEEFE8;font-size:10.5pt}.gan{color:#2F7A3E}"
+    + "h3{margin:14px 0 6px;font-size:12pt}.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}ul{margin:0;padding-left:16px}li{margin:3px 0;font-size:10.5pt}.box{background:#F6F6F3;border-radius:10px;padding:10px 12px}"
+    + ".foot{margin-top:auto;display:flex;justify-content:space-between;border-top:1px solid #D9DCCF;padding-top:8px;font-size:10pt;color:#5E6656}.foot b{color:#2F3822;font-size:12pt}"
+    + "@media screen{body{background:#ddd}.page{background:#fff;margin:10px auto}}</style></head><body><div class='page'>"
+    + '<div class="head"><img src="' + base + 'logo.png"><div><h1>Los Perrines</h1><p>Fundas tipo canasto para mascotas · Industria argentina 🇦🇷</p></div><span class="tag">Propuesta mayorista</span></div>'
+    + '<p class="intro">Fundas canasto para el asiento trasero del auto: <b>impermeables, acolchadas y antidesgarro</b>, con laterales que cubren las puertas. Un producto con buen margen de reventa.</p>'
+    + '<div class="prods">' + prods.map(card).join("") + "</div>"
+    + '<div class="cols"><div><h3>Condiciones</h3><div class="box"><ul><li><b>Pedido mínimo: ' + esc(m.min) + " unidades.</b></li><li><b>Envío incluido</b> a tu local por Andreani.</li><li>Pago por <b>transferencia antes del despacho</b>.</li>"
+    + "<li>Precio sugerido de venta: <b>el mismo de nuestra web, de contado</b>, para que no compitamos entre nosotros.</li>" + (nd(m.validez) > 0 ? "<li>Precios válidos por " + esc(m.validez) + " días.</li>" : "") + "</ul></div></div>"
+    + '<div><h3>Por qué se vende</h3><div class="box"><ul><li><b>Impermeable:</b> agua, barro y pelos no llegan al tapizado.</li><li><b>Canasto cerrado:</b> cubre asiento, respaldo y puertas.</li><li><b>Cierres en las cuatro esquinas</b> y abertura para el cinturón.</li><li>Viene en su <b>estuche</b> para guardarla.</li><li><b>Garantía de fábrica</b> y atención directa con quien la fabrica.</li></ul></div></div></div>'
+    + '<div class="foot"><span>Fotos, videos y medidas: <b>www.losperrines.com.ar</b></span><span>Escribinos para hacer tu pedido</span></div></div>'
+    + "<script>window.onload=function(){setTimeout(function(){window.print();},700);};<\/script></body></html>";
+  const w = window.open("", "_blank");
+  if (!w) { L.toast("El navegador bloqueó la ventana nueva: permitila e intentá de nuevo."); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 /* ================= MIGRACIÓN ================= */
@@ -952,6 +1026,9 @@ I.rsP = t => { RS[t.dataset.k] = t.value; soloMain(); };
 I.rsMix = t => { RS.mix = t.value; const x = $("#rsMixTxt"); if (x) x.textContent = t.value + "%"; const c = $("#rsCards"); if (c) c.innerHTML = PRODS.map(p => rentCard(p, nd(RS.objetivo) / 100)).join(""); };
 C.rsMixReal = () => { RS.mix = String(RS.mixReal); soloMain(); };
 C.rsMas = t => { const pr = RS.precios[t.dataset.p], old = nm(pr.t), d = old > 0 ? 1 - nm(pr.x) / old : 0, nt = Math.max(0, old + (+t.dataset.d)); pr.t = String(nt); pr.x = String(Math.round(nt * (1 - d) / 100) * 100); soloMain(); };
+I.mayF = t => { const m = mayLeer(); m[t.dataset.k] = t.value; mayGuardar(m); soloMain(); };
+I.mayP = t => { const m = mayLeer(); m.precio[t.dataset.p] = t.value; mayGuardar(m); soloMain(); };
+C.mayImprimir = () => { initRS(); mayImprimir(); };
 C.rsReset = () => { RS.init = false; initRS(); soloMain(); };
 C.rsGuardarParams = b => pedir("guardarConfig", {valores: {comision_mp: String(nd(RS.comision)), rentabilidad_objetivo: String(nd(RS.objetivo)), mix_tarjeta: String(nd(RS.mix))}}, "Parámetros guardados", b);
 C.rsAplicar = b => { const v = {precio_tarjeta: String(nm(RS.precios.doble.t)), precio_transferencia: String(nm(RS.precios.doble.x)), precio2_tarjeta: String(nm(RS.precios.individual.t)), precio2_transferencia: String(nm(RS.precios.individual.x))};
