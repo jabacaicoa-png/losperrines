@@ -91,7 +91,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '20/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '20/11/2026 · 3';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -448,7 +448,7 @@ function ventaManual(r) {
 function itemsMay(x) { try { var j = JSON.parse(x.items || '[]'); return Array.isArray(j) ? j : []; } catch (e) { return []; } }
 function nombreProdId(prods, id) { var p = prods.filter(function (x) { return x.id === id; })[0]; return p ? p.nombre : id; }
 function mayoristasDatos() {
-  var cons = hoja(H.mayoristas) ? filas(H.mayoristas).map(function (x) {
+  var cons = hoja(H.mayoristas) ? filas(H.mayoristas).filter(function (x) { return x.estado !== 'borrada'; }).map(function (x) {   // 'borrada': no se borra la fila para no correr las demás (las cotizaciones guardan el número de fila)
     return {fila: x._fila, fecha: fmtFecha(x.fecha), nombre: String(x.nombre), apellido: String(x.apellido), negocio: String(x.negocio), localidad: String(x.localidad),
       whatsapp: String(x.whatsapp), email: String(x.email), doble: num(x.doble), individual: num(x.individual), mensaje: String(x.mensaje), estado: String(x.estado || 'nueva')};
   }).reverse() : [];
@@ -528,7 +528,7 @@ function mayoristaCancelar(r) {
 function mayoristaConsulta(r) {
   var cs = filas(H.mayoristas).filter(function (y) { return String(y._fila) === String(r.fila); })[0];
   if (!cs) throw new Error('No encontré esa consulta.');
-  setear(H.mayoristas, cs._fila, {estado: ['nueva', 'respondida', 'cotizada', 'archivada', 'pedido'].indexOf(r.estado) >= 0 ? r.estado : 'nueva'});
+  setear(H.mayoristas, cs._fila, {estado: ['nueva', 'respondida', 'cotizada', 'archivada', 'pedido', 'borrada'].indexOf(r.estado) >= 0 ? r.estado : 'nueva'});
   return {};
 }
 function detalleEntregaMano() { return 'En mano: la coordinamos con vos'; }

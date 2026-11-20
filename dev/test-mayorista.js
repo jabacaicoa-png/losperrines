@@ -81,4 +81,9 @@ assert.strictEqual(co.estado,'pendiente'); assert.strictEqual(cx.consultas.find(
 const ct2=env.post({accion:'mayoristaGuardar',token:tok,data:{cotizacion:true,negocio:'Otro',items:[{producto:'individual',cantidad:2,precio:33000}]}});
 assert(env.post({accion:'mayoristaCancelar',token:tok,id:ct2.id}).ok);
 assert.strictEqual(env.post({accion:'resumen',token:tok}).mayoristas.pedidos.find(x=>x.id===ct2.id).estado,'cancelado');
+// borrar una consulta de prueba: desaparece de la lista sin correr las filas de las demás
+const antes=env.post({accion:'resumen',token:tok}).mayoristas.consultas; const borr=antes[antes.length-1].fila;
+assert(env.post({accion:'mayoristaConsulta',token:tok,fila:borr,estado:'borrada'}).ok);
+const desp=env.post({accion:'resumen',token:tok}).mayoristas.consultas; assert.strictEqual(desp.length,antes.length-1); assert(!desp.some(c=>c.fila===borr));
+assert(desp.every(c=>antes.find(a=>a.fila===c.fila)),'las demás conservan su número');
 console.log('COTIZACIONES OK');

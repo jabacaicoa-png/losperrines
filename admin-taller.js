@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "20/11 · 4";
+window.PANEL_VERSION = "20/11 · 5";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -799,6 +799,7 @@ function myConsultas(D) {
       + (wa ? '<a class="btn ghost sm" target="_blank" rel="noopener" href="' + esc(wa) + '">WhatsApp</a>' : "")
       + (x.estado === "nueva" ? '<button class="btn ghost sm" data-a="myConsEst" data-f="' + x.fila + '" data-e="respondida">Ya le respondí</button>' : "")
       + (x.estado === "archivada" ? '<button class="btn ghost sm" data-a="myConsEst" data-f="' + x.fila + '" data-e="nueva">Desarchivar</button>' : '<button class="btn ghost sm" data-a="myConsEst" data-f="' + x.fila + '" data-e="archivada">Archivar</button>')
+      + '<button class="btn ghost sm" data-a="myConsBorrar" data-f="' + x.fila + '">Borrar</button>'
       + "</div></div>"; }).join("");
   if (arch) h += '<button class="linkb" data-a="myVerArch">' + (MY.verArch ? "Ocultar las archivadas" : "Ver las archivadas (" + arch + ")") + "</button>";
   return h;
@@ -1209,6 +1210,7 @@ C.myCotDescartar = b => { const x = cotDe(b.dataset.id); if (!x || !confirm("¿D
 C.myCotizarConsulta = b => { const x = (mayDatos() || {consultas: []}).consultas.find(c => String(c.fila) === b.dataset.f); if (!x) return;
   const m = mayLeer(); m.cant = {doble: x.doble ? String(x.doble) : "", individual: x.individual ? String(x.individual) : ""}; m.para = x.negocio || (x.nombre + " " + x.apellido).trim(); m.consulta = String(x.fila);
   mayGuardar(m); MY.tab = "cotizar"; soloMain(); window.scrollTo(0, 0); };
+C.myConsBorrar = b => { if (!confirm("¿Borrar esta consulta? No se puede deshacer desde el panel.")) return; pedir("mayoristaConsulta", {fila: b.dataset.f, estado: "borrada"}, "Consulta borrada", b); };
 C.myConsEst = b => pedir("mayoristaConsulta", {fila: b.dataset.f, estado: b.dataset.e}, b.dataset.e === "archivada" ? "Consulta archivada" : "Listo", b);
 C.myPedNuevo = () => { initRS(); MY.ped = myPedDesde(null); myPedDlg(); };
 C.myPedEditar = b => { const x = (mayDatos() || {pedidos: []}).pedidos.find(p => p.id === b.dataset.id); if (!x) return; MY.ped = myPedDesde(x); myPedDlg(); };
