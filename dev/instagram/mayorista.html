@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- Placa para grupos de WhatsApp de comerciantes (1080×1350), para buscar mayoristas (20/11/2026).
+     Se genera con: node dev/instagram/mayorista.js <salida> <foto1.jpg> <foto2.jpg>
+     Las fotos no están en el repo porque es público: usar fotos reales de la funda puesta (verticales).
+     Precios al público: los de la web (cambiarlos acá si cambian). NUNCA poner precios mayoristas. -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=block" rel="stylesheet">
+<style>
+:root{--olive:#4E5B3A;--dark:#1E2418;--yel:#D9E15A;--cream:#F2F3EC}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Bricolage Grotesque",sans-serif}
+#h{position:relative;width:1080px;height:1350px;background:var(--olive);overflow:hidden}
+.top{position:absolute;top:44px;left:60px;right:60px;display:flex;align-items:center;gap:18px;color:var(--cream);font-weight:700;font-size:40px}
+.top img{width:84px;height:84px;border-radius:50%}
+.tag{margin-left:auto;background:var(--yel);color:var(--dark);font-weight:800;font-size:30px;letter-spacing:.06em;padding:10px 22px;border-radius:999px}
+.fotos{position:absolute;top:160px;left:60px;right:60px;height:600px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fotos img{width:100%;height:600px;object-fit:cover;border-radius:34px;border:6px solid var(--yel);background:#000}
+.fotos img:first-child{object-position:50% 45%}.fotos img:last-child{object-position:45% 40%}
+.tit{position:absolute;top:796px;left:60px;right:60px;color:#fff;font-weight:800;font-size:76px;line-height:1;letter-spacing:-.02em}
+.sub{position:absolute;top:960px;left:60px;right:60px;color:var(--cream);font-weight:500;font-size:38px;line-height:1.2}
+.chips{position:absolute;top:1028px;left:60px;right:60px;display:flex;gap:10px;justify-content:space-between}
+.chip{background:var(--cream);color:var(--dark);border-radius:999px;font-weight:800;font-size:28px;padding:9px 18px;white-space:nowrap}
+.pie{position:absolute;top:1104px;left:60px;right:60px;background:var(--yel);border-radius:32px;padding:24px 34px;color:var(--dark)}
+.pie .l{font-size:36px;font-weight:700}
+.pie .u{font-size:62px;font-weight:800;letter-spacing:-.01em}
+.ar{position:absolute;bottom:34px;left:0;right:0;text-align:center;color:var(--cream);font-weight:600;font-size:28px;opacity:.9}
+</style></head><body>
+<section id="h">
+ <div class="top"><img src="logo.png">Los Perrines<span class="tag">VENTA POR MAYOR</span></div>
+ <div class="fotos"><img src="foto1.jpg"><img src="foto2.jpg"></div>
+ <div class="tit">¿Tenés pet shop<br>o veterinaria?</div>
+ <div class="sub">Sumá a tu local las fundas canasto para el auto.</div>
+ <div class="chips"><span class="chip">📦 Precios por cantidad</span><span class="chip">🚚 Envío incluido</span><span class="chip">💰 Buen margen</span></div>
+ <div class="pie"><div class="l">Pedí la propuesta 👉</div><div class="u">losperrines.com.ar/mayorista</div></div>
+ <div class="ar">🇦🇷 Fabricación propia · Impermeables, acolchadas y antidesgarro</div>
+</section></body></html>

@@ -19,7 +19,7 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | `ig/`, `pet/`, `fb/`, `wa/`, `mayorista/` | Links cortos con utm (Instagram bio, veterinarias, Marketplace/Facebook, WhatsApp, grupos de comerciantes → formulario mayorista). |
 | `vendedores-mensajes.md`, `mayoristas-mensajes.md` | Mensajes de WhatsApp para invitar vendedores y conseguir mayoristas. |
 | `privacidad/` | Política de privacidad (la pidió Google). |
-| `dev/` | Emulador de Apps Script, pruebas y helpers de Playwright; `dev/instagram/` placas (lanzamiento, semana, **vendedor.js**); `dev/video/` scripts ffmpeg de Reels. |
+| `dev/` | Emulador de Apps Script, pruebas y helpers de Playwright; `dev/instagram/` placas (lanzamiento, semana, **vendedor.js**, **mayorista.js** para grupos de comerciantes); `dev/video/` scripts ffmpeg de Reels. |
 | `costos.html`, `insumos.html`, `pagos.html`, `admin-viejo.html` | Herramientas viejas, de respaldo. |
 
 ## Actualizar el sistema (importante)
