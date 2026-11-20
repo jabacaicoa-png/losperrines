@@ -1,6 +1,6 @@
 <!doctype html><html><head><meta charset="utf-8">
 <!-- Placa para grupos de WhatsApp de comerciantes (1080×1350), para buscar mayoristas (20/11/2026).
-     Se genera con: node dev/instagram/mayorista.js <salida> <foto1.jpg> <foto2.jpg>
+     Se genera con: node dev/instagram/mayorista.js <salida> <foto-2plazas.jpg> <foto-1plaza.jpg>
      Las fotos no están en el repo porque es público: usar fotos reales de la funda puesta (verticales).
      Precios al público: los de la web (cambiarlos acá si cambian). NUNCA poner precios mayoristas. -->
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=block" rel="stylesheet">
@@ -13,8 +13,9 @@ body{font-family:"Bricolage Grotesque",sans-serif}
 .top img{width:84px;height:84px;border-radius:50%}
 .tag{margin-left:auto;background:var(--yel);color:var(--dark);font-weight:800;font-size:30px;letter-spacing:.06em;padding:10px 22px;border-radius:999px}
 .fotos{position:absolute;top:160px;left:60px;right:60px;height:600px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.fotos img{width:100%;height:600px;object-fit:cover;border-radius:34px;border:6px solid var(--yel);background:#000}
-.fotos img:first-child{object-position:50% 45%}.fotos img:last-child{object-position:45% 40%}
+.fotos figure{position:relative;margin:0}.fotos img{width:100%;height:600px;object-fit:cover;border-radius:34px;border:6px solid var(--yel);background:#000;display:block}
+.fotos figure:first-child img{object-position:45% 60%}.fotos figure:last-child img{object-position:50% 55%}
+.fotos figcaption{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:var(--dark);color:#fff;font-weight:800;font-size:36px;padding:8px 26px;border-radius:999px;white-space:nowrap;border:3px solid var(--yel)}
 .tit{position:absolute;top:796px;left:60px;right:60px;color:#fff;font-weight:800;font-size:76px;line-height:1;letter-spacing:-.02em}
 .sub{position:absolute;top:960px;left:60px;right:60px;color:var(--cream);font-weight:500;font-size:38px;line-height:1.2}
 .chips{position:absolute;top:1028px;left:60px;right:60px;display:flex;gap:10px;justify-content:space-between}
@@ -26,7 +27,7 @@ body{font-family:"Bricolage Grotesque",sans-serif}
 </style></head><body>
 <section id="h">
  <div class="top"><img src="logo.png">Los Perrines<span class="tag">VENTA POR MAYOR</span></div>
- <div class="fotos"><img src="foto1.jpg"><img src="foto2.jpg"></div>
+ <div class="fotos"><figure><img src="foto1.jpg"><figcaption>2 plazas</figcaption></figure><figure><img src="foto2.jpg"><figcaption>1 plaza</figcaption></figure></div>
  <div class="tit">¿Tenés pet shop<br>o veterinaria?</div>
  <div class="sub">Sumá a tu local las fundas canasto para el auto.</div>
  <div class="chips"><span class="chip">📦 Precios por cantidad</span><span class="chip">🚚 Envío incluido</span><span class="chip">💰 Buen margen</span></div>

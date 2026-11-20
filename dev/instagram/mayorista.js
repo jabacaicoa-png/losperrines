@@ -1,5 +1,5 @@
 // Placa para grupos de WhatsApp de comerciantes (buscar mayoristas), 1080×1350 (20/11/2026).
-// Uso: node dev/instagram/mayorista.js <carpeta-salida> <foto1.jpg> <foto2.jpg>
+// Uso: node dev/instagram/mayorista.js <carpeta-salida> <foto-2plazas.jpg> <foto-1plaza.jpg>
 const {chromium}=require('playwright'), fs=require('fs'), path=require('path');
 const [salida, foto1, foto2]=process.argv.slice(2);
 if(!salida||!foto1||!foto2){ console.log('Uso: node dev/instagram/mayorista.js <salida> <foto1.jpg> <foto2.jpg>'); process.exit(1); }
