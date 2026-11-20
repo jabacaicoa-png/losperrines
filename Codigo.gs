@@ -91,7 +91,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '20/11/2026 · 3';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '20/11/2026 · 4';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -528,8 +528,9 @@ function mayoristaCancelar(r) {
 function mayoristaConsulta(r) {
   var cs = filas(H.mayoristas).filter(function (y) { return String(y._fila) === String(r.fila); })[0];
   if (!cs) throw new Error('No encontré esa consulta.');
-  setear(H.mayoristas, cs._fila, {estado: ['nueva', 'respondida', 'cotizada', 'archivada', 'pedido', 'borrada'].indexOf(r.estado) >= 0 ? r.estado : 'nueva'});
-  return {};
+  if (['nueva', 'respondida', 'cotizada', 'archivada', 'pedido', 'borrada'].indexOf(r.estado) < 0) throw new Error('Estado de consulta desconocido: ' + r.estado);
+  setear(H.mayoristas, cs._fila, {estado: r.estado});
+  return {estado: r.estado};   // el panel lo revisa: un sistema viejo no devuelve nada (y antes dejaba la consulta como "nueva")
 }
 function detalleEntregaMano() { return 'En mano: la coordinamos con vos'; }
 function mailVentaFuera(p, c) {   // el "¡Gracias por tu compra!" de una venta cargada desde el panel

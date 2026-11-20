@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "20/11 · 5";
+window.PANEL_VERSION = "20/11 · 6";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -1210,8 +1210,10 @@ C.myCotDescartar = b => { const x = cotDe(b.dataset.id); if (!x || !confirm("¿D
 C.myCotizarConsulta = b => { const x = (mayDatos() || {consultas: []}).consultas.find(c => String(c.fila) === b.dataset.f); if (!x) return;
   const m = mayLeer(); m.cant = {doble: x.doble ? String(x.doble) : "", individual: x.individual ? String(x.individual) : ""}; m.para = x.negocio || (x.nombre + " " + x.apellido).trim(); m.consulta = String(x.fila);
   mayGuardar(m); MY.tab = "cotizar"; soloMain(); window.scrollTo(0, 0); };
-C.myConsBorrar = b => { if (!confirm("¿Borrar esta consulta? No se puede deshacer desde el panel.")) return; pedir("mayoristaConsulta", {fila: b.dataset.f, estado: "borrada"}, "Consulta borrada", b); };
-C.myConsEst = b => pedir("mayoristaConsulta", {fila: b.dataset.f, estado: b.dataset.e}, b.dataset.e === "archivada" ? "Consulta archivada" : "Listo", b);
+const myConsCambiar = (b, estado, msg) => pedir("mayoristaConsulta", {fila: b.dataset.f, estado: estado}, null, b).then(r => { if (!r) return;
+  if (r.estado !== estado) L.toast("No se pudo: el sistema instalado es una versión vieja. Andá a Configuración → Sistema → Buscar actualización → Actualizar ahora y probá de nuevo.", 9000); else L.toast(msg); });
+C.myConsBorrar = b => { if (confirm("¿Borrar esta consulta? No se puede deshacer desde el panel.")) myConsCambiar(b, "borrada", "Consulta borrada"); };
+C.myConsEst = b => myConsCambiar(b, b.dataset.e, b.dataset.e === "archivada" ? "Consulta archivada" : "Listo");
 C.myPedNuevo = () => { initRS(); MY.ped = myPedDesde(null); myPedDlg(); };
 C.myPedEditar = b => { const x = (mayDatos() || {pedidos: []}).pedidos.find(p => p.id === b.dataset.id); if (!x) return; MY.ped = myPedDesde(x); myPedDlg(); };
 I.myPF = t => { MY.ped[t.dataset.k] = t.value; };
