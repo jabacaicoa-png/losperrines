@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "19/11 · 1";
+window.PANEL_VERSION = "20/11 · 1";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -662,7 +662,7 @@ function rentCard(p, obj) {
    (localStorage), NO en el código: el repositorio es público. Costo mayorista = costo de la ficha
    − envío gratis de una venta común + envío del pedido mayorista repartido entre las unidades. */
 const MAY_KEY = "lp_mayorista";
-function mayLeer() { let m = null; try { m = JSON.parse(localStorage.getItem(MAY_KEY) || "null"); } catch (e) {} m = m || {}; m.min = m.min || "10"; m.envio = m.envio != null ? m.envio : "20000"; m.precio = m.precio || {}; m.validez = m.validez || "30"; return m; }
+function mayLeer() { let m = null; try { m = JSON.parse(localStorage.getItem(MAY_KEY) || "null"); } catch (e) {} m = m || {}; m.min = m.min == null ? "10" : m.min; m.envio = m.envio != null ? m.envio : "20000"; m.precio = m.precio || {}; m.validez = m.validez == null ? "30" : m.validez; return m; }
 function mayGuardar(m) { try { localStorage.setItem(MAY_KEY, JSON.stringify(m)); } catch (e) {} }
 function mayCalc(p, m, obj) {
   const f = fichaGuardada(p), c = costo(f), n = Math.max(1, nd(m.min) || 1), envU = nm(m.envio) / n;
@@ -672,8 +672,8 @@ function mayCalc(p, m, obj) {
 }
 function mayoristaBlock(obj) {
   const m = mayLeer();
-  let h = '<div class="block"><h3 style="margin-top:0">Venta mayorista</h3><p class="muted small" style="margin:-4px 0 10px">Para pet shops, veterinarias o revendedores. El costo se calcula sin el envío gratis de una venta común y con el envío del pedido repartido entre las unidades. Los precios mayoristas se guardan solo en este celular o compu.</p>'
-    + '<div class="g3"><label class="f">Pedido mínimo (unidades)<input id="my-min" data-in="mayF" data-k="min" inputmode="numeric" value="' + esc(m.min) + '"></label>'
+  let h = '<div class="block"><h3 style="margin-top:0">Venta mayorista</h3><p class="muted small" style="margin:-4px 0 10px">Para pet shops, veterinarias o revendedores. El costo se calcula sin el envío gratis de una venta común y con el envío del pedido repartido entre las unidades. No hay pedido mínimo: «Calcular para» es solo para hacer la cuenta (el envío se reparte entre esas unidades). Los precios mayoristas se guardan solo en este celular o compu.</p>'
+    + '<div class="g3"><label class="f">Calcular para (unidades)<input id="my-min" data-in="mayF" data-k="min" inputmode="numeric" value="' + esc(m.min) + '"></label>'
     + '<label class="f">Envío de todo el pedido<input id="my-env" data-in="mayF" data-k="envio" inputmode="numeric" value="' + esc(m.envio) + '"></label>'
     + '<label class="f">Precios válidos por (días)<input id="my-val" data-in="mayF" data-k="validez" inputmode="numeric" value="' + esc(m.validez) + '"></label></div>'
     + '<div class="cols2" id="mayCards">' + PRODS.map(p => mayCard(p, m, obj)).join("") + "</div>"
@@ -688,7 +688,7 @@ function mayCard(p, m, obj) {
     + '<label class="f">Precio mayorista por unidad<input id="my-p-' + p + '" data-in="mayP" data-p="' + p + '" inputmode="numeric" placeholder="Ej. ' + money(r.piso) + '" value="' + esc(m.precio[p] || "") + '"></label>'
     + mayFila("Costo por unidad", money(r.C), "sin el envío gratis (" + money(r.envFicha) + ") y con " + money(r.envU) + " de envío mayorista")
     + (r.pm ? mayFila("Ganás por unidad", "<b>" + money(r.gan) + "</b> " + pillR(r.rent, obj))
-      + mayFila("Pedido de " + esc(m.min), "ganás <b>" + money(r.gan * (nd(m.min) || 1)) + "</b>", "cobrás " + money(r.pm * (nd(m.min) || 1)))
+      + mayFila("Pedido de " + esc(m.min || "1"), "ganás <b>" + money(r.gan * (nd(m.min) || 1)) + "</b>", "cobrás " + money(r.pm * (nd(m.min) || 1)))
       + mayFila("El revendedor gana", money(r.rev) + " <span class='muted small'>(" + pct(r.revR) + ")</span>", "vendiendo a " + money(r.pv) + ", de contado como la web") : "")
     + '<div class="note ' + (r.pm && r.rent >= obj ? "ok" : r.pm ? "warn" : "") + '">Para llegar al ' + esc(RS.objetivo) + "% el precio mínimo es <b>" + money(r.piso) + "</b>." + (r.pm && r.revR < 0.3 ? " Ojo: al revendedor le queda menos del 30%, puede parecerle poco." : "") + "</div></div>";
 }
@@ -720,7 +720,7 @@ function mayImprimir() {
     + '<div class="head"><img src="' + base + 'logo.png"><div><h1>Los Perrines</h1><p>Fundas tipo canasto para mascotas · Industria argentina 🇦🇷</p></div><span class="tag">Propuesta mayorista</span></div>'
     + '<p class="intro">Fundas canasto para el asiento trasero del auto: <b>impermeables, acolchadas y antidesgarro</b>, con laterales que cubren las puertas. Un producto con buen margen de reventa.</p>'
     + '<div class="prods">' + prods.map(card).join("") + "</div>"
-    + '<div class="cols"><div><h3>Condiciones</h3><div class="box"><ul><li><b>Pedido mínimo: ' + esc(m.min) + " unidades.</b></li><li><b>Envío incluido</b> a tu local por Andreani.</li><li>Pago por <b>transferencia antes del despacho</b>.</li>"
+    + '<div class="cols"><div><h3>Condiciones</h3><div class="box"><ul><li><b>Precios por cantidad:</b> consultanos por tu pedido.</li><li><b>Envío incluido</b> a tu local por Andreani.</li><li>Pago por <b>transferencia antes del despacho</b>.</li>'
     + "<li>Precio sugerido de venta: <b>el mismo de nuestra web, de contado</b>, para que no compitamos entre nosotros.</li>" + (nd(m.validez) > 0 ? "<li>Precios válidos por " + esc(m.validez) + " días.</li>" : "") + "</ul></div></div>"
     + '<div><h3>Por qué se vende</h3><div class="box"><ul><li><b>Impermeable:</b> agua, barro y pelos no llegan al tapizado.</li><li><b>Canasto cerrado:</b> cubre asiento, respaldo y puertas.</li><li><b>Cierres en las cuatro esquinas</b> y abertura para el cinturón.</li><li>Viene en su <b>estuche</b> para guardarla.</li><li><b>Garantía de fábrica</b> y atención directa con quien la fabrica.</li></ul></div></div></div>'
     + '<div class="foot"><span>Fotos, videos y medidas: <b>www.losperrines.com.ar</b></span><span>Escribinos para hacer tu pedido</span></div></div>'
