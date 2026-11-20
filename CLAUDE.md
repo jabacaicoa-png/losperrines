@@ -16,8 +16,8 @@ El repositorio es **público**: no escribas acá datos sensibles (costos, márge
 | `admin.html` + `admin-*.js` | Panel. `admin-core.js` (núcleo, Ventas, Tienda, Recuperar ventas y Códigos de descuento; expone `window.LP`), `admin-hoy.js` (Hoy), `admin-venta.js` (Nueva venta y **Vendedores**), `admin-taller.js` (Taller, Precios y rentabilidad, **Mayoristas**; define `window.PANEL_VERSION`), `admin-publicidad.js`, `admin-tablero.js`. |
 | `Codigo.gs` | Backend en Google Apps Script sobre una planilla. Se instala con el botón del panel (ver abajo). |
 | `corte.html` | Plano de corte y ficha para la costurera. |
-| `ig/`, `pet/`, `fb/`, `wa/` | Links cortos con utm (Instagram bio, veterinarias, Marketplace/Facebook, WhatsApp). |
-| `vendedores-mensajes.md` | Mensajes de WhatsApp para invitar vendedores. |
+| `ig/`, `pet/`, `fb/`, `wa/`, `mayorista/` | Links cortos con utm (Instagram bio, veterinarias, Marketplace/Facebook, WhatsApp, grupos de comerciantes → formulario mayorista). |
+| `vendedores-mensajes.md`, `mayoristas-mensajes.md` | Mensajes de WhatsApp para invitar vendedores y conseguir mayoristas. |
 | `privacidad/` | Política de privacidad (la pidió Google). |
 | `dev/` | Emulador de Apps Script, pruebas y helpers de Playwright; `dev/instagram/` placas (lanzamiento, semana, **vendedor.js**); `dev/video/` scripts ffmpeg de Reels. |
 | `costos.html`, `insumos.html`, `pagos.html`, `admin-viejo.html` | Herramientas viejas, de respaldo. |
