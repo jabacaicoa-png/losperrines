@@ -32,7 +32,7 @@ var COLS = {
   Bajas: ['fecha','email'],
   Mayoristas: ['fecha','nombre','apellido','negocio','localidad','whatsapp','email','doble','individual','mensaje','estado'],   // consultas de venta por mayor desde la web (19/11/2026)
   PedidosMayoristas: ['id','fecha','estado','negocio','nombre','apellido','whatsapp','email','dni','entrega','calle','numero','piso','depto','prov_loc_cp','sucursal',
-                      'items','envio','total','pagado','pedido','consulta','notas','actualizado'],   // pedidos por mayor cargados en el panel (20/11/2026)
+                      'items','envio','total','pagado','pedido','consulta','notas','actualizado','validez'],   // pedidos y cotizaciones por mayor cargados en el panel (20/11/2026)
   Config: ['clave','valor','descripcion'],
   TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
   TallerInsumos: ['id','nombre','descripcion','proveedor','envase','contenido','unidad','precio','minimo','activo','actualizado'],
@@ -91,7 +91,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '20/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '20/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -454,7 +454,7 @@ function mayoristasDatos() {
   }).reverse() : [];
   var ped = hoja(H.mped) ? filas(H.mped).map(function (x) {
     var o = {}; COLS.PedidosMayoristas.forEach(function (k) { o[k] = x[k] instanceof Date ? fmtFecha(x[k]) : x[k]; });
-    o.id = String(x.id); o.items = itemsMay(x); o.pagado = x.pagado === 'SI'; o.total = num(x.total); o.envio = num(x.envio); return o;
+    o.id = String(x.id); o.items = itemsMay(x); o.pagado = x.pagado === 'SI'; o.total = num(x.total); o.envio = num(x.envio); o.validez = num(x.validez); return o;
   }).reverse() : [];
   return {consultas: cons, pedidos: ped};
 }
@@ -470,19 +470,29 @@ function mayoristaGuardar(r) {
     dni: limpiar(d.dni, 13).replace(/\D/g, ''), entrega: ['domicilio', 'sucursal', 'mano'].indexOf(d.entrega) >= 0 ? d.entrega : 'domicilio',
     calle: limpiar(d.calle, 80), numero: limpiar(d.numero, 10), piso: limpiar(d.piso, 5), depto: limpiar(d.depto, 5), prov_loc_cp: limpiar(d.prov_loc_cp, 120), sucursal: limpiar(d.sucursal, 80),
     items: JSON.stringify(items), envio: Math.max(0, Math.round(num(d.envio))), total: items.reduce(function (a, x) { return a + x.cantidad * x.precio; }, 0),
-    pagado: d.pagado ? 'SI' : 'NO', consulta: limpiar(d.consulta, 10), notas: limpiar(d.notas, 300), actualizado: ahora()};
+    pagado: d.pagado ? 'SI' : 'NO', consulta: limpiar(d.consulta, 10), notas: limpiar(d.notas, 300), actualizado: ahora(), validez: Math.max(0, Math.round(num(d.validez)))};
+  var coti = d.cotizacion === true;   // cotización guardada (20/11/2026): no toca el stock; con "Pasar a pedido" queda pendiente
   asegurarHoja(H.mped);
   var x = d.id ? filas(H.mped).filter(function (y) { return String(y.id) === String(d.id); })[0] : null;
   if (d.id && !x) throw new Error('No existe el pedido ' + d.id);
-  if (x && x.estado !== 'pendiente') { setear(H.mped, x._fila, {notas: o.notas, actualizado: o.actualizado}); return {id: String(x.id)}; }   // ya salió del stock: solo las notas
+  if (x && x.estado !== 'pendiente' && x.estado !== 'cotizacion') { setear(H.mped, x._fila, {notas: o.notas, actualizado: o.actualizado}); return {id: String(x.id)}; }   // ya salió del stock: solo las notas
   if (!items.length) throw new Error('Poné la cantidad de al menos una funda.');
-  if (!o.negocio && !o.nombre) throw new Error('Poné el nombre del negocio o de quien compra.');
-  if (x) { setear(H.mped, x._fila, o); return {id: String(x.id)}; }
+  if (!coti && !o.negocio && !o.nombre) throw new Error('Poné el nombre del negocio o de quien compra.');
+  if (x && coti) {   // retomar una cotización desde la calculadora: no se tocan los datos de contacto
+    setear(H.mped, x._fila, {negocio: o.negocio, items: o.items, envio: o.envio, total: o.total, validez: o.validez, consulta: o.consulta || x.consulta, actualizado: o.actualizado});
+    return {id: String(x.id)};
+  }
+  if (x) { var paso = x.estado === 'cotizacion'; setear(H.mped, x._fila, Object.assign(o, {estado: 'pendiente'})); if (paso) marcarConsultaMay(o.consulta || String(x.consulta || ''), 'pedido'); return {id: String(x.id)}; }
   var pre = 'MY-' + Utilities.formatDate(ahora(), TZ, 'yyMMdd') + '-', n = filas(H.mped).filter(function (y) { return String(y.id).indexOf(pre) === 0; }).length + 1;
   var id = pre + ('00' + n).slice(-3);
-  agregar(H.mped, Object.assign({id: id, fecha: ahora(), estado: 'pendiente', pedido: ''}, o));
-  if (o.consulta && hoja(H.mayoristas)) { var cs = filas(H.mayoristas).filter(function (y) { return String(y._fila) === o.consulta; })[0]; if (cs) setear(H.mayoristas, cs._fila, {estado: 'pedido'}); }
+  agregar(H.mped, Object.assign({id: id, fecha: ahora(), estado: coti ? 'cotizacion' : 'pendiente', pedido: ''}, o));
+  marcarConsultaMay(o.consulta, coti ? 'cotizada' : 'pedido');
   return {id: id};
+}
+function marcarConsultaMay(fila, estado) {
+  if (!fila || !hoja(H.mayoristas)) return;
+  var cs = filas(H.mayoristas).filter(function (y) { return String(y._fila) === String(fila); })[0];
+  if (cs && !(estado === 'cotizada' && cs.estado === 'pedido')) setear(H.mayoristas, cs._fila, {estado: estado});
 }
 function mayoristaSacar(r) {
   var x = filas(H.mped).filter(function (y) { return String(y.id) === String(r.id); })[0];
@@ -518,7 +528,7 @@ function mayoristaCancelar(r) {
 function mayoristaConsulta(r) {
   var cs = filas(H.mayoristas).filter(function (y) { return String(y._fila) === String(r.fila); })[0];
   if (!cs) throw new Error('No encontré esa consulta.');
-  setear(H.mayoristas, cs._fila, {estado: ['nueva', 'respondida', 'archivada', 'pedido'].indexOf(r.estado) >= 0 ? r.estado : 'nueva'});
+  setear(H.mayoristas, cs._fila, {estado: ['nueva', 'respondida', 'cotizada', 'archivada', 'pedido'].indexOf(r.estado) >= 0 ? r.estado : 'nueva'});
   return {};
 }
 function detalleEntregaMano() { return 'En mano: la coordinamos con vos'; }

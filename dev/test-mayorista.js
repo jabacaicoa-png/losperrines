@@ -59,3 +59,26 @@ assert.strictEqual(env.post({accion:'resumen',token:tok}).mayoristas.consultas[0
 // no cuenta para Publicidad (no vino de un anuncio)
 assert.strictEqual(env.ctx.esFuera(P),true);
 console.log('PEDIDOS MAYORISTAS OK');
+
+/* ---------- cotizaciones guardadas (20/11/2026) ---------- */
+assert(env.post({accion:'mayorista',nombre:'Bea',apellido:'Vet',negocio:'Vete Bea',localidad:'Merlo',whatsapp:'2664999888',doble:'4',individual:'0'}).ok);
+const fc=env.ctx.filas(env.ctx.H.mayoristas).slice(-1)[0]._fila;
+const dS=disp('doble');
+const ct=env.post({accion:'mayoristaGuardar',token:tok,data:{cotizacion:true,negocio:'',items:[{producto:'doble',cantidad:4,precio:52000}],envio:12000,validez:15,consulta:String(fc)}});
+assert(ct.ok,ct.error);
+let cx=env.post({accion:'resumen',token:tok}).mayoristas; let co=cx.pedidos.find(x=>x.id===ct.id);
+assert.strictEqual(co.estado,'cotizacion'); assert.strictEqual(co.validez,15); assert.strictEqual(co.total,208000); assert.strictEqual(disp('doble'),dS,'la cotización no toca el stock');
+assert.strictEqual(cx.consultas.find(c=>c.fila===fc).estado,'cotizada');
+assert(env.post({accion:'mayoristaSacar',token:tok,id:ct.id}).error,'una cotización no sale del stock');
+// retomarla y cambiar el precio desde la calculadora
+assert(env.post({accion:'mayoristaGuardar',token:tok,data:{id:ct.id,cotizacion:true,negocio:'Vete Bea',items:[{producto:'doble',cantidad:5,precio:50000}],envio:12000,validez:15}}).ok);
+co=env.post({accion:'resumen',token:tok}).mayoristas.pedidos.find(x=>x.id===ct.id); assert.strictEqual(co.total,250000); assert.strictEqual(co.estado,'cotizacion'); assert.strictEqual(co.negocio,'Vete Bea');
+// pasar a pedido
+assert(env.post({accion:'mayoristaGuardar',token:tok,data:Object.assign({},co,{estado:undefined,nombre:'Bea',whatsapp:'2664999888',pagado:true})}).ok);
+cx=env.post({accion:'resumen',token:tok}).mayoristas; co=cx.pedidos.find(x=>x.id===ct.id);
+assert.strictEqual(co.estado,'pendiente'); assert.strictEqual(cx.consultas.find(c=>c.fila===fc).estado,'pedido'); assert.strictEqual(disp('doble'),dS,'pendiente tampoco toca el stock');
+// descartar otra cotización
+const ct2=env.post({accion:'mayoristaGuardar',token:tok,data:{cotizacion:true,negocio:'Otro',items:[{producto:'individual',cantidad:2,precio:33000}]}});
+assert(env.post({accion:'mayoristaCancelar',token:tok,id:ct2.id}).ok);
+assert.strictEqual(env.post({accion:'resumen',token:tok}).mayoristas.pedidos.find(x=>x.id===ct2.id).estado,'cancelado');
+console.log('COTIZACIONES OK');

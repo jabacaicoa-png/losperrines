@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "20/11 · 3";
+window.PANEL_VERSION = "20/11 · 4";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -669,7 +669,7 @@ const MAY_KEY = "lp_mayorista";
 const MY = {tab: "cotizar", verArch: false, ped: null};
 function mayLeer() {
   let m = null; try { m = JSON.parse(localStorage.getItem(MAY_KEY) || "null"); } catch (e) {} m = m || {};
-  m.envio = m.envio != null ? m.envio : "20000"; m.validez = m.validez == null ? "30" : m.validez; m.para = m.para || ""; m.consulta = m.consulta || "";
+  m.envio = m.envio != null ? m.envio : "20000"; m.validez = m.validez == null ? "30" : m.validez; m.para = m.para || ""; m.consulta = m.consulta || ""; m.cotId = m.cotId || "";
   ["precio", "rent", "cant", "modo"].forEach(k => { m[k] = m[k] || {}; });
   return m;
 }
@@ -687,17 +687,19 @@ function mayDatos() { return S.data && S.data.mayoristas; }
 function vMayoristas() {
   const g = guard(); if (g) return cabecera("Mayoristas") + g;
   initRS();
-  const D = mayDatos(), nuevas = D ? D.consultas.filter(x => x.estado === "nueva").length : 0, pend = D ? D.pedidos.filter(x => x.estado === "pendiente").length : 0;
+  const D = mayDatos(), nuevas = D ? D.consultas.filter(x => x.estado === "nueva").length : 0, pend = D ? D.pedidos.filter(x => x.estado === "pendiente").length : 0, cots = D ? D.pedidos.filter(x => x.estado === "cotizacion").length : 0;
   let h = cabecera("Mayoristas", "Pet shops, veterinarias y revendedores: cotizá, mirá las consultas de la web y cargá los pedidos.");
   if (!D) h += '<div class="note warn">Para ver las consultas y cargar pedidos falta actualizar el sistema: <b>Configuración → Sistema → Buscar actualización → Actualizar ahora</b>. La calculadora ya funciona.</div>';
-  h += '<div class="bk-tabs" role="tablist" style="margin-bottom:12px">' + [["cotizar", "Cotizar"], ["consultas", "Consultas" + (nuevas ? " (" + nuevas + ")" : "")], ["pedidos", "Pedidos" + (pend ? " (" + pend + ")" : "")]]
+  h += '<div class="bk-tabs" role="tablist" style="margin-bottom:12px">' + [["cotizar", "Cotizar"], ["cotizaciones", "Cotizaciones" + (cots ? " (" + cots + ")" : "")], ["consultas", "Consultas" + (nuevas ? " (" + nuevas + ")" : "")], ["pedidos", "Pedidos" + (pend ? " (" + pend + ")" : "")]]
     .map(t => '<button data-a="myTab" data-t="' + t[0] + '" aria-pressed="' + (MY.tab === t[0]) + '">' + t[1] + "</button>").join("") + "</div>";
-  if (MY.tab === "consultas") h += myConsultas(D); else if (MY.tab === "pedidos") h += myPedidos(D); else h += myCotizar();
+  if (MY.tab === "consultas") h += myConsultas(D); else if (MY.tab === "pedidos") h += myPedidos(D); else if (MY.tab === "cotizaciones") h += myCotizaciones(D); else h += myCotizar();
   return h;
 }
 function myCotizar() {
-  const m = mayLeer(), U = mayUnidades(m);
-  let h = '<div class="block" style="margin-top:0"><div class="g3"><label class="f">Propuesta para (opcional)<input id="my-para" data-in="mayF" data-k="para" placeholder="Nombre del negocio" value="' + esc(m.para) + '"></label>'
+  const m = mayLeer(), U = mayUnidades(m), D = mayDatos(), cot = m.cotId && D ? D.pedidos.find(x => x.id === m.cotId && x.estado === "cotizacion") : null;
+  if (m.cotId && D && !cot) { m.cotId = ""; mayGuardar(m); }
+  let h = (cot ? '<div class="note" style="margin-bottom:10px">Estás editando la cotización <b>' + esc(cot.id) + "</b>" + (cot.negocio ? " (" + esc(cot.negocio) + ")" : "") + '. Tocá <b>Guardar cambios</b> para actualizarla.</div>' : "")
+    + '<div class="block" style="margin-top:0"><div class="g3"><label class="f">Propuesta para (opcional)<input id="my-para" data-in="mayF" data-k="para" placeholder="Nombre del negocio" value="' + esc(m.para) + '"></label>'
     + '<label class="f">Envío de todo el pedido<input id="my-env" data-in="mayF" data-k="envio" inputmode="numeric" value="' + esc(m.envio) + '"></label>'
     + '<label class="f">Precios válidos por (días)<input id="my-val" data-in="mayF" data-k="validez" inputmode="numeric" value="' + esc(m.validez) + '"></label></div>'
     + '<p class="muted small" style="margin:0">El costo de cada funda va sin el envío gratis de una venta común y con su parte del envío del pedido' + (U ? ": " + money(nm(m.envio)) + " ÷ " + U + " fundas = <b>" + money(U ? nm(m.envio) / U : 0) + "</b> cada una." : ". Poné las cantidades para repartirlo.") + "</p></div>";
@@ -710,8 +712,9 @@ function myCotizar() {
       + mayFila("Te cuesta", money(cos), "fundas + " + money(nm(m.envio)) + " de envío")
       + mayFila("Ganás", "<b>" + money(gan) + '</b> <span class="pill">' + pct(cos > 0 ? gan / cos : 0) + "</span>", "rentabilidad del pedido entero") + "</div>";
   }
-  h += '<div class="acts" style="margin-top:12px"><button class="btn main" data-a="mayImprimir">🖨 Imprimir propuesta</button>'
-    + (mayDatos() ? '<button class="btn ghost" data-a="myPedNuevo">Cargar como pedido</button>' : "")
+  h += '<div class="acts" style="margin-top:12px">' + (D ? '<button class="btn main" data-a="myGuardarCoti">💾 ' + (cot ? "Guardar cambios" : "Guardar cotización") + "</button>" : "")
+    + '<button class="btn ' + (D ? "ghost" : "main") + '" data-a="mayImprimir">🖨 Imprimir propuesta</button>'
+    + (D ? '<button class="btn ghost" data-a="myPedNuevo">Pasar a pedido</button>' : "")
     + '<button class="btn ghost" data-a="myLimpiar">Empezar otra cotización</button></div>'
     + '<p class="muted small">La propuesta se abre en una hoja: elegí "Guardar como PDF" para mandarla por WhatsApp. Si hay cantidades, incluye el detalle del pedido.</p>';
   return h;
@@ -777,7 +780,7 @@ function mayImprimir() {
   w.document.open(); w.document.write(html); w.document.close();
 }
 /* ---------- consultas de la web ---------- */
-const MY_EST = {nueva: ["Nueva", "warn"], respondida: ["Respondida", "ok"], pedido: ["Hizo pedido", "ok"], archivada: ["Archivada", "mute"]};
+const MY_EST = {nueva: ["Nueva", "warn"], respondida: ["Respondida", "ok"], cotizada: ["Cotizada", "ok"], pedido: ["Hizo pedido", "ok"], archivada: ["Archivada", "mute"]};
 function waNormL(v) { let d = String(v == null ? "" : v).replace(/\D/g, ""); if (!d) return ""; d = d.replace(/^00/, ""); if (/^54/.test(d)) d = d.slice(2); if (/^9/.test(d) && d.length === 11) d = d.slice(1); d = d.replace(/^0/, "");
   if (d.length === 12) for (let k = 2; k <= 4; k++) { if (d.substr(k, 2) === "15") { d = d.slice(0, k) + d.slice(k + 2); break; } } return d.length === 10 ? "549" + d : ""; }   // igual que waNorm() del núcleo
 function waLink(v, txt) { const n = waNormL(v); return /^\d{10,}$/.test(n) ? "https://wa.me/" + n + (txt ? "?text=" + encodeURIComponent(txt) : "") : ""; }
@@ -807,8 +810,9 @@ function myPedidos(D) {
   const ped = (S.data && S.data.pedidos) || [], st = (S.data && S.data.stock) || {};
   let h = '<div class="note">Un pedido <b>pendiente no toca el stock</b>: la web sigue vendiendo mientras lo mandás a confeccionar. Cuando lo vas a despachar, tocá <b>Sacar del stock</b>: se descuentan las fundas y el pedido pasa a <b>Hoy</b> para prepararlo y despacharlo. Al negocio no le llega ningún mail.</div>'
     + '<div class="acts" style="margin:10px 0"><button class="btn main" data-a="myPedNuevo">+ Cargar pedido</button><span class="muted small">Stock ahora: ' + PRODS.map(p => esc(nombreP(p)) + " <b>" + Math.max(0, (st[p] || {}).disponible || 0) + "</b>").join(" · ") + "</span></div>";
-  if (!D.pedidos.length) return h + '<p class="muted">Todavía no cargaste pedidos mayoristas.</p>';
-  h += D.pedidos.map(x => {
+  const lista = D.pedidos.filter(x => x.estado !== "cotizacion");
+  if (!lista.length) return h + '<p class="muted">Todavía no cargaste pedidos mayoristas.</p>';
+  h += lista.map(x => {
     const pv = x.pedido ? ped.find(p => p.id === x.pedido) : null, wa = waLink(x.whatsapp);
     const est = x.estado === "pendiente" ? '<span class="pill warn">Pendiente · no tocó el stock</span>' : x.estado === "cancelado" ? '<span class="pill mute">Cancelado</span>'
       : '<span class="pill ok">Salió del stock' + (pv ? " · " + esc(({reserva: "falta que te pague", pagado: "para preparar", exportado: "para despachar", despachado: "en camino", entregado: "entregado", cancelado: "cancelado"})[pv.estado] || pv.estado) : "") + "</span>";
@@ -826,10 +830,33 @@ function myPedidos(D) {
   }).join("");
   return h;
 }
+/* ---------- cotizaciones guardadas (20/11/2026) ---------- */
+function venceCot(x) {   // fecha "dd/mm/aaaa hh:mm" + días de validez
+  const f = String(x.fecha || "").match(/^(\d{2})\/(\d{2})\/(\d{4})/), dias = +x.validez || 0; if (!f || !dias) return null;
+  const v = new Date(+f[3], +f[2] - 1, +f[1] + dias, 23, 59); return {txt: ("0" + v.getDate()).slice(-2) + "/" + ("0" + (v.getMonth() + 1)).slice(-2), vencida: v < new Date()};
+}
+function myCotizaciones(D) {
+  if (!D) return '<p class="muted">Falta actualizar el sistema para guardar cotizaciones.</p>';
+  const l = D.pedidos.filter(x => x.estado === "cotizacion"), m = mayLeer();
+  let h = '<p class="muted small" style="margin-top:0">Las cotizaciones quedan guardadas en el sistema (las ves desde el celular y la compu) y <b>no tocan el stock</b>. Cuando el negocio confirma, tocá <b>Pasar a pedido</b>.</p>';
+  if (!l.length) return h + '<p class="muted">Todavía no guardaste cotizaciones. Armala en <button class="linkb" data-a="myTab" data-t="cotizar">Cotizar</button> y tocá "Guardar cotización".</p>';
+  return h + l.map(x => { const v = venceCot(x), U = (x.items || []).reduce((a, it) => a + it.cantidad, 0);
+    return '<div class="block" style="margin-top:0;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>' + esc(x.negocio || "Sin nombre") + "</b><b>" + money(x.total) + "</b></div>"
+      + '<div class="muted small">' + esc(x.id) + " · " + esc(x.fecha) + " · " + U + " funda" + (U === 1 ? "" : "s") + "</div>"
+      + '<div style="margin:6px 0">' + esc(itemsTxt(x.items)) + "</div>"
+      + (v ? '<span class="pill ' + (v.vencida ? "mute" : "ok") + '">' + (v.vencida ? "Venció el " : "Vigente hasta el ") + v.txt + "</span> " : "") + (m.cotId === x.id ? '<span class="pill warn">Abierta en Cotizar</span>' : "")
+      + '<div class="acts" style="margin-top:8px"><button class="btn main sm" data-a="myCotPedido" data-id="' + esc(x.id) + '">Pasar a pedido</button><button class="btn ghost sm" data-a="myCotAbrir" data-id="' + esc(x.id) + '">Abrir</button>'
+      + '<button class="btn ghost sm" data-a="myCotPdf" data-id="' + esc(x.id) + '">PDF</button><button class="btn ghost sm" data-a="myCotDescartar" data-id="' + esc(x.id) + '">Descartar</button></div></div>'; }).join("");
+}
+function myCotCargar(x) {   // pasa una cotización guardada a la calculadora
+  const m = mayLeer(); m.cant = {}; m.precio = {}; m.modo = {}; m.rent = {};
+  (x.items || []).forEach(it => { m.cant[it.producto] = String(it.cantidad); m.precio[it.producto] = String(it.precio); m.modo[it.producto] = "precio"; });
+  m.envio = String(x.envio || 0); if (x.validez) m.validez = String(x.validez); m.para = x.negocio || ""; m.consulta = String(x.consulta || ""); m.cotId = x.id; mayGuardar(m);
+}
 function myPedDlg() {
-  const P = MY.ped, ro = !!P.id && P.estado !== "pendiente", st = (S.data && S.data.stock) || {};
+  const P = MY.ped, ro = !!P.id && P.estado !== "pendiente" && P.estado !== "cotizacion", st = (S.data && S.data.stock) || {};
   const inp = (k, lbl, extra) => '<label class="f">' + lbl + '<input id="mp-' + k + '" data-in="myPF" data-k="' + k + '"' + (ro ? " disabled" : "") + ' value="' + esc(P[k] || "") + '"' + (extra || "") + "></label>";
-  let h = '<div class="row"><h3>' + (P.id ? "Pedido " + esc(P.id) : "Nuevo pedido mayorista") + '</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>';
+  let h = '<div class="row"><h3>' + (P.estado === "cotizacion" ? "Pasar a pedido · " + esc(P.id) : P.id ? "Pedido " + esc(P.id) : "Nuevo pedido mayorista") + '</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>';
   if (ro) h += '<p class="muted small">Este pedido ya salió del stock: solo podés cambiar las notas. El pago y el despacho se manejan desde Hoy.</p>';
   h += '<div class="g2">' + PRODS.map(p => '<div><b>' + esc(nombreP(p)) + '</b> <span class="muted small">(stock ' + Math.max(0, (st[p] || {}).disponible || 0) + ')</span><div class="g2">'
       + '<label class="f">Cantidad<input id="mp-q-' + p + '" data-in="myPI" data-p="' + p + '" data-k="cantidad" inputmode="numeric"' + (ro ? " disabled" : "") + ' value="' + esc(P.items[p].cantidad) + '"></label>'
@@ -851,9 +878,13 @@ function myPedDlg() {
 function myPedDesde(x) {
   const m = mayLeer(), items = {};
   PRODS.forEach(p => { items[p] = {cantidad: "", precio: ""}; });
-  if (x) { (x.items || []).forEach(it => { items[it.producto] = {cantidad: String(it.cantidad), precio: String(it.precio)}; }); return Object.assign({}, x, {items: items}); }
+  const consDe = f => f && mayDatos() ? mayDatos().consultas.find(c => String(c.fila) === String(f)) : null;
+  const deCons = (o, cs) => { if (cs) ["nombre", "apellido", "whatsapp", "email"].forEach(k => { if (!o[k]) o[k] = cs[k]; }); if (cs && !o.negocio) o.negocio = cs.negocio; if (cs && !o.prov_loc_cp) o.prov_loc_cp = cs.localidad; return o; };
+  if (x) { (x.items || []).forEach(it => { items[it.producto] = {cantidad: String(it.cantidad), precio: String(it.precio)}; }); return deCons(Object.assign({}, x, {items: items}), consDe(x.consulta)); }
   PRODS.forEach(p => { if (!fichaGuardada(p)._nueva) { const r = mayCalc(p, m); items[p] = {cantidad: m.cant[p] || "", precio: r.pm ? String(r.pm) : ""}; } });
-  const cs = m.consulta && mayDatos() ? mayDatos().consultas.find(c => String(c.fila) === String(m.consulta)) : null;
+  const cot = m.cotId && mayDatos() ? mayDatos().pedidos.find(y => y.id === m.cotId && y.estado === "cotizacion") : null;
+  if (cot) return deCons(Object.assign({}, cot, {items: items, negocio: m.para || cot.negocio, envio: nm(m.envio), validez: m.validez}), consDe(cot.consulta || m.consulta));
+  const cs = consDe(m.consulta);
   return {id: "", estado: "pendiente", items: items, negocio: m.para || (cs ? cs.negocio : ""), nombre: cs ? cs.nombre : "", apellido: cs ? cs.apellido : "", whatsapp: cs ? cs.whatsapp : "", email: cs ? cs.email : "",
     dni: "", entrega: "domicilio", calle: "", numero: "", piso: "", prov_loc_cp: cs && cs.localidad ? cs.localidad : "", sucursal: "", notas: "", pagado: false, consulta: m.consulta || "", envio: nm(m.envio)};
 }
@@ -1163,7 +1194,18 @@ I.mayR = myM((m, t) => { m.rent[t.dataset.p] = t.value; m.modo[t.dataset.p] = "r
 C.mayImprimir = () => { initRS(); mayImprimir(); };
 C.myTab = b => { MY.tab = b.dataset.t; soloMain(); };
 C.myVerArch = () => { MY.verArch = !MY.verArch; soloMain(); };
-C.myLimpiar = () => { const m = mayLeer(); m.cant = {}; m.para = ""; m.consulta = ""; mayGuardar(m); soloMain(); };
+C.myLimpiar = () => { const m = mayLeer(); m.cant = {}; m.para = ""; m.consulta = ""; m.cotId = ""; mayGuardar(m); soloMain(); };
+const cotDe = id => (mayDatos() || {pedidos: []}).pedidos.find(p => p.id === id);
+C.myGuardarCoti = b => { initRS(); const m = mayLeer(), items = PRODS.filter(p => !fichaGuardada(p)._nueva).map(p => { const r = mayCalc(p, m); return {producto: p, cantidad: r.n, precio: r.pm}; }).filter(x => x.cantidad > 0);
+  if (!items.length) { L.toast("Poné la cantidad de al menos una funda."); return; }
+  const sinP = items.find(x => !(x.precio > 0)); if (sinP) { L.toast("Poné el precio de " + nombreP(sinP.producto) + "."); return; }
+  pedir("mayoristaGuardar", {data: {id: m.cotId, cotizacion: true, negocio: m.para, items: items, envio: nm(m.envio), validez: nd(m.validez), consulta: m.consulta}}, m.cotId ? "Cotización actualizada" : "Cotización guardada", b)
+    .then(r => { if (r) { const k = mayLeer(); k.cotId = r.id; mayGuardar(k); soloMain(); } }); };
+C.myCotAbrir = b => { const x = cotDe(b.dataset.id); if (!x) return; myCotCargar(x); MY.tab = "cotizar"; soloMain(); window.scrollTo(0, 0); };
+C.myCotPdf = b => { const x = cotDe(b.dataset.id); if (!x) return; myCotCargar(x); initRS(); mayImprimir(); soloMain(); };
+C.myCotPedido = b => { const x = cotDe(b.dataset.id); if (!x) return; initRS(); MY.ped = myPedDesde(x); myPedDlg(); };
+C.myCotDescartar = b => { const x = cotDe(b.dataset.id); if (!x || !confirm("¿Descartar esta cotización?")) return;
+  pedir("mayoristaCancelar", {id: x.id}, "Cotización descartada", b).then(r => { if (r) { const m = mayLeer(); if (m.cotId === x.id) { m.cotId = ""; mayGuardar(m); soloMain(); } } }); };
 C.myCotizarConsulta = b => { const x = (mayDatos() || {consultas: []}).consultas.find(c => String(c.fila) === b.dataset.f); if (!x) return;
   const m = mayLeer(); m.cant = {doble: x.doble ? String(x.doble) : "", individual: x.individual ? String(x.individual) : ""}; m.para = x.negocio || (x.nombre + " " + x.apellido).trim(); m.consulta = String(x.fila);
   mayGuardar(m); MY.tab = "cotizar"; soloMain(); window.scrollTo(0, 0); };
@@ -1175,12 +1217,13 @@ I.myPI = t => { MY.ped.items[t.dataset.p][t.dataset.k] = t.value; const e = $("#
 I["myPEnt:change"] = t => { MY.ped.entrega = t.value; myPedDlg(); };
 I["myPPag:change"] = t => { MY.ped.pagado = t.checked; };
 C.myPedOk = b => { const P = MY.ped, items = PRODS.map(p => ({producto: p, cantidad: Math.floor(nd(P.items[p].cantidad) || 0), precio: nm(P.items[p].precio)})).filter(x => x.cantidad > 0);
-  const ro = !!P.id && P.estado !== "pendiente";
+  const ro = !!P.id && P.estado !== "pendiente" && P.estado !== "cotizacion";
   if (!ro) { if (!items.length) { errEn("mpErr", "Poné la cantidad de al menos una funda."); return; }
     const sinP = items.find(x => !(x.precio > 0)); if (sinP) { errEn("mpErr", "Poné el precio de " + nombreP(sinP.producto) + "."); return; }
     if (!String(P.negocio || P.nombre || "").trim()) { errEn("mpErr", "Poné el nombre del negocio."); return; } }
   const data = Object.assign({}, P, {items: items}); delete data.estado;
-  pedir("mayoristaGuardar", {data: data}, P.id ? "Pedido guardado" : "Pedido cargado: queda pendiente, todavía no tocó el stock", b).then(r => { if (r) { L.cerrarDlg(); MY.tab = "pedidos"; if (!P.id) C.myLimpiar(); } }); };
+  const nuevo = !P.id || P.estado === "cotizacion";
+  pedir("mayoristaGuardar", {data: data}, nuevo ? "Pedido cargado: queda pendiente, todavía no tocó el stock" : "Pedido guardado", b).then(r => { if (r) { L.cerrarDlg(); MY.tab = "pedidos"; if (nuevo && (!P.id || mayLeer().cotId === P.id)) C.myLimpiar(); else soloMain(); } }); };
 C.mySacar = b => { const x = (mayDatos() || {pedidos: []}).pedidos.find(p => p.id === b.dataset.id); if (!x) return; const st = S.data.stock || {}, q = {};
   (x.items || []).forEach(it => { q[it.producto] = (q[it.producto] || 0) + it.cantidad; });
   const falta = Object.keys(q).filter(p => q[p] > Math.max(0, (st[p] || {}).disponible || 0));
