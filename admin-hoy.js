@@ -72,7 +72,7 @@ function tarjeta(p, k, d) {
   return '<div class="hoyp' + (al ? " " + al.nivel : "") + '">'
     + (sel ? '<input type="checkbox" id="hc-' + k + '-' + esc(p.id) + '" data-ch="hoySel" data-k="' + k + '" data-id="' + esc(p.id) + '"' + (sel[p.id] ? " checked" : "") + ' aria-label="Elegir ' + esc(p.id) + '">' : "")
     + '<div class="hoyb"><div class="hoyh"><b>' + esc(p.nombre + " " + p.apellido) + '</b><b>' + money(p.total) + '</b></div>'
-    + '<div class="muted small">' + esc(p.id) + ' · ' + esc(p._items || (p.cantidad + " u.")) + ' · ' + ({efectivo: "Efectivo", transferencia: "Transferencia", tarjeta: "Tarjeta", otro: "Otro medio"}[p.medio] || (p.pago === "tarjeta" ? "Tarjeta" : "Transferencia")) + (p.origen === "fuera" ? " · Fuera de la web" + (p.canal ? " (" + esc(p.canal) + ")" : "") : "") + '</div>'
+    + '<div class="muted small">' + esc(p.id) + ' · ' + esc(p._items || (p.cantidad + " u.")) + ' · ' + ({efectivo: "Efectivo", transferencia: "Transferencia", tarjeta: "Tarjeta", otro: "Otro medio"}[p.medio] || (p.pago === "tarjeta" ? "Tarjeta" : "Transferencia")) + (p.origen === "fuera" ? " · Fuera de la web" + (p.canal ? " (" + esc(p.canal) + ")" : "") : p.origen === "mayorista" ? " · Mayorista" + (p.canal ? " (" + esc(p.canal) + ")" : "") : "") + '</div>'
     + (k !== "confirmar" ? '<div class="muted small">' + esc(destino(p)) + '</div>' : (p.estado === "reserva" && p.vence ? '<div class="muted small">Reserva hasta el ' + esc(p.vence) + '</div>' : ""))
     + (p.observaciones ? '<div class="small">Observaciones: ' + esc(p.observaciones) + '</div>' : "")
     + (p.notas ? '<div class="small">Nota: ' + esc(p.notas) + '</div>' : "")

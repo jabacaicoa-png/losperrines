@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "20/11 · 1";
+window.PANEL_VERSION = "20/11 · 2";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -629,7 +629,7 @@ function vRentabilidad() {
     + '<span class="muted small" style="max-width:260px">' + "Se usa el % que guardaste." + (RS.mixReal != null ? " Según tus ventas registradas sería " + RS.mixReal + "% (" + RS.ventas + " fundas, incluye pedidos de prueba). " + (String(RS.mixReal) !== RS.mix ? '<button class="linkb" data-a="rsMixReal">Usar ese</button>' : "") : "") + "</span></div>"
     + '<div class="acts" style="margin-top:12px"><button class="btn ghost sm" data-a="rsGuardarParams">Guardar comisión, objetivo y mezcla</button></div></div>';
   h += '<div class="cols2" style="margin-top:14px" id="rsCards">' + PRODS.map(p => rentCard(p, obj)).join("") + "</div>";
-  h += mayoristaBlock(obj);
+  h += '<div class="block"><b>Venta mayorista:</b> ahora tiene su propia solapa, <button class="linkb" data-go="mayoristas">Números → Mayoristas</button>.</div>';
   const cambios = PRODS.some(p => { const k = p === "doble" ? ["precio_tarjeta", "precio_transferencia"] : ["precio2_tarjeta", "precio2_transferencia"]; return String(nm(RS.precios[p].t)) !== String(nm(c[k[0]])) || String(nm(RS.precios[p].x)) !== String(nm(c[k[1]])); });
   h += '<div class="block acts" style="justify-content:space-between">' + (cambios ? "<b>Estos precios son distintos a los de la web.</b>" : '<span class="muted">Son los precios que está mostrando la web.</span>')
     + '<span class="acts"><button class="btn ghost" data-a="rsReset"' + (cambios ? "" : " disabled") + '>Volver a los de la web</button><button class="btn main" data-a="rsAplicar"' + (cambios ? "" : " disabled") + ">Aplicar precios a la web</button></span></div>";
@@ -657,69 +657,116 @@ function rentCard(p, obj) {
       + (r.minTransf != null && r.minTransf < 1 ? ", o vender al menos <b>" + Math.ceil(r.minTransf * 100) + "%</b> por transferencia" : "") + ".") + "</div></div>";
 }
 
-/* ================= VENTA MAYORISTA (19/11/2026, pedido del dueño) =================
-   Calculadora y propuesta para imprimir. Los precios mayoristas se guardan solo en este aparato
-   (localStorage), NO en el código: el repositorio es público. Costo mayorista = costo de la ficha
-   − envío gratis de una venta común + envío del pedido mayorista repartido entre las unidades. */
+/* ================= MAYORISTAS (19/11/2026; solapa propia desde el 20/11/2026, pedido del dueño) =================
+   Tres partes: Cotizar (calculadora + propuesta en PDF), Consultas (las del formulario de la web) y Pedidos.
+   Cotizar: una cantidad por funda; el envío de todo el pedido se reparte igual entre todas las fundas.
+   En cada funda se escribe el precio (y se ve la rentabilidad) o la rentabilidad (y se ve el precio): manda
+   el último que se escribió. Los precios se guardan solo en este aparato (localStorage), NO en el código:
+   el repositorio es público. Costo mayorista = costo de la ficha − envío gratis de una venta común + envío repartido.
+   Pedidos: mientras están pendientes no tocan el stock; "Sacar del stock" crea el pedido (origen mayorista)
+   que descuenta las fundas y sigue por Hoy. Al negocio no se le manda ningún mail. */
 const MAY_KEY = "lp_mayorista";
-function mayLeer() { let m = null; try { m = JSON.parse(localStorage.getItem(MAY_KEY) || "null"); } catch (e) {} m = m || {}; m.min = m.min == null ? "10" : m.min; m.envio = m.envio != null ? m.envio : "20000"; m.precio = m.precio || {}; m.validez = m.validez == null ? "30" : m.validez; return m; }
-function mayGuardar(m) { try { localStorage.setItem(MAY_KEY, JSON.stringify(m)); } catch (e) {} }
-function mayCalc(p, m, obj) {
-  const f = fichaGuardada(p), c = costo(f), n = Math.max(1, nd(m.min) || 1), envU = nm(m.envio) / n;
-  const C = c.total - c.envio + envU, pv = nm(RS.precios[p].x), pm = nm(m.precio[p]);
-  const gan = pm - C, rent = C > 0 ? gan / C : 0, rev = pv - pm, revR = pm > 0 ? rev / pm : 0;
-  return {f: f, C: C, envFicha: c.envio, envU: envU, pv: pv, pm: pm, gan: gan, rent: rent, rev: rev, revR: revR, piso: Math.ceil(C * (1 + obj) / 100) * 100};
+const MY = {tab: "cotizar", verArch: false, ped: null};
+function mayLeer() {
+  let m = null; try { m = JSON.parse(localStorage.getItem(MAY_KEY) || "null"); } catch (e) {} m = m || {};
+  m.envio = m.envio != null ? m.envio : "20000"; m.validez = m.validez == null ? "30" : m.validez; m.para = m.para || ""; m.consulta = m.consulta || "";
+  ["precio", "rent", "cant", "modo"].forEach(k => { m[k] = m[k] || {}; });
+  return m;
 }
-function mayoristaBlock(obj) {
-  const m = mayLeer();
-  let h = '<div class="block"><h3 style="margin-top:0">Venta mayorista</h3><p class="muted small" style="margin:-4px 0 10px">Para pet shops, veterinarias o revendedores. El costo se calcula sin el envío gratis de una venta común y con el envío del pedido repartido entre las unidades. No hay pedido mínimo: «Calcular para» es solo para hacer la cuenta (el envío se reparte entre esas unidades). Los precios mayoristas se guardan solo en este celular o compu.</p>'
-    + '<div class="g3"><label class="f">Calcular para (unidades)<input id="my-min" data-in="mayF" data-k="min" inputmode="numeric" value="' + esc(m.min) + '"></label>'
-    + '<label class="f">Envío de todo el pedido<input id="my-env" data-in="mayF" data-k="envio" inputmode="numeric" value="' + esc(m.envio) + '"></label>'
-    + '<label class="f">Precios válidos por (días)<input id="my-val" data-in="mayF" data-k="validez" inputmode="numeric" value="' + esc(m.validez) + '"></label></div>'
-    + '<div class="cols2" id="mayCards">' + PRODS.map(p => mayCard(p, m, obj)).join("") + "</div>"
-    + '<div class="acts" style="margin-top:12px"><button class="btn main" data-a="mayImprimir">🖨 Imprimir propuesta</button><span class="muted small">Se abre la propuesta en una hoja: elegí "Guardar como PDF" para mandarla por WhatsApp.</span></div></div>';
+function mayGuardar(m) { try { localStorage.setItem(MAY_KEY, JSON.stringify(m)); } catch (e) {} }
+function mayUnidades(m) { return PRODS.reduce((a, p) => a + Math.max(0, Math.floor(nd(m.cant[p]) || 0)), 0); }
+function mayCalc(p, m) {
+  const f = fichaGuardada(p), c = costo(f), U = mayUnidades(m), n = Math.max(0, Math.floor(nd(m.cant[p]) || 0));
+  const envU = U > 0 ? nm(m.envio) / U : 0, C = c.total - c.envio + envU, pv = nm(RS.precios[p].x);
+  let pm = nm(m.precio[p]), rent = C > 0 && pm > 0 ? (pm - C) / C : 0;
+  if (m.modo[p] === "rent" && String(m.rent[p] || "").trim() !== "") { rent = nd(m.rent[p]) / 100; pm = Math.ceil(C * (1 + rent) / 100) * 100; }
+  const gan = pm - C;
+  return {f: f, n: n, C: C, envFicha: c.envio, envU: envU, pv: pv, pm: pm, gan: gan, rent: C > 0 && pm > 0 ? gan / C : 0, rev: pv - pm, revR: pm > 0 ? (pv - pm) / pm : 0};
+}
+function mayDatos() { return S.data && S.data.mayoristas; }
+function vMayoristas() {
+  const g = guard(); if (g) return cabecera("Mayoristas") + g;
+  initRS();
+  const D = mayDatos(), nuevas = D ? D.consultas.filter(x => x.estado === "nueva").length : 0, pend = D ? D.pedidos.filter(x => x.estado === "pendiente").length : 0;
+  let h = cabecera("Mayoristas", "Pet shops, veterinarias y revendedores: cotizá, mirá las consultas de la web y cargá los pedidos.");
+  if (!D) h += '<div class="note warn">Para ver las consultas y cargar pedidos falta actualizar el sistema: <b>Configuración → Sistema → Buscar actualización → Actualizar ahora</b>. La calculadora ya funciona.</div>';
+  h += '<div class="bk-tabs" role="tablist" style="margin-bottom:12px">' + [["cotizar", "Cotizar"], ["consultas", "Consultas" + (nuevas ? " (" + nuevas + ")" : "")], ["pedidos", "Pedidos" + (pend ? " (" + pend + ")" : "")]]
+    .map(t => '<button data-a="myTab" data-t="' + t[0] + '" aria-pressed="' + (MY.tab === t[0]) + '">' + t[1] + "</button>").join("") + "</div>";
+  if (MY.tab === "consultas") h += myConsultas(D); else if (MY.tab === "pedidos") h += myPedidos(D); else h += myCotizar();
   return h;
 }
-function mayCard(p, m, obj) {
+function myCotizar() {
+  const m = mayLeer(), U = mayUnidades(m);
+  let h = '<div class="block" style="margin-top:0"><div class="g3"><label class="f">Propuesta para (opcional)<input id="my-para" data-in="mayF" data-k="para" placeholder="Nombre del negocio" value="' + esc(m.para) + '"></label>'
+    + '<label class="f">Envío de todo el pedido<input id="my-env" data-in="mayF" data-k="envio" inputmode="numeric" value="' + esc(m.envio) + '"></label>'
+    + '<label class="f">Precios válidos por (días)<input id="my-val" data-in="mayF" data-k="validez" inputmode="numeric" value="' + esc(m.validez) + '"></label></div>'
+    + '<p class="muted small" style="margin:0">El costo de cada funda va sin el envío gratis de una venta común y con su parte del envío del pedido' + (U ? ": " + money(nm(m.envio)) + " ÷ " + U + " fundas = <b>" + money(U ? nm(m.envio) / U : 0) + "</b> cada una." : ". Poné las cantidades para repartirlo.") + "</p></div>";
+  h += '<div class="cols2" style="margin-top:14px">' + PRODS.map(p => mayCard(p, m)).join("") + "</div>";
+  const rs = PRODS.map(p => fichaGuardada(p)._nueva ? null : mayCalc(p, m)).filter(r => r && r.n > 0 && r.pm > 0);
+  if (rs.length) {
+    const cob = rs.reduce((a, r) => a + r.pm * r.n, 0), cos = rs.reduce((a, r) => a + r.C * r.n, 0), gan = cob - cos;
+    h += '<div class="block"><h3 style="margin-top:0">Todo el pedido · ' + U + " funda" + (U === 1 ? "" : "s") + "</h3>"
+      + mayFila("Cobrás", "<b>" + money(cob) + "</b>", rs.map(r => r.n + " × " + money(r.pm)).join(" + "))
+      + mayFila("Te cuesta", money(cos), "fundas + " + money(nm(m.envio)) + " de envío")
+      + mayFila("Ganás", "<b>" + money(gan) + '</b> <span class="pill">' + pct(cos > 0 ? gan / cos : 0) + "</span>", "rentabilidad del pedido entero") + "</div>";
+  }
+  h += '<div class="acts" style="margin-top:12px"><button class="btn main" data-a="mayImprimir">🖨 Imprimir propuesta</button>'
+    + (mayDatos() ? '<button class="btn ghost" data-a="myPedNuevo">Cargar como pedido</button>' : "")
+    + '<button class="btn ghost" data-a="myLimpiar">Empezar otra cotización</button></div>'
+    + '<p class="muted small">La propuesta se abre en una hoja: elegí "Guardar como PDF" para mandarla por WhatsApp. Si hay cantidades, incluye el detalle del pedido.</p>';
+  return h;
+}
+function mayCard(p, m) {
   const f = fichaGuardada(p);
-  if (f._nueva) return '<div class="block" style="margin-top:0"><h3>' + esc(nombreP(p)) + '</h3><p class="muted">Cargá la receta para calcular el costo.</p></div>';
-  const r = mayCalc(p, m, obj);
-  return '<div class="block" style="margin-top:0"><h3>' + esc(nombreP(p)) + '</h3>'
-    + '<label class="f">Precio mayorista por unidad<input id="my-p-' + p + '" data-in="mayP" data-p="' + p + '" inputmode="numeric" placeholder="Ej. ' + money(r.piso) + '" value="' + esc(m.precio[p] || "") + '"></label>'
-    + mayFila("Costo por unidad", money(r.C), "sin el envío gratis (" + money(r.envFicha) + ") y con " + money(r.envU) + " de envío mayorista")
-    + (r.pm ? mayFila("Ganás por unidad", "<b>" + money(r.gan) + "</b> " + pillR(r.rent, obj))
-      + mayFila("Pedido de " + esc(m.min || "1"), "ganás <b>" + money(r.gan * (nd(m.min) || 1)) + "</b>", "cobrás " + money(r.pm * (nd(m.min) || 1)))
+  if (f._nueva) return '<div class="block" style="margin-top:0"><h3>' + esc(nombreP(p)) + '</h3><p class="muted">Cargá la receta en <button class="linkb" data-go="productos">Productos y recetas</button> para calcular el costo.</p></div>';
+  const r = mayCalc(p, m), modoR = m.modo[p] === "rent";
+  return '<div class="block" style="margin-top:0"><h3>' + esc(nombreP(p)) + "</h3>"
+    + '<div class="g3"><label class="f">Cantidad<input id="my-q-' + p + '" data-in="mayQ" data-p="' + p + '" inputmode="numeric" placeholder="0" value="' + esc(m.cant[p] || "") + '"></label>'
+    + '<label class="f">Precio por unidad<input id="my-p-' + p + '" data-in="mayP" data-p="' + p + '" inputmode="numeric" value="' + esc(modoR ? (r.pm ? String(r.pm) : "") : (m.precio[p] || "")) + '"></label>'
+    + '<label class="f">Rentabilidad<span class="unitw"><input class="inp" id="my-r-' + p + '" data-in="mayR" data-p="' + p + '" inputmode="decimal" value="' + esc(modoR ? (m.rent[p] || "") : (r.pm ? String(Math.round(r.rent * 1000) / 10).replace(".", ",") : "")) + '"> %</span></label></div>'
+    + '<p class="muted small" style="margin:-6px 0 6px">' + (modoR ? "Pusiste la rentabilidad: el precio se calcula solo (redondeado a $100)." : "Pusiste el precio: la rentabilidad se calcula sola.") + " Podés escribir en cualquiera de los dos.</p>"
+    + mayFila("Costo por unidad", money(r.C), "sin el envío gratis (" + money(r.envFicha) + ")" + (r.envU ? " y con " + money(r.envU) + " de envío" : ""))
+    + (r.pm ? mayFila("Ganás por unidad", "<b>" + money(r.gan) + '</b> <span class="pill">' + pct(r.rent) + "</span>")
+      + (r.n ? mayFila(r.n + " funda" + (r.n === 1 ? "" : "s"), "ganás <b>" + money(r.gan * r.n) + "</b>", "cobrás " + money(r.pm * r.n)) : "")
       + mayFila("El revendedor gana", money(r.rev) + " <span class='muted small'>(" + pct(r.revR) + ")</span>", "vendiendo a " + money(r.pv) + ", de contado como la web") : "")
-    + '<div class="note ' + (r.pm && r.rent >= obj ? "ok" : r.pm ? "warn" : "") + '">Para llegar al ' + esc(RS.objetivo) + "% el precio mínimo es <b>" + money(r.piso) + "</b>." + (r.pm && r.revR < 0.3 ? " Ojo: al revendedor le queda menos del 30%, puede parecerle poco." : "") + "</div></div>";
+    + "</div>";
 }
 function mayFila(t, v, sub) { return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span>' + t + (sub ? '<br><span class="muted small">' + sub + "</span>" : "") + '</span><span style="text-align:right;white-space:nowrap">' + v + "</span></div>"; }
 function mayImprimir() {
   const m = mayLeer(), med = (S.data && S.data.media) || [], cfg = cfgTienda(), base = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "");
   const foto = p => { const l = med.filter(x => x.destino === p && x.tipo === "img"), pr = l.find(x => x.principal) || l[0] || med.find(x => x.destino === "portada" && x.principal && x.tipo === "img"); return pr ? "https://lh3.googleusercontent.com/d/" + pr.drive + "=w900" : ""; };
   const sub = {doble: cfg.sub1 || "Asiento trasero completo", individual: cfg.sub2 || "Un solo asiento, el otro queda libre"};
-  const prods = PRODS.filter(p => nm(m.precio[p]) > 0);
+  const R = {}; PRODS.forEach(p => { if (!fichaGuardada(p)._nueva) R[p] = mayCalc(p, m); });
+  const prods = PRODS.filter(p => R[p] && R[p].pm > 0);
   if (!prods.length) { L.toast("Poné el precio mayorista de al menos una funda."); return; }
-  const card = p => { const pm = nm(m.precio[p]), pv = nm(RS.precios[p].x), fo = foto(p);
+  const det = prods.filter(p => R[p].n > 0), tot = det.reduce((a, p) => a + R[p].pm * R[p].n, 0);
+  const card = p => { const pm = R[p].pm, pv = R[p].pv, fo = foto(p);
     return '<div class="card"><div class="ph">' + (fo ? '<img class="bg" src="' + fo + '"><img class="fg" src="' + fo + '">' : "") + '</div><div class="b"><h2>' + esc(nombreP(p)) + '</h2><p class="sub">' + esc(sub[p]) + "</p>"
       + '<div class="big"><span>Precio mayorista c/u</span><b>' + money(pm) + "</b></div>"
       + '<div class="row"><span>Precio sugerido de venta (contado)</span><b>' + money(pv) + "</b></div>"
       + '<div class="row"><span>Tu ganancia por unidad</span><b class="gan">' + money(pv - pm) + "</b></div></div></div>"; };
+  const detalle = det.length ? '<h3>Detalle del pedido</h3><table class="det"><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio c/u</th><th>Subtotal</th></tr></thead><tbody>'
+    + det.map(p => "<tr><td>" + esc(nombreP(p)) + "</td><td>" + R[p].n + "</td><td>" + money(R[p].pm) + "</td><td>" + money(R[p].pm * R[p].n) + "</td></tr>").join("")
+    + '<tr class="tt"><td>Total</td><td>' + det.reduce((a, p) => a + R[p].n, 0) + "</td><td></td><td>" + money(tot) + '</td></tr></tbody></table><p class="nota">Envío incluido a tu local por Andreani.</p>' : "";
   const html = '<!doctype html><html><head><meta charset="utf-8"><title>Los Perrines · Propuesta mayorista</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"><style>'
     + "@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;font:400 11.5pt/1.45 Inter,sans-serif;color:#1E2418;-webkit-print-color-adjust:exact;print-color-adjust:exact}"
     + ".page{width:210mm;min-height:297mm;padding:14mm 15mm 12mm;display:flex;flex-direction:column;margin:0 auto}"
     + ".head{display:flex;align-items:center;gap:14px;border-bottom:3px solid #2F3822;padding-bottom:10px}.head img{width:58px;height:58px;border-radius:50%}.head h1{margin:0;font-size:22pt;font-weight:800}.head p{margin:2px 0 0;color:#5E6656}"
-    + ".tag{margin-left:auto;background:#2F3822;color:#F2F3EC;font-weight:700;font-size:10pt;padding:6px 12px;border-radius:999px}.intro{margin:12px 0 10px}"
+    + ".tag{margin-left:auto;background:#2F3822;color:#F2F3EC;font-weight:700;font-size:10pt;padding:6px 12px;border-radius:999px}.intro{margin:12px 0 10px}.para{margin:10px 0 0;font-weight:700;font-size:12.5pt}"
     + ".prods{display:grid;grid-template-columns:repeat(" + prods.length + ",1fr);gap:12px}.card{border:1px solid #D9DCCF;border-radius:10px;overflow:hidden}"
-    + ".ph{height:62mm;background:#1E2418;position:relative;overflow:hidden}.ph img{position:absolute;inset:0;width:100%;height:100%}.ph .bg{object-fit:cover;filter:blur(14px) brightness(.7);transform:scale(1.2)}.ph .fg{object-fit:contain}"
+    + ".ph{height:" + (det.length ? 52 : 62) + "mm;background:#1E2418;position:relative;overflow:hidden}.ph img{position:absolute;inset:0;width:100%;height:100%}.ph .bg{object-fit:cover;filter:blur(14px) brightness(.7);transform:scale(1.2)}.ph .fg{object-fit:contain}"
     + ".b{padding:10px 12px 12px}h2{margin:0;font-size:14pt}.sub{margin:1px 0 8px;color:#5E6656;font-size:10pt}"
     + ".big{background:#F4F6DA;border:1px solid #DDE29A;border-radius:8px;padding:8px 10px;margin:4px 0 6px;display:flex;justify-content:space-between;align-items:baseline}.big span{font-size:10pt;font-weight:600}.big b{font-size:19pt;font-weight:800}"
     + ".row{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #EEEFE8;font-size:10.5pt}.gan{color:#2F7A3E}"
+    + "table.det{width:100%;border-collapse:collapse;font-size:10.5pt}table.det th{text-align:left;color:#5E6656;font-weight:600;border-bottom:1px solid #D9DCCF;padding:5px 6px}table.det td{padding:5px 6px;border-bottom:1px solid #EEEFE8}"
+    + "table.det th:not(:first-child),table.det td:not(:first-child){text-align:right}table.det .tt td{font-weight:800;font-size:12pt;border-bottom:0;background:#F4F6DA}.nota{margin:4px 0 0;font-size:10pt;color:#5E6656}"
     + "h3{margin:14px 0 6px;font-size:12pt}.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}ul{margin:0;padding-left:16px}li{margin:3px 0;font-size:10.5pt}.box{background:#F6F6F3;border-radius:10px;padding:10px 12px}"
     + ".foot{margin-top:auto;display:flex;justify-content:space-between;border-top:1px solid #D9DCCF;padding-top:8px;font-size:10pt;color:#5E6656}.foot b{color:#2F3822;font-size:12pt}"
     + "@media screen{body{background:#ddd}.page{background:#fff;margin:10px auto}}</style></head><body><div class='page'>"
     + '<div class="head"><img src="' + base + 'logo.png"><div><h1>Los Perrines</h1><p>Fundas tipo canasto para mascotas · Industria argentina 🇦🇷</p></div><span class="tag">Propuesta mayorista</span></div>'
+    + (m.para ? '<p class="para">Propuesta para ' + esc(m.para) + "</p>" : "")
     + '<p class="intro">Fundas canasto para el asiento trasero del auto: <b>impermeables, acolchadas y antidesgarro</b>, con laterales que cubren las puertas. Un producto con buen margen de reventa.</p>'
-    + '<div class="prods">' + prods.map(card).join("") + "</div>"
+    + '<div class="prods">' + prods.map(card).join("") + "</div>" + detalle
     + '<div class="cols"><div><h3>Condiciones</h3><div class="box"><ul><li><b>Precios por cantidad:</b> consultanos por tu pedido.</li><li><b>Envío incluido</b> a tu local por Andreani.</li><li>Pago por <b>transferencia antes del despacho</b>.</li>'
     + "<li>Precio sugerido de venta: <b>el mismo de nuestra web, de contado</b>, para que no compitamos entre nosotros.</li>" + (nd(m.validez) > 0 ? "<li>Precios válidos por " + esc(m.validez) + " días.</li>" : "") + "</ul></div></div>"
     + '<div><h3>Por qué se vende</h3><div class="box"><ul><li><b>Impermeable:</b> agua, barro y pelos no llegan al tapizado.</li><li><b>Canasto cerrado:</b> cubre asiento, respaldo y puertas.</li><li><b>Cierres en las cuatro esquinas</b> y abertura para el cinturón.</li><li>Viene en su <b>estuche</b> para guardarla.</li><li><b>Garantía de fábrica</b> y atención directa con quien la fabrica.</li></ul></div></div></div>'
@@ -728,6 +775,87 @@ function mayImprimir() {
   const w = window.open("", "_blank");
   if (!w) { L.toast("El navegador bloqueó la ventana nueva: permitila e intentá de nuevo."); return; }
   w.document.open(); w.document.write(html); w.document.close();
+}
+/* ---------- consultas de la web ---------- */
+const MY_EST = {nueva: ["Nueva", "warn"], respondida: ["Respondida", "ok"], pedido: ["Hizo pedido", "ok"], archivada: ["Archivada", "mute"]};
+function waNormL(v) { let d = String(v == null ? "" : v).replace(/\D/g, ""); if (!d) return ""; d = d.replace(/^00/, ""); if (/^54/.test(d)) d = d.slice(2); if (/^9/.test(d) && d.length === 11) d = d.slice(1); d = d.replace(/^0/, "");
+  if (d.length === 12) for (let k = 2; k <= 4; k++) { if (d.substr(k, 2) === "15") { d = d.slice(0, k) + d.slice(k + 2); break; } } return d.length === 10 ? "549" + d : ""; }   // igual que waNorm() del núcleo
+function waLink(v, txt) { const n = waNormL(v); return /^\d{10,}$/.test(n) ? "https://wa.me/" + n + (txt ? "?text=" + encodeURIComponent(txt) : "") : ""; }
+function myConsultas(D) {
+  if (!D) return '<p class="muted">Falta actualizar el sistema para ver las consultas.</p>';
+  const l = D.consultas.filter(x => MY.verArch || x.estado !== "archivada"), arch = D.consultas.length - D.consultas.filter(x => x.estado !== "archivada").length;
+  let h = "";
+  if (!l.length) h += '<p class="muted">' + (D.consultas.length ? "No hay consultas sin archivar." : "Todavía no llegaron consultas desde la web.") + "</p>";
+  h += l.map(x => { const e = MY_EST[x.estado] || MY_EST.nueva, tot = x.doble + x.individual, wa = waLink(x.whatsapp, "¡Hola " + x.nombre + "! Te escribo de Los Perrines por tu consulta de venta por mayor.");
+    return '<div class="block" style="margin-top:0;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>' + esc(x.negocio || (x.nombre + " " + x.apellido)) + '</b><span class="pill ' + e[1] + '">' + e[0] + "</span></div>"
+      + '<div class="muted small">' + esc(x.fecha) + (x.negocio ? " · " + esc(x.nombre + " " + x.apellido) : "") + (x.localidad ? " · " + esc(x.localidad) : "") + "</div>"
+      + '<div style="margin:6px 0">' + tot + " funda" + (tot === 1 ? "" : "s") + ": " + x.doble + " de 2 plazas y " + x.individual + " de 1 plaza</div>"
+      + (x.mensaje ? '<div class="small">“' + esc(x.mensaje) + "”</div>" : "")
+      + '<div class="muted small">WhatsApp ' + esc(x.whatsapp) + (x.email ? " · " + esc(x.email) : "") + "</div>"
+      + '<div class="acts" style="margin-top:8px"><button class="btn main sm" data-a="myCotizarConsulta" data-f="' + x.fila + '">Cotizar</button>'
+      + (wa ? '<a class="btn ghost sm" target="_blank" rel="noopener" href="' + esc(wa) + '">WhatsApp</a>' : "")
+      + (x.estado === "nueva" ? '<button class="btn ghost sm" data-a="myConsEst" data-f="' + x.fila + '" data-e="respondida">Ya le respondí</button>' : "")
+      + (x.estado === "archivada" ? '<button class="btn ghost sm" data-a="myConsEst" data-f="' + x.fila + '" data-e="nueva">Desarchivar</button>' : '<button class="btn ghost sm" data-a="myConsEst" data-f="' + x.fila + '" data-e="archivada">Archivar</button>')
+      + "</div></div>"; }).join("");
+  if (arch) h += '<button class="linkb" data-a="myVerArch">' + (MY.verArch ? "Ocultar las archivadas" : "Ver las archivadas (" + arch + ")") + "</button>";
+  return h;
+}
+/* ---------- pedidos mayoristas ---------- */
+function itemsTxt(items) { return (items || []).map(it => it.cantidad + " " + (it.producto === "individual" ? "de 1 plaza" : "de 2 plazas") + " a " + money(it.precio)).join(" + "); }
+function myPedidos(D) {
+  if (!D) return '<p class="muted">Falta actualizar el sistema para cargar pedidos.</p>';
+  const ped = (S.data && S.data.pedidos) || [], st = (S.data && S.data.stock) || {};
+  let h = '<div class="note">Un pedido <b>pendiente no toca el stock</b>: la web sigue vendiendo mientras lo mandás a confeccionar. Cuando lo vas a despachar, tocá <b>Sacar del stock</b>: se descuentan las fundas y el pedido pasa a <b>Hoy</b> para prepararlo y despacharlo. Al negocio no le llega ningún mail.</div>'
+    + '<div class="acts" style="margin:10px 0"><button class="btn main" data-a="myPedNuevo">+ Cargar pedido</button><span class="muted small">Stock ahora: ' + PRODS.map(p => esc(nombreP(p)) + " <b>" + Math.max(0, (st[p] || {}).disponible || 0) + "</b>").join(" · ") + "</span></div>";
+  if (!D.pedidos.length) return h + '<p class="muted">Todavía no cargaste pedidos mayoristas.</p>';
+  h += D.pedidos.map(x => {
+    const pv = x.pedido ? ped.find(p => p.id === x.pedido) : null, wa = waLink(x.whatsapp);
+    const est = x.estado === "pendiente" ? '<span class="pill warn">Pendiente · no tocó el stock</span>' : x.estado === "cancelado" ? '<span class="pill mute">Cancelado</span>'
+      : '<span class="pill ok">Salió del stock' + (pv ? " · " + esc(({reserva: "falta que te pague", pagado: "para preparar", exportado: "para despachar", despachado: "en camino", entregado: "entregado", cancelado: "cancelado"})[pv.estado] || pv.estado) : "") + "</span>";
+    let acts = "";
+    if (x.estado === "pendiente") acts = '<button class="btn main sm" data-a="mySacar" data-id="' + esc(x.id) + '">Sacar del stock</button><button class="btn ghost sm" data-a="myPedEditar" data-id="' + esc(x.id) + '">Editar</button>';
+    else if (x.estado === "enviado") acts = '<button class="btn ghost sm" data-go="hoy">Ver en Hoy</button><button class="btn ghost sm" data-a="myPedEditar" data-id="' + esc(x.id) + '">Notas</button>';
+    if (wa) acts += '<a class="btn ghost sm" target="_blank" rel="noopener" href="' + esc(wa) + '">WhatsApp</a>';
+    if (x.estado !== "cancelado" && !(pv && ["despachado", "entregado"].indexOf(pv.estado) >= 0)) acts += '<button class="btn ghost sm" data-a="myPedCancelar" data-id="' + esc(x.id) + '">Cancelar</button>';
+    return '<div class="block" style="margin-top:0;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>' + esc(x.negocio || (x.nombre + " " + x.apellido)) + "</b><b>" + money(x.total) + "</b></div>"
+      + '<div class="muted small">' + esc(x.id) + " · " + esc(x.fecha) + (x.pedido ? " · pedido " + esc(x.pedido) : "") + "</div>"
+      + '<div style="margin:6px 0">' + esc(itemsTxt(x.items)) + "</div>"
+      + "<div>" + est + (x.estado === "pendiente" ? ' <span class="pill ' + (x.pagado ? "ok" : "mute") + '">' + (x.pagado ? "Pagado" : "Sin pagar") + "</span>" : "") + "</div>"
+      + (x.notas ? '<div class="small" style="margin-top:4px">Nota: ' + esc(x.notas) + "</div>" : "")
+      + '<div class="acts" style="margin-top:8px">' + acts + "</div></div>";
+  }).join("");
+  return h;
+}
+function myPedDlg() {
+  const P = MY.ped, ro = !!P.id && P.estado !== "pendiente", st = (S.data && S.data.stock) || {};
+  const inp = (k, lbl, extra) => '<label class="f">' + lbl + '<input id="mp-' + k + '" data-in="myPF" data-k="' + k + '"' + (ro ? " disabled" : "") + ' value="' + esc(P[k] || "") + '"' + (extra || "") + "></label>";
+  let h = '<div class="row"><h3>' + (P.id ? "Pedido " + esc(P.id) : "Nuevo pedido mayorista") + '</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>';
+  if (ro) h += '<p class="muted small">Este pedido ya salió del stock: solo podés cambiar las notas. El pago y el despacho se manejan desde Hoy.</p>';
+  h += '<div class="g2">' + PRODS.map(p => '<div><b>' + esc(nombreP(p)) + '</b> <span class="muted small">(stock ' + Math.max(0, (st[p] || {}).disponible || 0) + ')</span><div class="g2">'
+      + '<label class="f">Cantidad<input id="mp-q-' + p + '" data-in="myPI" data-p="' + p + '" data-k="cantidad" inputmode="numeric"' + (ro ? " disabled" : "") + ' value="' + esc(P.items[p].cantidad) + '"></label>'
+      + '<label class="f">Precio c/u<input id="mp-p-' + p + '" data-in="myPI" data-p="' + p + '" data-k="precio" inputmode="numeric"' + (ro ? " disabled" : "") + ' value="' + esc(P.items[p].precio) + '"></label></div></div>').join("") + "</div>";
+  const tot = PRODS.reduce((a, p) => a + Math.floor(nd(P.items[p].cantidad) || 0) * nm(P.items[p].precio), 0);
+  h += '<p style="margin:0 0 8px">Total: <b id="mpTot">' + money(tot) + "</b></p>"
+    + '<div class="g2">' + inp("negocio", "Negocio") + inp("whatsapp", "WhatsApp", ' inputmode="tel"') + "</div>"
+    + '<div class="g2">' + inp("nombre", "Nombre de quien recibe") + inp("apellido", "Apellido") + "</div>"
+    + '<div class="g2">' + inp("dni", "DNI o CUIT (para Andreani)", ' inputmode="numeric"') + inp("email", 'Email <span class="muted small">(opcional, no se le manda nada)</span>', ' inputmode="email"') + "</div>"
+    + '<label class="f">Entrega<select id="mp-entrega" data-ch="myPEnt"' + (ro ? " disabled" : "") + ">" + [["domicilio", "A domicilio (Andreani)"], ["sucursal", "A sucursal Andreani"], ["mano", "En mano"]].map(o => '<option value="' + o[0] + '"' + (P.entrega === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") + "</select></label>";
+  if (P.entrega === "domicilio") h += '<div class="g3">' + inp("calle", "Calle") + inp("numero", "Número") + inp("piso", "Piso / depto") + "</div>";
+  if (P.entrega !== "mano") h += inp("prov_loc_cp", "Provincia / localidad / código postal", ' placeholder="San Luis / Villa Mercedes / 5730"');
+  if (P.entrega === "sucursal") h += inp("sucursal", "Sucursal de Andreani");
+  h += '<label class="f">Notas<textarea id="mp-notas" data-in="myPF" data-k="notas" rows="2">' + esc(P.notas || "") + "</textarea></label>"
+    + '<label class="check"><input type="checkbox" id="mp-pag" data-ch="myPPag"' + (P.pagado ? " checked" : "") + (ro ? " disabled" : "") + "> Ya me pagó</label>"
+    + '<p class="err" id="mpErr"></p><div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="myPedOk">Guardar</button></div>';
+  L.dlg(h);
+}
+function myPedDesde(x) {
+  const m = mayLeer(), items = {};
+  PRODS.forEach(p => { items[p] = {cantidad: "", precio: ""}; });
+  if (x) { (x.items || []).forEach(it => { items[it.producto] = {cantidad: String(it.cantidad), precio: String(it.precio)}; }); return Object.assign({}, x, {items: items}); }
+  PRODS.forEach(p => { if (!fichaGuardada(p)._nueva) { const r = mayCalc(p, m); items[p] = {cantidad: m.cant[p] || "", precio: r.pm ? String(r.pm) : ""}; } });
+  const cs = m.consulta && mayDatos() ? mayDatos().consultas.find(c => String(c.fila) === String(m.consulta)) : null;
+  return {id: "", estado: "pendiente", items: items, negocio: m.para || (cs ? cs.negocio : ""), nombre: cs ? cs.nombre : "", apellido: cs ? cs.apellido : "", whatsapp: cs ? cs.whatsapp : "", email: cs ? cs.email : "",
+    dni: "", entrega: "domicilio", calle: "", numero: "", piso: "", prov_loc_cp: cs && cs.localidad ? cs.localidad : "", sucursal: "", notas: "", pagado: false, consulta: m.consulta || "", envio: nm(m.envio)};
 }
 
 /* ================= MIGRACIÓN ================= */
@@ -1026,9 +1154,42 @@ I.rsP = t => { RS[t.dataset.k] = t.value; soloMain(); };
 I.rsMix = t => { RS.mix = t.value; const x = $("#rsMixTxt"); if (x) x.textContent = t.value + "%"; const c = $("#rsCards"); if (c) c.innerHTML = PRODS.map(p => rentCard(p, nd(RS.objetivo) / 100)).join(""); };
 C.rsMixReal = () => { RS.mix = String(RS.mixReal); soloMain(); };
 C.rsMas = t => { const pr = RS.precios[t.dataset.p], old = nm(pr.t), d = old > 0 ? 1 - nm(pr.x) / old : 0, nt = Math.max(0, old + (+t.dataset.d)); pr.t = String(nt); pr.x = String(Math.round(nt * (1 - d) / 100) * 100); soloMain(); };
-I.mayF = t => { const m = mayLeer(); m[t.dataset.k] = t.value; mayGuardar(m); soloMain(); };
-I.mayP = t => { const m = mayLeer(); m.precio[t.dataset.p] = t.value; mayGuardar(m); soloMain(); };
+// mayoristas
+const myM = fn => t => { const m = mayLeer(); fn(m, t); mayGuardar(m); soloMain(); };
+I.mayF = myM((m, t) => { m[t.dataset.k] = t.value; });
+I.mayQ = myM((m, t) => { m.cant[t.dataset.p] = t.value; });
+I.mayP = myM((m, t) => { m.precio[t.dataset.p] = t.value; m.modo[t.dataset.p] = "precio"; });
+I.mayR = myM((m, t) => { m.rent[t.dataset.p] = t.value; m.modo[t.dataset.p] = "rent"; });
 C.mayImprimir = () => { initRS(); mayImprimir(); };
+C.myTab = b => { MY.tab = b.dataset.t; soloMain(); };
+C.myVerArch = () => { MY.verArch = !MY.verArch; soloMain(); };
+C.myLimpiar = () => { const m = mayLeer(); m.cant = {}; m.para = ""; m.consulta = ""; mayGuardar(m); soloMain(); };
+C.myCotizarConsulta = b => { const x = (mayDatos() || {consultas: []}).consultas.find(c => String(c.fila) === b.dataset.f); if (!x) return;
+  const m = mayLeer(); m.cant = {doble: x.doble ? String(x.doble) : "", individual: x.individual ? String(x.individual) : ""}; m.para = x.negocio || (x.nombre + " " + x.apellido).trim(); m.consulta = String(x.fila);
+  mayGuardar(m); MY.tab = "cotizar"; soloMain(); window.scrollTo(0, 0); };
+C.myConsEst = b => pedir("mayoristaConsulta", {fila: b.dataset.f, estado: b.dataset.e}, b.dataset.e === "archivada" ? "Consulta archivada" : "Listo", b);
+C.myPedNuevo = () => { initRS(); MY.ped = myPedDesde(null); myPedDlg(); };
+C.myPedEditar = b => { const x = (mayDatos() || {pedidos: []}).pedidos.find(p => p.id === b.dataset.id); if (!x) return; MY.ped = myPedDesde(x); myPedDlg(); };
+I.myPF = t => { MY.ped[t.dataset.k] = t.value; };
+I.myPI = t => { MY.ped.items[t.dataset.p][t.dataset.k] = t.value; const e = $("#mpTot"); if (e) e.textContent = money(PRODS.reduce((a, p) => a + Math.floor(nd(MY.ped.items[p].cantidad) || 0) * nm(MY.ped.items[p].precio), 0)); };
+I["myPEnt:change"] = t => { MY.ped.entrega = t.value; myPedDlg(); };
+I["myPPag:change"] = t => { MY.ped.pagado = t.checked; };
+C.myPedOk = b => { const P = MY.ped, items = PRODS.map(p => ({producto: p, cantidad: Math.floor(nd(P.items[p].cantidad) || 0), precio: nm(P.items[p].precio)})).filter(x => x.cantidad > 0);
+  const ro = !!P.id && P.estado !== "pendiente";
+  if (!ro) { if (!items.length) { errEn("mpErr", "Poné la cantidad de al menos una funda."); return; }
+    const sinP = items.find(x => !(x.precio > 0)); if (sinP) { errEn("mpErr", "Poné el precio de " + nombreP(sinP.producto) + "."); return; }
+    if (!String(P.negocio || P.nombre || "").trim()) { errEn("mpErr", "Poné el nombre del negocio."); return; } }
+  const data = Object.assign({}, P, {items: items}); delete data.estado;
+  pedir("mayoristaGuardar", {data: data}, P.id ? "Pedido guardado" : "Pedido cargado: queda pendiente, todavía no tocó el stock", b).then(r => { if (r) { L.cerrarDlg(); MY.tab = "pedidos"; if (!P.id) C.myLimpiar(); } }); };
+C.mySacar = b => { const x = (mayDatos() || {pedidos: []}).pedidos.find(p => p.id === b.dataset.id); if (!x) return; const st = S.data.stock || {}, q = {};
+  (x.items || []).forEach(it => { q[it.producto] = (q[it.producto] || 0) + it.cantidad; });
+  const falta = Object.keys(q).filter(p => q[p] > Math.max(0, (st[p] || {}).disponible || 0));
+  if (falta.length) { L.toast("No alcanza el stock: " + falta.map(p => nombreP(p) + " (son " + q[p] + " y hay " + Math.max(0, (st[p] || {}).disponible || 0) + ")").join(", ") + ". Recibí la tanda en el Taller o cargalas en Stock de fundas.", 7000); return; }
+  if (!confirm("¿Sacar del stock las fundas de este pedido?\n\n" + Object.keys(q).map(p => nombreP(p) + ": " + q[p] + " (quedan " + ((st[p] || {}).disponible - q[p]) + ")").join("\n") + "\n\nEl pedido pasa a Hoy " + (x.pagado ? "para prepararlo y despacharlo." : "esperando que te pague."))) return;
+  pedir("mayoristaSacar", {id: x.id}, "Listo: las fundas salieron del stock y el pedido está en Hoy", b); };
+C.myPedCancelar = b => { const x = (mayDatos() || {pedidos: []}).pedidos.find(p => p.id === b.dataset.id); if (!x) return;
+  if (!confirm(x.estado === "pendiente" ? "¿Cancelar este pedido?" : "¿Cancelar este pedido? Las fundas vuelven al stock.")) return;
+  pedir("mayoristaCancelar", {id: x.id}, "Pedido cancelado", b); };
 C.rsReset = () => { RS.init = false; initRS(); soloMain(); };
 C.rsGuardarParams = b => pedir("guardarConfig", {valores: {comision_mp: String(nd(RS.comision)), rentabilidad_objetivo: String(nd(RS.objetivo)), mix_tarjeta: String(nd(RS.mix))}}, "Parámetros guardados", b);
 C.rsAplicar = b => { const v = {precio_tarjeta: String(nm(RS.precios.doble.t)), precio_transferencia: String(nm(RS.precios.doble.x)), precio2_tarjeta: String(nm(RS.precios.individual.t)), precio2_transferencia: String(nm(RS.precios.individual.x))};
@@ -1079,6 +1240,7 @@ L.vista("productos", "Taller", "Productos y recetas", vProductos, () => ({n: PD.
 L.vista("insumos", "Taller", "Insumos", vInsumos, () => ({n: T() ? bajoMinimo().length : 0, bad: true}));
 L.vista("proveedores", "Taller", "Proveedores y gastos", vProveedores);
 L.vista("rentabilidad", "Números", "Precios y rentabilidad", vRentabilidad);
+L.vista("mayoristas", "Números", "Mayoristas", vMayoristas, () => { const D = mayDatos(); return {n: D ? D.consultas.filter(x => x.estado === "nueva").length + D.pedidos.filter(x => x.estado === "pendiente").length : 0}; });
 // las secciones plegables recuerdan si estaban abiertas al redibujar la pantalla
 document.addEventListener("toggle", e => { if (e.target && e.target.id === "pdRolloDet") PD.rolloAbierto = e.target.open; }, true);
 window.addEventListener("beforeunload", e => { if (PD.dirty) { e.preventDefault(); e.returnValue = ""; } });

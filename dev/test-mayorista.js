@@ -16,3 +16,46 @@ const m=enviados.find(o=>/Consulta por mayor/.test(o.subject)); assert(m,'mail a
 assert(/wa\.me\/5492664123456/.test(m.htmlBody),'link de WhatsApp normalizado');
 assert(env.post(Object.assign({},ok,{web:'spam'})).ok); assert.strictEqual(env.ctx.filas(env.ctx.H.mayoristas).length,1,'el robot no se guarda');
 console.log('MAYORISTA OK');
+
+/* ---------- pedidos mayoristas (20/11/2026) ---------- */
+const disp=id=>env.ctx.stock()[id].disponible;
+const d0=disp('doble'), i0=disp('individual');
+let res=env.post({accion:'resumen',token:tok}); assert(res.mayoristas&&res.mayoristas.consultas.length===1,'consultas en el resumen');
+const fila=res.mayoristas.consultas[0].fila;
+assert(env.post({accion:'mayoristaGuardar',token:tok,data:{negocio:'X',items:[]}}).error,'sin fundas');
+assert(env.post({accion:'mayoristaGuardar',token:tok,data:{negocio:'X',items:[{producto:'doble',cantidad:2,precio:0}]}}).error,'sin precio');
+const nMails=enviados.length;
+const g=env.post({accion:'mayoristaGuardar',token:tok,data:{negocio:'Pet Shop Ana',nombre:'Ana',apellido:'Pet',whatsapp:'0266 15 4123456',email:'ana@petshop.com',entrega:'domicilio',calle:'San Martín',numero:'100',prov_loc_cp:'San Luis / Villa Mercedes / 5730',
+  items:[{producto:'doble',cantidad:3,precio:50000},{producto:'individual',cantidad:1,precio:33000}],envio:25000,pagado:false,consulta:String(fila)}});
+assert(g.ok,g.error); assert(/^MY-\d{6}-001$/.test(g.id),g.id);
+assert.strictEqual(disp('doble'),d0,'pendiente: no toca el stock'); assert.strictEqual(disp('individual'),i0);
+res=env.post({accion:'resumen',token:tok}); const pm=res.mayoristas.pedidos[0];
+assert.strictEqual(pm.total,183000); assert.strictEqual(pm.estado,'pendiente'); assert.strictEqual(res.mayoristas.consultas[0].estado,'pedido','la consulta queda como "hizo pedido"');
+// editar mientras está pendiente
+assert(env.post({accion:'mayoristaGuardar',token:tok,data:Object.assign({},pm,{items:[{producto:'doble',cantidad:2,precio:50000},{producto:'individual',cantidad:1,precio:33000}],pagado:false})}).ok);
+res=env.post({accion:'resumen',token:tok}); assert.strictEqual(res.mayoristas.pedidos[0].total,133000,'editado');
+// sacar del stock: crea el pedido mayorista, descuenta, sin mails
+const sa=env.post({accion:'mayoristaSacar',token:tok,id:g.id}); assert(sa.ok,sa.error);
+assert.strictEqual(disp('doble'),d0-2,'descontó dobles'); assert.strictEqual(disp('individual'),i0-1,'descontó individual');
+assert(env.post({accion:'mayoristaSacar',token:tok,id:g.id}).error,'no se saca dos veces');
+let P=env.ctx.filas(env.ctx.H.pedidos).find(p=>p.id===sa.id);
+assert.strictEqual(P.origen,'mayorista'); assert.strictEqual(P.estado,'reserva','sin pagar: espera el pago'); assert.strictEqual(P.email,''); assert.strictEqual(String(P.cel_num),'2664123456');
+assert.strictEqual(env.ctx.stock().doble.disponible,d0-2,'la reserva mayorista no vence');
+assert.strictEqual(enviados.length,nMails,'no se mandó ningún mail');
+assert(env.post({accion:'pagado',token:tok,id:sa.id}).ok); assert.strictEqual(enviados.length,nMails,'pago confirmado sin mail');
+assert(env.post({accion:'despachar',token:tok,id:sa.id,tracking:'360000123456'}).ok); assert.strictEqual(enviados.length,nMails,'despacho sin mail');
+assert(env.post({accion:'mayoristaCancelar',token:tok,id:g.id}).error,'ya despachado: no se cancela');
+// no alcanza el stock
+const g2=env.post({accion:'mayoristaGuardar',token:tok,data:{negocio:'Grande',items:[{producto:'doble',cantidad:500,precio:45000}],pagado:true}}); assert(g2.ok);
+const sa2=env.post({accion:'mayoristaSacar',token:tok,id:g2.id}); assert(sa2.error&&/No alcanza el stock/.test(sa2.error),sa2.error);
+// sacar pagado y cancelar: vuelve al stock
+const g3=env.post({accion:'mayoristaGuardar',token:tok,data:{negocio:'Chico',items:[{producto:'doble',cantidad:1,precio:52000}],pagado:true,entrega:'mano'}}); assert(g3.ok);
+const dA=disp('doble'); const sa3=env.post({accion:'mayoristaSacar',token:tok,id:g3.id}); assert(sa3.ok);
+assert.strictEqual(env.ctx.filas(env.ctx.H.pedidos).find(p=>p.id===sa3.id).estado,'pagado'); assert.strictEqual(disp('doble'),dA-1);
+assert(env.post({accion:'mayoristaCancelar',token:tok,id:g3.id}).ok); assert.strictEqual(disp('doble'),dA,'cancelado: vuelve al stock');
+// consultas: archivar
+assert(env.post({accion:'mayoristaConsulta',token:tok,fila:fila,estado:'archivada'}).ok);
+assert.strictEqual(env.post({accion:'resumen',token:tok}).mayoristas.consultas[0].estado,'archivada');
+// no cuenta para Publicidad (no vino de un anuncio)
+assert.strictEqual(env.ctx.esFuera(P),true);
+console.log('PEDIDOS MAYORISTAS OK');

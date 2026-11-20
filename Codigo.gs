@@ -16,7 +16,7 @@
  */
 
 var TZ = 'America/Argentina/Buenos_Aires';
-var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores', mayoristas: 'Mayoristas'};
+var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores', mayoristas: 'Mayoristas', mped: 'PedidosMayoristas'};
 var COLS = {
   Pedidos: ['id','fecha','estado','pago','cantidad','total','nombre','apellido','dni','email','cel_cod','cel_num',
             'entrega','calle','numero','piso','depto','prov_loc_cp','sucursal','observaciones','vence',
@@ -31,6 +31,8 @@ var COLS = {
   PagosVendedores: ['fecha','codigo','monto','fundas','pedidos','notas'],   // cada pago de comisiones (los viernes); pedidos = IDs pagados, separados por coma
   Bajas: ['fecha','email'],
   Mayoristas: ['fecha','nombre','apellido','negocio','localidad','whatsapp','email','doble','individual','mensaje','estado'],   // consultas de venta por mayor desde la web (19/11/2026)
+  PedidosMayoristas: ['id','fecha','estado','negocio','nombre','apellido','whatsapp','email','dni','entrega','calle','numero','piso','depto','prov_loc_cp','sucursal',
+                      'items','envio','total','pagado','pedido','consulta','notas','actualizado'],   // pedidos por mayor cargados en el panel (20/11/2026)
   Config: ['clave','valor','descripcion'],
   TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
   TallerInsumos: ['id','nombre','descripcion','proveedor','envase','contenido','unidad','precio','minimo','activo','actualizado'],
@@ -89,7 +91,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '19/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '20/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -196,6 +198,10 @@ function rutear(r) {
     case 'guardarCupon': return conLock(function () { return guardarCupon(r); });
     case 'borrarCupon': return conLock(function () { return borrarCupon(r.codigo); });
     case 'vendedores': return vendedoresResumen();
+    case 'mayoristaGuardar': return conLock(function () { return mayoristaGuardar(r); });
+    case 'mayoristaSacar': return conLock(function () { return mayoristaSacar(r); });
+    case 'mayoristaCancelar': return conLock(function () { return mayoristaCancelar(r); });
+    case 'mayoristaConsulta': return conLock(function () { return mayoristaConsulta(r); });
     case 'pagarVendedor': return conLock(function () { return pagarVendedor(r.codigo, r.monto); });
     case 'corte': return {corte: leerDoc('Corte')};
     case 'insumos': return {insumos: leerDoc('Insumos')};
@@ -387,7 +393,8 @@ function crearPedido(r) {
    precio libre, cualquier medio de pago, entrega en mano posible, y no se le avisa a Meta
    ni cuenta como venta de un anuncio. */
 var MEDIOS = {efectivo: 'efectivo', transferencia: 'transferencia', tarjeta: 'tarjeta', otro: 'otro medio'};
-function esFuera(p) { return String(p.origen || '') === 'fuera'; }
+function esFuera(p) { var o = String(p.origen || ''); return o === 'fuera' || o === 'mayorista'; }   // los mayoristas se manejan igual: sin vencimiento, sin Meta
+function esMayorista(p) { return String(p.origen || '') === 'mayorista'; }
 function esMano(p) { return String(p.entrega || '') === 'mano'; }
 function ventaManual(r) {
   var c = cfg(), s = stock(), prods = productos(c);
@@ -432,6 +439,87 @@ function ventaManual(r) {
   var mail = '';
   try { mailVentaFuera(p, c); mail = p.email; } catch (e) { mail = ''; console.error(e); }
   return {id: p.id, mail: mail};
+}
+/* ================= PEDIDOS MAYORISTAS (20/11/2026, pedido del dueño) =================
+   Se cargan en el panel (Números → Mayoristas). Mientras están "pendiente" NO tocan el stock: puede que
+   se manden a confeccionar y la web sigue vendiendo. Con "Sacar del stock" se crea un pedido en Pedidos
+   (origen 'mayorista': sin vencimiento, sin Meta, sin mails al negocio) que descuenta las fundas y sigue
+   por Hoy hasta el despacho. */
+function itemsMay(x) { try { var j = JSON.parse(x.items || '[]'); return Array.isArray(j) ? j : []; } catch (e) { return []; } }
+function nombreProdId(prods, id) { var p = prods.filter(function (x) { return x.id === id; })[0]; return p ? p.nombre : id; }
+function mayoristasDatos() {
+  var cons = hoja(H.mayoristas) ? filas(H.mayoristas).map(function (x) {
+    return {fila: x._fila, fecha: fmtFecha(x.fecha), nombre: String(x.nombre), apellido: String(x.apellido), negocio: String(x.negocio), localidad: String(x.localidad),
+      whatsapp: String(x.whatsapp), email: String(x.email), doble: num(x.doble), individual: num(x.individual), mensaje: String(x.mensaje), estado: String(x.estado || 'nueva')};
+  }).reverse() : [];
+  var ped = hoja(H.mped) ? filas(H.mped).map(function (x) {
+    var o = {}; COLS.PedidosMayoristas.forEach(function (k) { o[k] = x[k] instanceof Date ? fmtFecha(x[k]) : x[k]; });
+    o.id = String(x.id); o.items = itemsMay(x); o.pagado = x.pagado === 'SI'; o.total = num(x.total); o.envio = num(x.envio); return o;
+  }).reverse() : [];
+  return {consultas: cons, pedidos: ped};
+}
+function mayoristaGuardar(r) {
+  var d = r.data || {}, prods = productos(cfg()), items = [];
+  (Array.isArray(d.items) ? d.items : []).forEach(function (it) {
+    var id = it.producto === 'individual' ? 'individual' : 'doble', q = Math.max(0, Math.min(500, Math.floor(num(it.cantidad)))), pr = Math.round(num(it.precio));
+    if (!q) return;
+    if (!(pr > 0)) throw new Error('Poné el precio de ' + nombreProdId(prods, id) + '.');
+    items.push({producto: id, cantidad: q, precio: pr});
+  });
+  var o = {negocio: limpiar(d.negocio, 80), nombre: limpiar(d.nombre, 60), apellido: limpiar(d.apellido, 60), whatsapp: limpiar(d.whatsapp, 30), email: limpiar(d.email, 100).toLowerCase(),
+    dni: limpiar(d.dni, 13).replace(/\D/g, ''), entrega: ['domicilio', 'sucursal', 'mano'].indexOf(d.entrega) >= 0 ? d.entrega : 'domicilio',
+    calle: limpiar(d.calle, 80), numero: limpiar(d.numero, 10), piso: limpiar(d.piso, 5), depto: limpiar(d.depto, 5), prov_loc_cp: limpiar(d.prov_loc_cp, 120), sucursal: limpiar(d.sucursal, 80),
+    items: JSON.stringify(items), envio: Math.max(0, Math.round(num(d.envio))), total: items.reduce(function (a, x) { return a + x.cantidad * x.precio; }, 0),
+    pagado: d.pagado ? 'SI' : 'NO', consulta: limpiar(d.consulta, 10), notas: limpiar(d.notas, 300), actualizado: ahora()};
+  asegurarHoja(H.mped);
+  var x = d.id ? filas(H.mped).filter(function (y) { return String(y.id) === String(d.id); })[0] : null;
+  if (d.id && !x) throw new Error('No existe el pedido ' + d.id);
+  if (x && x.estado !== 'pendiente') { setear(H.mped, x._fila, {notas: o.notas, actualizado: o.actualizado}); return {id: String(x.id)}; }   // ya salió del stock: solo las notas
+  if (!items.length) throw new Error('Poné la cantidad de al menos una funda.');
+  if (!o.negocio && !o.nombre) throw new Error('Poné el nombre del negocio o de quien compra.');
+  if (x) { setear(H.mped, x._fila, o); return {id: String(x.id)}; }
+  var pre = 'MY-' + Utilities.formatDate(ahora(), TZ, 'yyMMdd') + '-', n = filas(H.mped).filter(function (y) { return String(y.id).indexOf(pre) === 0; }).length + 1;
+  var id = pre + ('00' + n).slice(-3);
+  agregar(H.mped, Object.assign({id: id, fecha: ahora(), estado: 'pendiente', pedido: ''}, o));
+  if (o.consulta && hoja(H.mayoristas)) { var cs = filas(H.mayoristas).filter(function (y) { return String(y._fila) === o.consulta; })[0]; if (cs) setear(H.mayoristas, cs._fila, {estado: 'pedido'}); }
+  return {id: id};
+}
+function mayoristaSacar(r) {
+  var x = filas(H.mped).filter(function (y) { return String(y.id) === String(r.id); })[0];
+  if (!x) throw new Error('No existe el pedido ' + r.id);
+  if (x.estado !== 'pendiente') throw new Error('Ese pedido ya salió del stock.');
+  var c = cfg(), s = stock(), prods = productos(c), items = itemsMay(x), falta = [], q = {};
+  items.forEach(function (it) { q[it.producto] = (q[it.producto] || 0) + num(it.cantidad); });
+  Object.keys(q).forEach(function (id) { var d = Math.max(0, s[id].disponible); if (d < q[id]) falta.push(nombreProdId(prods, id) + ': son ' + q[id] + ' y hay ' + d); });
+  if (falta.length) throw new Error('No alcanza el stock (' + falta.join(' · ') + '). Recibí la tanda en el Taller o cargá las fundas en Stock de fundas.');
+  var ya = ahora(), pagado = x.pagado === 'SI', cel = waNorm(x.whatsapp).replace(/^549/, '').replace(/\D/g, '');
+  var it2 = items.map(function (it) { var pr = prods.filter(function (y) { return y.id === it.producto; })[0] || {}; return {producto: it.producto, cantidad: num(it.cantidad), nombre: pr.nombre || it.producto, precio: num(it.precio), precio_tarjeta: num(pr.tarjeta)}; });
+  var p = {id: siguienteIdPedido(ya), fecha: ya, estado: pagado ? 'pagado' : 'reserva', pago: 'transferencia', medio: 'transferencia', origen: 'mayorista', canal: String(x.negocio || ''),
+    nombre: String(x.nombre || x.negocio), apellido: String(x.apellido || (x.nombre ? x.negocio : '')), dni: String(x.dni || ''), email: '', cel_cod: '', cel_num: cel,
+    entrega: String(x.entrega || 'domicilio'), calle: String(x.calle), numero: String(x.numero), piso: String(x.piso), depto: String(x.depto), prov_loc_cp: String(x.prov_loc_cp), sucursal: String(x.sucursal),
+    observaciones: 'Pedido mayorista ' + x.id + (x.negocio ? ' · ' + x.negocio : ''), items: JSON.stringify(it2), cantidad: it2.reduce(function (a, y) { return a + y.cantidad; }, 0),
+    total: num(x.total), descuento: '', vence: '', pagado_el: pagado ? ya : '', bonificacion: 'Precio mayorista', notas: String(x.notas || '')};
+  agregar(H.pedidos, p);
+  setear(H.mped, x._fila, {estado: 'enviado', pedido: p.id, actualizado: ya});
+  return {id: p.id};
+}
+function mayoristaCancelar(r) {
+  var x = filas(H.mped).filter(function (y) { return String(y.id) === String(r.id); })[0];
+  if (!x) throw new Error('No existe el pedido ' + r.id);
+  if (x.estado === 'cancelado') return {};
+  if (x.pedido) {
+    var p = filas(H.pedidos).filter(function (y) { return String(y.id) === String(x.pedido); })[0];
+    if (p && ['despachado', 'entregado'].indexOf(p.estado) >= 0) throw new Error('El pedido ya salió (' + p.id + '): no se puede cancelar.');
+    if (p) setear(H.pedidos, p._fila, {estado: 'cancelado'});   // las fundas vuelven al stock
+  }
+  setear(H.mped, x._fila, {estado: 'cancelado', actualizado: ahora()});
+  return {};
+}
+function mayoristaConsulta(r) {
+  var cs = filas(H.mayoristas).filter(function (y) { return String(y._fila) === String(r.fila); })[0];
+  if (!cs) throw new Error('No encontré esa consulta.');
+  setear(H.mayoristas, cs._fila, {estado: ['nueva', 'respondida', 'archivada', 'pedido'].indexOf(r.estado) >= 0 ? r.estado : 'nueva'});
+  return {};
 }
 function detalleEntregaMano() { return 'En mano: la coordinamos con vos'; }
 function mailVentaFuera(p, c) {   // el "¡Gracias por tu compra!" de una venta cargada desde el panel
@@ -665,7 +753,7 @@ function resumen() {
     v.unidades += num(p.cantidad); v.total += num(p.total); v[p.pago] += num(p.total);
   });
   return {
-    stock: s, ventasMes: v, pedidos: ped, config: c,
+    stock: s, ventasMes: v, pedidos: ped, config: c, mayoristas: mayoristasDatos(),
     movimientos: filas(H.mov).map(function (m) { return {fecha: fmtFecha(m.fecha), tipo: m.tipo, cantidad: num(m.cantidad), motivo: m.motivo, producto: m.producto === 'individual' ? 'individual' : 'doble'}; }).reverse(),
     productos: productos(c),
     avisos: filas(H.avisos).filter(function (a) { return a.avisado !== 'SI'; }).map(function (a) { return a.email; }),
@@ -786,7 +874,7 @@ function exportarAndreani(ids) {
   var paq = ['', num(c.peso_gr), num(c.alto_cm), num(c.ancho_cm), num(c.profundidad_cm), num(c.valor_declarado)];
   var fd = [], fs = [];
   pend.forEach(function (p) {
-    var dest = [p.id, p.nombre, p.apellido, String(p.dni), p.email, String(p.cel_cod), String(p.cel_num)];
+    var dest = [p.id, p.nombre, p.apellido, String(p.dni), p.email || (esMayorista(p) ? c.email_aviso : ''), String(p.cel_cod), String(p.cel_num)];   // mayorista sin mail: a Andreani va el del dueño
     if (p.entrega === 'sucursal') fs.push(paq.concat(dest, [p.sucursal]));
     else fd.push(paq.concat(dest, [p.calle, String(p.numero), String(p.piso || ''), String(p.depto || ''), p.prov_loc_cp, p.observaciones || '']));
   });
@@ -1578,6 +1666,7 @@ function avisoDueño(asunto, p, c) {
   enviar(c.email_aviso, asunto, plantilla(asunto, '<p>' + esc(p.nombre + ' ' + p.apellido) + ' · ' + esc(p.email) + ' · ' + esc(p.cel_cod + ' ' + p.cel_num) + '</p>' + detalle(p, c), c), c);
 }
 function enviar(to, asunto, html, c) {
+  if (!to) return;   // pedidos mayoristas: al negocio no se le manda ningún mail (decisión del dueño, 20/11/2026)
   if (MailApp.getRemainingDailyQuota() < 1) throw new Error('Se alcanzó el límite diario de mails de Google. Los que faltan se pueden mandar mañana.');
   MailApp.sendEmail({to: to, subject: asunto, htmlBody: html, name: 'Los Perrines', replyTo: c.email_aviso || undefined});
 }

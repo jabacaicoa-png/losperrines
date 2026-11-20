@@ -138,11 +138,11 @@ function tarjetaPedido(p){
   else if(p.estado==="pagado"||p.estado==="exportado"){
     acts+='<div class="inline" style="width:100%"><input class="inp" inputmode="numeric" placeholder="N° de seguimiento Andreani" id="tr-'+esc(p.id)+'"><button class="btn main" data-a="despachar" data-id="'+esc(p.id)+'">Despachar</button></div>';
   }
-  if(["reserva","pagado","exportado","despachado","entregado"].indexOf(p.estado)>=0) acts+='<button class="btn ghost" data-a="reenviar" data-id="'+esc(p.id)+'">Reenviar mail</button>';
+  if(p.origen!=="mayorista"&&["reserva","pagado","exportado","despachado","entregado"].indexOf(p.estado)>=0) acts+='<button class="btn ghost" data-a="reenviar" data-id="'+esc(p.id)+'">Reenviar mail</button>';
   var wa=String(p.cel_cod||"")+String(p.cel_num||""); if(wa) acts+='<a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/549'+esc(wa.replace(/\D/g,""))+'">WhatsApp</a>';
   return '<article class="order"><div class="head"><div class="who"><b>'+esc(p.nombre+" "+p.apellido)+'</b><small>'+esc(p.id)+' · '+esc(p.fecha)+'</small></div>'
     +'<div class="amt"><b>'+money(p.total)+'</b><small class="meta">'+medio+' · '+esc(p._items||(p.cantidad+' u.'))+'</small></div></div>'
-    +'<div class="meta"><span class="st '+esc(p.estado)+'">'+esc(mano&&p.estado==="pagado"?"Pagado · para entregar en mano":p.origen==="fuera"&&p.estado==="reserva"?"Vendido por fuera · falta que te pague":LABEL[p.estado]||p.estado)+'</span>'+(p.origen==="fuera"?' <span class="pill">Fuera de la web'+(p.canal?' · '+esc(p.canal):'')+'</span>':'')+'</div>'
+    +'<div class="meta"><span class="st '+esc(p.estado)+'">'+esc(mano&&p.estado==="pagado"?"Pagado · para entregar en mano":(p.origen==="fuera"||p.origen==="mayorista")&&p.estado==="reserva"?(p.origen==="mayorista"?"Mayorista":"Vendido por fuera")+" · falta que te pague":LABEL[p.estado]||p.estado)+'</span>'+(p.origen==="fuera"?' <span class="pill">Fuera de la web'+(p.canal?' · '+esc(p.canal):'')+'</span>':p.origen==="mayorista"?' <span class="pill">Mayorista'+(p.canal?' · '+esc(p.canal):'')+'</span>':'')+'</div>'
     +'<div class="meta">'+esc(dest)+'</div><div class="meta">'+(p.dni?'DNI '+esc(p.dni)+' · ':'')+''+esc(p.email)+' · '+esc(p.cel_cod+" "+p.cel_num)+'</div>'
     +(p.tracking?'<div class="meta">Seguimiento: <a href="https://www.andreani.com/envio/'+esc(p.tracking)+'" target="_blank" rel="noopener">'+esc(p.tracking)+'</a></div>':'')
     +(p.cupon?'<div class="meta">Código '+esc(p.cupon)+': −'+money(p.descuento)+'</div>':'')
