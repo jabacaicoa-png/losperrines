@@ -532,7 +532,7 @@ details.m-det[open] summary::after{content:"−"}
    fondo blanco, letra Inter, sin tarjetas de colores. Las secciones viejas quedan en el HTML con class="viejo" (ocultas). ===== */
 .viejo{display:none!important}
 :root:not([data-theme="dark"]){--bg:#FFFFFF;--line:#E8E8E3;--field:#F6F6F3}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14170F}}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14170F;--line:#323A28;--field:#181C13}}
 body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px}
 h1,h2,h3,.btn,.cart-btn,.brand{font-family:Inter,system-ui,sans-serif}
 h2{font-size:clamp(1.35rem,4.5vw,1.8rem);font-weight:700;letter-spacing:-.01em}
@@ -632,6 +632,8 @@ h3{font-weight:600}
 .my-ok{background:#E6F2E2;border:1px solid #BFDDB7;border-radius:8px;padding:16px;font-size:.98rem}
 .anuncio-my{display:block;text-align:center;font-size:.86rem;color:var(--ink);background:var(--field);border-bottom:1px solid var(--line);padding:5px 10px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .anuncio-my b{color:var(--olive)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .anuncio-my b{color:#C2CD86}}
+:root[data-theme="dark"] .anuncio-my b{color:#C2CD86}
 @media(max-width:899px){.anuncio-my{font-size:min(.8rem,3.1vw);padding:4px 8px}}
 </style>
 </head>
