@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "20/11 · 2";
+window.PANEL_VERSION = "20/11 · 3";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -768,7 +768,7 @@ function mayImprimir() {
     + '<p class="intro">Fundas canasto para el asiento trasero del auto: <b>impermeables, acolchadas y antidesgarro</b>, con laterales que cubren las puertas. Un producto con buen margen de reventa.</p>'
     + '<div class="prods">' + prods.map(card).join("") + "</div>" + detalle
     + '<div class="cols"><div><h3>Condiciones</h3><div class="box"><ul><li><b>Precios por cantidad:</b> consultanos por tu pedido.</li><li><b>Envío incluido</b> a tu local por Andreani.</li><li>Pago por <b>transferencia antes del despacho</b>.</li>'
-    + "<li>Precio sugerido de venta: <b>el mismo de nuestra web, de contado</b>, para que no compitamos entre nosotros.</li>" + (nd(m.validez) > 0 ? "<li>Precios válidos por " + esc(m.validez) + " días.</li>" : "") + "</ul></div></div>"
+    + "<li>Precio sugerido de venta: <b>el mismo de nuestra web, de contado</b>.</li>" + (nd(m.validez) > 0 ? "<li>Precios válidos por " + esc(m.validez) + " días.</li>" : "") + "</ul></div></div>"
     + '<div><h3>Por qué se vende</h3><div class="box"><ul><li><b>Impermeable:</b> agua, barro y pelos no llegan al tapizado.</li><li><b>Canasto cerrado:</b> cubre asiento, respaldo y puertas.</li><li><b>Cierres en las cuatro esquinas</b> y abertura para el cinturón.</li><li>Viene en su <b>estuche</b> para guardarla.</li><li><b>Garantía de fábrica</b> y atención directa con quien la fabrica.</li></ul></div></div></div>'
     + '<div class="foot"><span>Fotos, videos y medidas: <b>www.losperrines.com.ar</b></span><span>Escribinos para hacer tu pedido</span></div></div>'
     + "<script>window.onload=function(){setTimeout(function(){window.print();},700);};<\/script></body></html>";
