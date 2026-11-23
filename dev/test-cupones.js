@@ -1,4 +1,5 @@
 // Códigos de descuento: porcentaje o monto fijo en $ por funda (16/11/2026). Uso: node dev/test-cupones.js
+process.env.TZ='America/Argentina/Buenos_Aires';   // como el proyecto de Apps Script
 const {makeEnv}=require('./gas-emu'); const assert=require('assert');
 const env=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs')}); env.ctx.instalar(); require('./seed-store.js')(env);
 const tok=env.token; let r0; const P=b=>{const r=env.post(b); if(!r.ok) throw new Error(b.accion+': '+r.error); return r;};
@@ -71,5 +72,18 @@ console.log('vendedores: ok');
   e2.ctx.ahora=()=>new Date('2026-11-28T00:05:00-03:00');
   r1=e2.post({accion:'cupon',codigo:'BLACK',email:'z@x.com'}); assert(!r1.ok&&/vencido/.test(r1.error),'el 28 ya no vale');
   console.log('código con tarjeta y fecha de inicio: ok');
+}
+
+// ===== Promo en la web (franja que carga el dueño, 23/11/2026) =====
+{
+  const e3=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs')}); e3.ctx.instalar(); require('./seed-store.js')(e3);
+  const Q=b=>{const r=e3.post(b); if(!r.ok) throw new Error(b.accion+': '+r.error); return r;};
+  Q({accion:'guardarConfig',token:e3.token,valores:{promo_texto:'🖤 BLACK FRIDAY: 5% OFF con el código BLACK',promo_codigo:'black',promo_desde:'2026-11-25',promo_hasta:'2026-11-27'}});
+  e3.ctx.ahora=()=>new Date('2026-11-24T12:00:00-03:00'); assert.equal(Q({accion:'config'}).promo,null,'antes no se ve');
+  e3.ctx.ahora=()=>new Date('2026-11-25T00:01:00-03:00'); const pr=Q({accion:'config'}).promo; assert(pr&&pr.codigo==='BLACK'&&/BLACK FRIDAY/.test(pr.texto),'el 25 se ve');
+  e3.ctx.ahora=()=>new Date('2026-11-27T23:58:00-03:00'); assert(Q({accion:'config'}).promo,'el 27 a la noche sigue');
+  e3.ctx.ahora=()=>new Date('2026-11-28T00:01:00-03:00'); assert.equal(Q({accion:'config'}).promo,null,'el 28 se va sola');
+  Q({accion:'guardarConfig',token:e3.token,valores:{promo_texto:''}}); e3.ctx.ahora=()=>new Date('2026-11-26T12:00:00-03:00'); assert.equal(Q({accion:'config'}).promo,null,'sin texto no hay promo');
+  console.log('promo en la web: ok');
 }
 console.log('ok');

@@ -83,6 +83,10 @@ var CONFIG_DEF = [
   ['mix_tarjeta','50','% estimado de ventas con tarjeta (se usa hasta tener ventas reales).'],
   ['taller_migrado','','Fecha en que se importaron los datos de las herramientas viejas.'],
   ['resumen_hora','20','Hora del resumen diario por mail (0 a 23). Vacío = no mandarlo.'],
+  ['promo_texto','','Promo en la web: texto de la franja de arriba (vacío = sin promo).'],
+  ['promo_codigo','','Promo en la web: código que se carga solo en el carrito (opcional).'],
+  ['promo_desde','','Promo en la web: primer día que se muestra (AAAA-MM-DD).'],
+  ['promo_hasta','','Promo en la web: último día que se muestra (AAAA-MM-DD).'],
   ['alerta_despacho_dias','2','Días desde el pago para avisar que un pedido se está atrasando.'],
   ['consulta_entrega_dias','5','Días después del despacho para preguntarle al cliente si le llegó (vacío = no preguntar).'],
   ['instagram','losperrines_','Tu usuario de Instagram, sin @ (se lo mostramos al cliente cuando recibe).'],
@@ -91,7 +95,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '23/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '23/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -292,8 +296,25 @@ function publicoConfig(r) {
     vista: !!vista && c.tienda_abierta !== 'SI',   // el cartel de vista previa solo con la tienda cerrada al público
     precio_tarjeta: num(c.precio_tarjeta), precio_transferencia: num(c.precio_transferencia),
     cuotas: num(c.cuotas_max), whatsapp: c.whatsapp, producto: c.producto, valor_envio: num(c.valor_envio),
-    disponible: Math.max(0, s.doble.disponible), productos: prods, media: listaMedia()
+    disponible: Math.max(0, s.doble.disponible), productos: prods, media: listaMedia(), promo: promoActiva(c, !!vista)
   };
+}
+/* Promo en la web (23/11/2026): el dueño carga texto, código y fechas en Configuración; se muestra sola entre esas fechas.
+   Con el link de vista previa se ve también antes de empezar (para revisarla), nunca después de terminar. */
+function diaCfg(v, fin) {
+  var d = null;
+  if (v instanceof Date) d = new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  else { var m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/) || null, m2 = String(v || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m) d = new Date(+m[1], +m[2] - 1, +m[3]); else if (m2) d = new Date(+m2[3], +m2[2] - 1, +m2[1]); }
+  if (d && fin) d = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+  return d;
+}
+function promoActiva(c, vista) {
+  var txt = limpiar(c.promo_texto, 140); if (!txt) return null;
+  var t = ahora(), de = diaCfg(c.promo_desde), ha = diaCfg(c.promo_hasta, true);
+  if (ha && t > ha) return null;
+  if (de && t < de && !vista) return null;
+  return {texto: txt, codigo: limpiar(c.promo_codigo, 30).toUpperCase().replace(/[^A-Z0-9]/g, '')};
 }
 function limpiar(v, max) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max || 120); }
 function validar(r) {
@@ -870,12 +891,12 @@ function guardarConfig(vals) {
   if (vals && vals.whatsapp != null && String(vals.whatsapp).trim()) vals.whatsapp = waNorm(vals.whatsapp);
   var sh = hoja(H.config), hechas = {};
   filas(H.config).forEach(function (r) {
-    if (Object.prototype.hasOwnProperty.call(vals, r.clave)) { sh.getRange(r._fila, 2).setValue(String(vals[r.clave]).trim()); hechas[r.clave] = 1; }
+    if (Object.prototype.hasOwnProperty.call(vals, r.clave)) { var cel = sh.getRange(r._fila, 2); if (/^promo_/.test(r.clave)) cel.setNumberFormat('@'); cel.setValue(String(vals[r.clave]).trim()); hechas[r.clave] = 1; }
   });
   Object.keys(vals).forEach(function (k) {
     if (hechas[k]) return;
     var def = CONFIG_DEF.filter(function (d) { return d[0] === k; })[0];
-    if (def) sh.appendRow([k, String(vals[k]).trim(), def[2]]);
+    if (def) { sh.appendRow([k, '', def[2]]); var cel2 = sh.getRange(sh.getLastRow(), 2); cel2.setNumberFormat('@'); cel2.setValue(String(vals[k]).trim()); }
   });
   return {};
 }

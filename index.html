@@ -632,8 +632,12 @@ h3{font-weight:600}
 .my-ok{background:#E6F2E2;border:1px solid #BFDDB7;border-radius:8px;padding:16px;font-size:.98rem}
 .anuncio-my{display:block;text-align:center;font-size:.86rem;color:var(--ink);background:var(--field);border-bottom:1px solid var(--line);padding:5px 10px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .anuncio-my b{color:var(--olive)}
+.anuncio-my.promo{background:#111;color:#D9E15A;font-weight:700;border-bottom:0;white-space:normal;line-height:1.3}   /* promo que carga el dueño en Configuración (23/11/2026) */
+.p-promo{margin:10px 0 2px;background:#111;color:#fff;border-radius:10px;padding:9px 12px;font-size:.92rem;font-weight:600;line-height:1.35}
+.p-promo b{color:#D9E15A;letter-spacing:.04em}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .anuncio-my b{color:#C2CD86}}
 :root[data-theme="dark"] .anuncio-my b{color:#C2CD86}
+.anuncio-my.promo b{color:#fff}
 @media(max-width:899px){.anuncio-my{font-size:min(.8rem,3.1vw);padding:4px 8px}}
 </style>
 </head>
@@ -1032,6 +1036,7 @@ if(!/^https:\/\/script\.google\.com\//.test(API)){ show("pronto"); return; }
 api("config").then(function(c){
   C=c;
   if(!c.abierta){ show("pronto"); return; }   /* con la tienda cerrada solo se registra la visita */
+  if(c.promo&&c.promo.texto){ var am=$(".anuncio-my"); if(am){ am.className="anuncio-my promo"; am.href="#producto"; am.textContent=c.promo.texto; } if(c.promo.codigo&&!CUPON_URL) CUPON_URL=c.promo.codigo; }
   show("tienda"); topOcultar(); $("#previewBar").hidden=!c.vista||c.publica===true;
   if(location.hash==="#mayorista") setTimeout(function(){ var m=$("#mayorista"); if(m) m.scrollIntoView(); },350);   // link corto /mayorista (grupos de comerciantes): va directo al formulario
   pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
@@ -1141,6 +1146,7 @@ function pintarProducto(){
     /* precio: las cuotas primero y después la transferencia (pedido del dueño, 18/11/2026: no mostrar el total con tarjeta grande) */
     +'<p class="p-cuo">'+(n>1?n+' cuotas sin interés de <b>'+money(p.precio_tarjeta/n)+'</b>':'<b>'+money(p.precio_tarjeta)+'</b> <span>con tarjeta</span>')+'</p>'
     +(p.precio_transferencia<p.precio_tarjeta?'<p class="p-tr">o <b>'+money(p.precio_transferencia)+'</b> por transferencia<span class="off">'+d+'% OFF</span></p>':'')
+    +(C.promo&&C.promo.texto?'<p class="p-promo">'+esc(C.promo.texto)+(C.promo.codigo?' <span style="opacity:.8;font-weight:500">· Se aplica solo al comprar.</span>':'')+'</p>':'')
     +(ps.length>1?'<p class="p-lbl">Tamaño: <b>'+esc(sub||p.nombre)+'</b></p><div class="p-op" role="group" aria-label="Tamaño">'+ps.map(function(x){ return '<button type="button" data-psel="'+x.id+'"'+(x.id===p.id?' class="on" aria-pressed="true"':' aria-pressed="false"')+'>'+(x.id==="individual"?"1 plaza":"2 plazas")+(x.disponible<=0?' <small>· sin stock</small>':'')+'</button>'; }).join("")+'</div>':'')
     +(sin?'<p class="p-stock">Sin stock por el momento. Dejanos tu mail y te avisamos cuando vuelva.</p>':(p.disponible<=5?'<p class="p-stock">'+(p.disponible===1?'¡Queda la última!':'Últimas '+p.disponible+' unidades')+'</p>':''))
     +'<button class="btn btn-main p-buy" id="pBuy" data-addp="'+p.id+'">'+(sin?'Avisame cuando vuelva':'Comprar')+'</button>'
