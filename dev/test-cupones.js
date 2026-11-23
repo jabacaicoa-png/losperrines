@@ -45,4 +45,31 @@ assert(res&&/Hoy es viernes: comisiones para pagar/.test(res.htmlBody)&&/EMILIAN
 env.ctx.ahora=()=>new Date('2026-11-18T20:10:00-03:00'); const m4=env.mails.length; P({accion:'resumenAhora',token:tok});
 assert(!/comisiones para pagar/.test(env.mails.slice(m4).find(m=>/Resumen/.test(m.subject)).htmlBody),'el miércoles no');
 console.log('vendedores: ok');
+
+// ===== Código que vale también con tarjeta y con fecha de inicio (Black Friday, 23/11/2026) =====
+{
+  let pref=null;
+  const e2=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs'),fetch:(url,o)=>{ if(/checkout\/preferences/.test(url)){ pref=JSON.parse(o.payload); return {getResponseCode:()=>201,getContentText:()=>JSON.stringify({id:'PREF1',init_point:'https://mp/x'})}; } }});
+  e2.ctx.instalar(); require('./seed-store.js')(e2); e2.props.MP_ACCESS_TOKEN='TEST';
+  const Q=b=>{const r=e2.post(b); if(!r.ok) throw new Error(b.accion+': '+r.error); return r;};
+  e2.ctx.ahora=()=>new Date('2026-11-24T10:00:00-03:00');
+  Q({accion:'guardarCupon',token:e2.token,codigo:'BLACK',porcentaje:5,desde:'2026-11-25',vence:'2026-11-27',tarjeta:true});
+  const c=Q({accion:'recuperar',token:e2.token}).cupones.find(x=>x.codigo==='BLACK'); assert(c.tarjeta&&c.desde==='25/11/2026'&&c.vence==='27/11/2026','se guarda tarjeta y desde');
+  let r1=e2.post({accion:'cupon',codigo:'BLACK',email:'z@x.com'}); assert(!r1.ok&&/empieza a valer el 25\/11/.test(r1.error),'antes del 25 no vale: '+r1.error);
+  e2.ctx.ahora=()=>new Date('2026-11-25T00:05:00-03:00');
+  const ok=Q({accion:'cupon',codigo:'BLACK',email:'z@x.com'}); assert.equal(ok.tarjeta,true);
+  const dt={nombre:'Ana',apellido:'P',dni:'30111222',email:'t@x.com',cel_cod:'266',cel_num:'4111111',cp:'5700',prov_loc_cp:'SAN LUIS / SAN LUIS / 5700',entrega:'sucursal',sucursal:'San Luis Centro',pago:'tarjeta'};
+  const t=Q(Object.assign({accion:'pedido',cupon:'BLACK',items:[{producto:'doble',cantidad:1},{producto:'individual',cantidad:1}]},dt));
+  assert.equal(t.pago,'tarjeta');
+  assert.deepEqual(pref.items.map(i=>i.unit_price),[95000-4750,65000-3250],'Mercado Pago cobra con el 5% adentro');
+  const tr=Q(Object.assign({accion:'pedido',cupon:'BLACK',items:[{producto:'doble',cantidad:1}]},dt,{pago:'transferencia',email:'u@x.com'}));
+  assert.equal(tr.descuento,4275); assert.equal(tr.total,85500-4275);
+  // un código común (sin "también con tarjeta") no toca el precio con tarjeta
+  Q({accion:'guardarCupon',token:e2.token,codigo:'SOLOTR',porcentaje:10});
+  Q(Object.assign({accion:'pedido',cupon:'SOLOTR',items:[{producto:'doble',cantidad:1}]},dt,{email:'v@x.com'}));
+  assert.deepEqual(pref.items.map(i=>i.unit_price),[95000],'sin tarjeta: precio lleno');
+  e2.ctx.ahora=()=>new Date('2026-11-28T00:05:00-03:00');
+  r1=e2.post({accion:'cupon',codigo:'BLACK',email:'z@x.com'}); assert(!r1.ok&&/vencido/.test(r1.error),'el 28 ya no vale');
+  console.log('código con tarjeta y fecha de inicio: ok');
+}
 console.log('ok');
