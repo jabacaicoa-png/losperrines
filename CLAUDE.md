@@ -98,6 +98,6 @@ node dev/gas-emu.js Codigo.gs 8787 dev/seed-store.js   # backend emulado con tie
 - **Sin respuesta:** compra de prueba con tarjeta del 13/11 (LP-261113-002) vencida sin pago.
 - **Pendientes del dueño:** fotos reales de la doble; precio en Marketplace y plantillas de WhatsApp; valor del envío vs Andreani; comisión real de Mercado Pago; margen de costura en 1; dominio en nic.ar; pagar compras del 8/11 a Casa Natalia.
 - **Estrategia:** no usar precios tachados (confianza y Defensa del Consumidor); no pelear precio con las hamacas de Mercado Libre; vendedores, video del canasto, primeras opiniones, mayoristas.
-- **Medidas:** en IG dice 1,30 × 1,40 m y en la web (medidas1) 130 × 130: preguntado, sin respuesta.
+- **Medidas (23/11):** la doble mide **130 de ancho × 140 de largo**; el dueño lo corrigió en la web (panel → Configuración → Medidas y detalles). Ojo: el desglose viejo (38 + 40 + 52) sumaba 130; si reaparece, pedirle las partes. Los valores por defecto de `index.html`/`Codigo.gs` siguen con 130 × 130 (solo se usan si falla la planilla).
 - **Ofrecido y sin hacer:** página del vendedor; "Compartir por WhatsApp"; precio de lanzamiento con fecha; botón "Corregir precio" de ventas por fuera; perfil de Google Maps.
 - **Material:** fotos en Drive, carpeta **FOTOS REDES** (no van al repo); la web toma las del panel (carpeta "Los Perrines - Fotos y videos"). Desde la nube el conector de Drive baja hasta 10 MB: videos más grandes, que los adjunte en el chat. Gmail conectado: nunca mandar mails sin su OK.
