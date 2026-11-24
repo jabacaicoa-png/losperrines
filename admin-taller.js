@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "24/11 · 4";
+window.PANEL_VERSION = "24/11 · 5";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -629,10 +629,36 @@ function vRentabilidad() {
     + '<span class="muted small" style="max-width:260px">' + "Se usa el % que guardaste." + (RS.mixReal != null ? " Según tus ventas registradas sería " + RS.mixReal + "% (" + RS.ventas + " fundas, incluye pedidos de prueba). " + (String(RS.mixReal) !== RS.mix ? '<button class="linkb" data-a="rsMixReal">Usar ese</button>' : "") : "") + "</span></div>"
     + '<div class="acts" style="margin-top:12px"><button class="btn ghost sm" data-a="rsGuardarParams">Guardar comisión, objetivo y mezcla</button></div></div>';
   h += '<div class="cols2" style="margin-top:14px" id="rsCards">' + PRODS.map(p => rentCard(p, obj)).join("") + "</div>";
+  h += promoBloque(obj);
   h += '<div class="block"><b>Venta mayorista:</b> ahora tiene su propia solapa, <button class="linkb" data-go="mayoristas">Números → Mayoristas</button>.</div>';
   const cambios = PRODS.some(p => { const k = p === "doble" ? ["precio_tarjeta", "precio_transferencia"] : ["precio2_tarjeta", "precio2_transferencia"]; return String(nm(RS.precios[p].t)) !== String(nm(c[k[0]])) || String(nm(RS.precios[p].x)) !== String(nm(c[k[1]])); });
   h += '<div class="block acts" style="justify-content:space-between">' + (cambios ? "<b>Estos precios son distintos a los de la web.</b>" : '<span class="muted">Son los precios que está mostrando la web.</span>')
     + '<span class="acts"><button class="btn ghost" data-a="rsReset"' + (cambios ? "" : " disabled") + '>Volver a los de la web</button><button class="btn main" data-a="rsAplicar"' + (cambios ? "" : " disabled") + ">Aplicar precios a la web</button></span></div>";
+  return h;
+}
+/* Probá una promo (24/11/2026, pedido del dueño para el Black Friday): un % de descuento sobre los precios de
+   arriba, con tarjeta y transferencia (como un código con "También con tarjeta"), para ver cuánto se ahorra el
+   cliente en pesos y cómo queda la rentabilidad. Es solo para mirar: no toca la web ni crea el código.
+   El descuento se redondea al peso, igual que en Codigo.gs. */
+function promoBloque(obj) {
+  if (RS.promo == null) { let v = null; try { v = localStorage.getItem("lp_promo_pct"); } catch (e) {} RS.promo = v || "10"; }
+  const d = Math.max(0, Math.min(90, nd(RS.promo))) / 100;
+  let h = '<div class="block" id="rsPromo"><h3 style="margin-top:0">Probá una promo</h3>'
+    + '<p class="muted small" style="margin:0 0 10px">Un % de descuento con tarjeta y transferencia, sobre los precios de arriba. Es solo para mirar: no cambia la web ni crea el código.</p>'
+    + '<div class="acts" style="align-items:end;gap:8px 10px;margin-bottom:12px"><label class="f" style="margin:0">Descuento<span class="unitw"><input class="inp xs" id="rs-promo" data-in="rsPromo" inputmode="decimal" value="' + esc(RS.promo) + '"> %</span></label>'
+    + [5, 10, 15, 20].map(n => '<button class="btn ghost sm" data-a="rsPromoSet" data-v="' + n + '">' + n + "%</button>").join("") + "</div>";
+  h += '<div class="cols2">' + PRODS.map(p => {
+    if (fichaGuardada(p)._nueva) return "";
+    const pr = RS.precios[p], pt = nm(pr.t), px = nm(pr.x), at = Math.round(pt * d), ax = Math.round(px * d);
+    const r0 = rent(p), r = rent(p, {t: pt - at, x: px - ax});
+    const cuota = v => money(Math.round(v / 3));
+    return '<div style="margin-top:0"><h4 style="margin:0 0 6px">' + esc(nombreP(p)) + "</h4>"
+      + '<div class="tw"><table><thead><tr><th>Pago</th><th class="n">Precio</th><th class="n">Ahorra</th><th class="n">Ganás</th></tr></thead><tbody>'
+      + "<tr><td>Tarjeta</td><td class='n'><s class='muted small'>" + money(pt) + "</s><br><b>" + money(pt - at) + "</b><br><span class='muted small'>3 de " + cuota(pt - at) + "</span></td><td class='n'><b>" + money(at) + "</b></td><td class='n'>" + money(r.gT) + "<br>" + pillR(r.rT, obj) + "<br><span class='muted small'>antes " + money(r0.gT) + "</span></td></tr>"
+      + "<tr><td>Transf.</td><td class='n'><s class='muted small'>" + money(px) + "</s><br><b>" + money(px - ax) + "</b></td><td class='n'><b>" + money(ax) + "</b></td><td class='n'>" + money(r.gX) + "<br>" + pillR(r.rX, obj) + "<br><span class='muted small'>antes " + money(r0.gX) + "</span></td></tr>"
+      + "<tr class='tot'><td colspan='3'>Mezcla (" + esc(RS.mix) + "% tarjeta)</td><td class='n'>" + money(r.gMix) + "<br>" + pillR(r.rMix, obj) + "</td></tr></tbody></table></div>"
+      + '<p class="muted small" style="margin:6px 0 0">Por cada funda dejás de ganar ' + money(r0.gMix - r.gMix) + " (con la mezcla). " + (r.gMix > 0 ? "Para ganar lo mismo que sin promo, donde vendías 10 fundas tenés que vender <b>" + Math.ceil(10 * r0.gMix / r.gMix - 1e-9) + "</b>." : "Así perdés plata en cada funda.") + "</p></div>";
+  }).join("") + "</div></div>";
   return h;
 }
 /* Venta con código de vendedor (16/11/2026, pedido del dueño): el cliente paga por transferencia con
@@ -1183,7 +1209,9 @@ C.provBorrar = b => { if (!confirm("¿Archivar o borrar este proveedor? Si tiene
 // rentabilidad
 I.rsPrecio = t => { initRS(); RS.precios[t.dataset.p][t.dataset.k] = t.value; soloMain(); };
 I.rsP = t => { RS[t.dataset.k] = t.value; soloMain(); };
-I.rsMix = t => { RS.mix = t.value; const x = $("#rsMixTxt"); if (x) x.textContent = t.value + "%"; const c = $("#rsCards"); if (c) c.innerHTML = PRODS.map(p => rentCard(p, nd(RS.objetivo) / 100)).join(""); };
+I.rsMix = t => { RS.mix = t.value; const x = $("#rsMixTxt"); if (x) x.textContent = t.value + "%"; const c = $("#rsCards"); if (c) c.innerHTML = PRODS.map(p => rentCard(p, nd(RS.objetivo) / 100)).join(""); const pb = $("#rsPromo"); if (pb) pb.outerHTML = promoBloque(nd(RS.objetivo) / 100); };
+I.rsPromo = t => { RS.promo = t.value; try { localStorage.setItem("lp_promo_pct", t.value); } catch (e) {} soloMain(); };
+C.rsPromoSet = t => { RS.promo = t.dataset.v; try { localStorage.setItem("lp_promo_pct", t.dataset.v); } catch (e) {} soloMain(); };
 C.rsMixReal = () => { RS.mix = String(RS.mixReal); soloMain(); };
 C.rsMas = t => { const pr = RS.precios[t.dataset.p], old = nm(pr.t), d = old > 0 ? 1 - nm(pr.x) / old : 0, nt = Math.max(0, old + (+t.dataset.d)); pr.t = String(nt); pr.x = String(Math.round(nt * (1 - d) / 100) * 100); soloMain(); };
 // mayoristas
