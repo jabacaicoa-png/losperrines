@@ -287,11 +287,11 @@ function subirArchivos(files){
 }
 var RC=null, RCsel={};
 /* ---------- Mail a tus contactos (24/11/2026) ---------- */
-var DIF_DEF={asunto:"🐶 Tu perro atrás, tu auto limpio: envío gratis + un regalo si respondés",
-  texto:"Te quería contar de mi proyecto nuevo: Los Perrines, la funda canasto para llevar a tu perro en el asiento de atrás.\n\nCubre el asiento, el respaldo y los costados: chau pelos, barro y uñas en el tapizado. Es impermeable, acolchada y la hacemos acá.",
-  envio:"en San Luis te la llevamos en mano",regalo:"🎁 $3.000 de descuento extra\nRespondé este mail con la palabra QUIERO y te mandamos tu código.",firma:"¡Gracias!\nLos Perrines"};
-function difGet(){ var d={}; try{ d=JSON.parse(localStorage.getItem("lp_dif")||"{}"); }catch(e){} Object.keys(DIF_DEF).forEach(function(k){ if(d[k]==null) d[k]=DIF_DEF[k]; }); return d; }
-function difLeer(){ var d={asunto:$("#difAsunto").value,texto:$("#difTexto").value,envio:$("#difEnvio").value,regalo:$("#difRegalo").value,firma:$("#difFirma").value}; try{ localStorage.setItem("lp_dif",JSON.stringify(d)); }catch(e){} return {asunto:d.asunto,texto:d.texto,extraEnvio:d.envio,regalo:d.regalo,firma:d.firma}; }
+var DIF_DEF={asunto:"🐶 Funda para llevar a tu perro en el auto: envío gratis + un regalo",
+  texto:"Te presento Los Perrines: la funda canasto para llevar a tu perro atrás sin pelos ni barro en el auto.",
+  envio:"",regalo:"🎁 $3.000 de descuento extra\nRespondé este mail y te pasamos tu código.",firma:"Los Perrines"};
+function difGet(){ var d={}; try{ d=JSON.parse(localStorage.getItem("lp_dif2")||"{}"); }catch(e){} Object.keys(DIF_DEF).forEach(function(k){ if(d[k]==null) d[k]=DIF_DEF[k]; }); return d; }
+function difLeer(){ var d={asunto:$("#difAsunto").value,texto:$("#difTexto").value,envio:$("#difEnvio").value,regalo:$("#difRegalo").value,firma:$("#difFirma").value}; try{ localStorage.setItem("lp_dif2",JSON.stringify(d)); }catch(e){} return {asunto:d.asunto,texto:d.texto,extraEnvio:d.envio,regalo:d.regalo,firma:d.firma}; }
 function bloqueDifusion(st){
   var d=difGet(), cuantos=Math.min(st.pendiente||0,st.hoy||0);
   return '<div class="block"><h3>Mail a tus contactos</h3><p class="muted small" style="margin:-4px 0 10px">Para mandarle un mail promocional a gente que te conoce. Sale desde tu Gmail, con el nombre de cada uno, los precios de la web y un link para darse de baja (a los que se dan de baja no les llega más). Google deja unos 100 mails por día: guardamos 10 para los mails de las ventas, así que se manda de a tandas.</p>'
@@ -300,9 +300,9 @@ function bloqueDifusion(st){
     +'<button class="btn ghost" data-a="difCargar">Cargar contactos</button>'+(st.pendiente?' <button class="linkb small" data-a="difVaciar" style="margin-left:8px">Borrar los pendientes</button>':'')
     +'<h3 style="margin-top:16px">2. El mail</h3>'
     +'<label class="f">Asunto<input id="difAsunto" value="'+esc(d.asunto)+'"></label>'
-    +'<label class="f">Texto (va después de “Hola Ana,”)<textarea id="difTexto" rows="6">'+esc(d.texto)+'</textarea></label>'
-    +'<p class="muted small" style="margin:-4px 0 10px">Abajo del texto van solos: los precios de las fundas (los de la web), las cuotas, el % OFF por transferencia y el envío gratis.</p>'
-    +'<label class="f">Al lado de “Envío gratis a todo el país” (opcional)<input id="difEnvio" value="'+esc(d.envio)+'"></label>'
+    +'<label class="f">Texto (va después de “Hola Ana,”)<textarea id="difTexto" rows="3">'+esc(d.texto)+'</textarea></label>'
+    +'<p class="muted small" style="margin:-4px 0 10px">Abajo del texto van solos los precios de la web (cuotas y transferencia) y “Envío gratis a todo el país”.</p>'
+    +'<label class="f">Debajo de “Envío gratis” (opcional, ej. En San Luis te la llevamos en mano)<input id="difEnvio" value="'+esc(d.envio)+'"></label>'
     +'<label class="f">Recuadro amarillo (opcional · el primer renglón va grande)<textarea id="difRegalo" rows="2">'+esc(d.regalo)+'</textarea></label>'
     +'<label class="f">Firma<textarea id="difFirma" rows="2">'+esc(d.firma)+'</textarea></label>'
     +'<button class="btn ghost" data-a="difPrueba">Mandarme una prueba</button>'

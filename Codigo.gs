@@ -96,7 +96,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '24/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '24/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -2025,22 +2025,18 @@ function mailDifusion(d, x, c) {
     return '<td style="padding:14px;vertical-align:top;width:' + Math.floor(100 / prods.length) + '%' + (i < prods.length - 1 ? ';border-right:1px solid #D9DCCF' : '') + '">' +
       '<div style="font-size:12px;letter-spacing:1px;color:#5E6656;font-weight:bold">' + esc(String(p.nombre).toUpperCase()) + '</div>' +
       (n > 1 ? '<div style="font-size:14px;color:#5E6656;margin-top:4px">' + n + ' cuotas sin interés de</div><div style="font-size:24px;font-weight:bold">' + plata(Math.round(p.tarjeta / n)) + '</div>' : '<div style="font-size:24px;font-weight:bold">' + plata(p.tarjeta) + '</div>') +
-      (p.transferencia < p.tarjeta ? '<div style="font-size:14px;margin-top:2px">o <b style="color:#2F7A3E;font-size:18px">' + plata(p.transferencia) + '</b> por transferencia</div>' : '') + '</td>';
+      (p.transferencia < p.tarjeta ? '<div style="font-size:14px;margin-top:2px">o <b style="color:#2F7A3E;font-size:18px">' + plata(p.transferencia) + '</b> por transferencia <b style="color:#2F7A3E;font-size:12px">' + Math.round((1 - p.transferencia / p.tarjeta) * 100) + '% OFF</b></div>' : '') + '</td>';
   }).join('');
-  var dto = prods.length && prods[0].transferencia < prods[0].tarjeta ? Math.round((1 - prods[0].transferencia / prods[0].tarjeta) * 100) : 0;
   return '<div style="background:#F2F3EC;padding:16px 8px;font-family:Arial,Helvetica,sans-serif;color:#1E2418">' +
     '<div style="max-width:560px;margin:0 auto;background:#fff">' +
-    '<div style="background:#2F3822;color:#F2F3EC;text-align:center;font-size:13px;font-weight:bold;padding:9px">ENVÍO GRATIS A TODO EL PAÍS · 🇦🇷 INDUSTRIA ARGENTINA</div>' +
     '<div style="padding:14px 20px;border-bottom:1px solid #D9DCCF;font-weight:bold;font-size:18px"><img src="' + url + '/logo.png" width="36" height="36" alt="" style="vertical-align:middle;border-radius:50%;margin-right:8px">Los Perrines</div>' +
     '<a href="' + link + '"><img src="' + url + '/img/mail-perro.jpg" width="560" alt="Funda canasto Los Perrines" style="display:block;width:100%;height:auto;border:0"></a>' +
     '<div style="padding:22px 22px 8px;font-size:16px;line-height:1.5">' +
     '<p style="margin:0 0 12px">Hola' + (nom ? ' <b>' + nom + '</b>' : '') + ',</p><p style="margin:0 0 16px">' + txt + '</p>' +
     (celdas ? '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9DCCF;border-radius:8px;margin:0 0 14px"><tr>' + celdas + '</tr></table>' : '') +
-    (n > 1 ? '<p style="margin:0 0 6px;font-size:15px">✅ <b>' + n + ' cuotas sin interés</b> con tarjeta</p>' : '') +
-    (dto ? '<p style="margin:0 0 6px;font-size:15px">✅ <b>' + dto + '% OFF</b> pagando por transferencia</p>' : '') +
-    '<p style="margin:0 0 16px;font-size:15px">✅ <b>Envío gratis a todo el país</b>' + (d.extraEnvio ? ' · ' + esc(d.extraEnvio) : '') + '</p>' +
+    '<p style="margin:0 0 16px;font-size:17px;text-align:center">🚚 <b>Envío gratis a todo el país</b>' + (d.extraEnvio ? '<br><span style="font-size:14px;color:#5E6656">' + esc(d.extraEnvio) + '</span>' : '') + '</p>' +
     (d.regalo ? '<div style="background:#D9E15A;border-radius:8px;padding:16px;text-align:center;margin:0 0 18px;font-size:15px;line-height:1.4">' + (function (l) { return '<div style="font-size:20px;font-weight:bold' + (l.length > 1 ? ';margin-bottom:6px' : '') + '">' + esc(l[0]) + '</div>' + esc(l.slice(1).join('\n')).replace(/\n/g, '<br>'); })(String(d.regalo).split(/\r?\n/)) + '</div>' : '') +
-    '<a href="' + link + '" style="display:block;background:#4E5B3A;color:#fff;text-align:center;text-decoration:none;font-weight:bold;font-size:16px;letter-spacing:1px;border-radius:6px;padding:15px">VER LA FUNDA EN LOSPERRINES.COM.AR</a>' +
+    '<a href="' + link + '" style="display:block;background:#4E5B3A;color:#fff;text-align:center;text-decoration:none;font-weight:bold;font-size:16px;letter-spacing:1px;border-radius:6px;padding:15px">VER LA FUNDA</a>' +
     (d.firma ? '<p style="margin:18px 0 4px;font-size:15px">' + esc(d.firma).replace(/\n/g, '<br>') + '</p>' : '') + '</div>' +
     '<div style="padding:14px 22px 20px;font-size:12px;color:#5E6656;border-top:1px solid #D9DCCF;line-height:1.5">Si no querés recibir más mails de Los Perrines, <a href="' + linkBaja(x.email) + '" style="color:#5E6656">tocá acá para darte de baja</a>.</div>' +
     '</div></div>';
