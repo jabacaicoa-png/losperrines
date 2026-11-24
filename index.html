@@ -1036,7 +1036,7 @@ if(!/^https:\/\/script\.google\.com\//.test(API)){ show("pronto"); return; }
 api("config").then(function(c){
   C=c;
   if(!c.abierta){ show("pronto"); return; }   /* con la tienda cerrada solo se registra la visita */
-  if(c.promo&&c.promo.texto){ var am=$(".anuncio-my"); if(am){ am.className="anuncio-my promo"; am.href="#producto"; am.textContent=c.promo.texto; } if(c.promo.codigo&&!CUPON_URL) CUPON_URL=c.promo.codigo; }
+  if(c.promo&&c.promo.texto){ var am=$(".anuncio-my"); if(am){ am.className="anuncio-my promo"; am.href="#producto"; am.textContent=c.promo.texto; } if(c.promo.codigo&&!CUPON_URL){ CUPON_URL=c.promo.codigo; PROMO_AUTO=c.promo.codigo; } }
   show("tienda"); topOcultar(); $("#previewBar").hidden=!c.vista||c.publica===true;
   if(location.hash==="#mayorista") setTimeout(function(){ var m=$("#mayorista"); if(m) m.scrollIntoView(); },350);   // link corto /mayorista (grupos de comerciantes): va directo al formulario
   pintarPrecios(); pintarStock(); fotos(); trk("view",{items:PRODS().map(function(p){return {id:p.id,q:1};})});
@@ -1379,7 +1379,7 @@ function buscarCP(cp,pre){
     mostrarSucursales();
   }).catch(function(){ sel.innerHTML='<option value="">No pudimos cargar las localidades</option>'; });
 }
-var CUPON=null, CUPON_URL=(new URLSearchParams(location.search).get("cupon")||"").toUpperCase(), carritoT=null, carritoUlt="";
+var PROMO_AUTO="", CUPON=null, CUPON_URL=(new URLSearchParams(location.search).get("cupon")||"").toUpperCase(), carritoT=null, carritoUlt="";
 function pagoSel(){ var r=$('#f [name="pago"]:checked'); return r?r.value:"tarjeta"; }
 function descTarj(){ /* con tarjeta el descuento va funda por funda (igual que crearPedido en Codigo.gs) */
   var d=0; PRODS().forEach(function(p){ var q=Q[p.id]||0; d+=(CUPON.monto>0?Math.min(p.precio_tarjeta,CUPON.monto):Math.round(p.precio_tarjeta*CUPON.pct/100))*q; }); return d; }
@@ -1401,7 +1401,9 @@ function aplicarCupon(){
   if(!cod){ CUPON=null; pintarCupon(); return; }
   msg.innerHTML='<span class="spinner"></span>';
   api("cupon",{codigo:cod,email:(f.querySelector('[name="email"]')||{}).value||""}).then(function(r){ CUPON={codigo:r.codigo,pct:+r.porcentaje||0,monto:+r.monto||0,tarjeta:!!r.tarjeta}; pintarCupon(); })
-    .catch(function(e){ CUPON=null; pintarCupon(); msg.innerHTML='<span style="color:#C2553F;font-weight:600">'+esc(e.message)+'</span>'; });
+    .catch(function(e){ CUPON=null; pintarCupon();
+      if(PROMO_AUTO&&cod===PROMO_AUTO){ var ci=f.querySelector('[name="cupon_in"]'); if(ci) ci.value=""; CUPON_URL=""; return; }   /* el código de la promo todavía no vale (o ya lo usó): no se pone y no se muestra error */
+      msg.innerHTML='<span style="color:#C2553F;font-weight:600">'+esc(e.message)+'</span>'; });
 }
 function guardarCarritoLuego(){
   clearTimeout(carritoT); carritoT=setTimeout(function(){
