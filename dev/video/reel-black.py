@@ -9,17 +9,20 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 GUION = """
 0–3 s    ¡Arrancó el Black Friday en Los Perrines!
 3–7 s    La funda canasto: tu perro viaja cómodo y tu auto queda limpio.
-7–11 s   Hasta el viernes, diez por ciento de descuento: sesenta y siete mil quinientos por transferencia.
-11–14 s  Y el envío es gratis a todo el país: te llega en 2 a 4 días hábiles.
-14–17 s  Entrá a losperrines punto com punto ar. ¡Solo hasta el viernes!
+7–10 s   Cubre todo el asiento y los costados.
+10–14 s  Hasta el viernes, diez por ciento de descuento: sesenta y siete mil quinientos por transferencia.
+14–17 s  Y el envío es gratis a todo el país: te llega en 2 a 4 días hábiles.
+17–20 s  Entrá a losperrines punto com punto ar. ¡Solo hasta el viernes!
 """
 FD, OUT = sys.argv[1], sys.argv[2]
 RAIZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
-W, H, FPS, DUR = 1080, 1920, 30, 17.5
+W, H, FPS, DUR = 1080, 1920, 30, 20.5
 YEL, NEG, CREMA = (217, 225, 90), (17, 17, 17), (242, 243, 236)
 F = lambda s, w=800: ImageFont.truetype(os.path.join(FD, "bric%d.ttf" % w), s)
 
 foto = ImageOps.exif_transpose(Image.open(os.path.join(RAIZ, "img", "mail-perro.jpg"))).convert("RGB")
+# canasto 2 plazas puesto, sin perro (Drive FOTOS REDES "08"; no está en el repo): canasto.jpg en la carpeta de las letras
+canasto = ImageOps.exif_transpose(Image.open(os.path.join(FD, "canasto.jpg"))).convert("RGB")
 logo = Image.open(os.path.join(RAIZ, "logo.png")).convert("RGBA").resize((96, 96), Image.LANCZOS)
 lm = Image.new("L", (96, 96), 0); ImageDraw.Draw(lm).ellipse((0, 0, 95, 95), fill=255); logo.putalpha(lm)
 
@@ -42,7 +45,7 @@ def caja(img, box, fill, r=34, alpha=1.0, borde=None, ancho=0):
 
 def plata(n): return "$" + f"{int(round(n)):,}".replace(",", ".")
 
-def cuadro(t):
+def cuadro(t, sin2=False, solo12=False):
     img = Image.new("RGBA", (W, H), NEG + (255,))
     # marca arriba (siempre)
     img.alpha_composite(logo, (70, 250)); texto(img, (184, 298), "Los Perrines", F(44, 600), CREMA, "lm")
@@ -61,7 +64,7 @@ def cuadro(t):
             if a < 1: capa.putalpha(capa.getchannel("A").point(lambda v: int(v * a)))
             img.alpha_composite(capa, (540 - capa.width // 2, 1290 - capa.height // 2))
     # ---- escena 2: foto real (3–7)
-    if 2.9 < t < 7.4:
+    if 2.9 < t < 7.4 and not sin2:
         a = pr(t, 2.9, 0.4) * (1 - pr(t, 7.1, 0.3))
         z = 1.0 + 0.10 * (t - 3) / 4.4
         fw, fh = 900, 900
@@ -74,6 +77,7 @@ def cuadro(t):
         img.alpha_composite(rec, (90, y0 - 2))
         texto(img, (540, 1440), "Tu perro viaja cómodo.", F(70), (255, 255, 255), alpha=a * pr(t, 3.6, 0.4))
         texto(img, (540, 1530), "Tu auto queda limpio.", F(70), YEL, alpha=a * pr(t, 4.6, 0.4))
+    if solo12: return img
     # ---- escena 3: precio (7–11)
     if 7.0 < t < 11.4:
         a = pr(t, 7.0, 0.35) * (1 - pr(t, 11.1, 0.3))
@@ -114,12 +118,36 @@ def cuadro(t):
         if e > 0:
             caja(img, (110, 1200, 970, 1350), YEL, 30, a)
             texto(img, (540, 1275), "losperrines.com.ar", F(int(80 * max(0.3, e))), NEG, alpha=a)
+    return img
+
+# escena del canasto sin perro (7–10 s, pedido del dueño 24/11): después del perrito; todo lo que sigue se corre 3 s
+def escena_canasto(img, t):
+    a = pr(t, 7.0, 0.4) * (1 - pr(t, 9.8, 0.3))
+    if a <= 0: return
+    fw, fh = 860, 1060
+    z = 1.0 + 0.08 * (t - 7.0) / 3.0
+    cw = int(canasto.width / z); ch = int(cw * fh / fw)
+    cx = canasto.width // 2; cy = int(canasto.height * 0.55) - int((t - 7.0) * 10)
+    y0c = max(0, min(canasto.height - ch, cy - ch // 2))
+    rec = canasto.crop((cx - cw // 2, y0c, cx + cw // 2, y0c + ch)).resize((fw, fh), Image.LANCZOS).convert("RGBA")
+    m = Image.new("L", (fw, fh), 0); ImageDraw.Draw(m).rounded_rectangle((0, 0, fw - 1, fh - 1), 40, fill=int(255 * a)); rec.putalpha(m)
+    y0 = 400 + int(60 * (1 - ease((t - 7.0) / 0.6)))
+    caja(img, (106, y0 - 6, 974, y0 + fh + 6), YEL, 46, a)
+    img.alpha_composite(rec, (110, y0 - 2))
+    texto(img, (540, 1540), "Cubre todo el asiento", F(66), (255, 255, 255), alpha=a * pr(t, 7.5, 0.4))
+    texto(img, (540, 1620), "y los costados.", F(66), YEL, alpha=a * pr(t, 8.3, 0.4))
+
+def fotograma(t):
+    if t < 7.0: img = cuadro(t)
+    elif t < 10.0:
+        img = cuadro(t, solo12=True); escena_canasto(img, t)
+    else: img = cuadro(t - 3.0, sin2=True)
     return img.convert("RGB")
 
 ff = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
                        "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-shortest",
                        "-c:v", "libx264", "-preset", "slow", "-crf", "24", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", OUT], stdin=subprocess.PIPE)
 for i in range(int(DUR * FPS)):
-    ff.stdin.write(cuadro(i / FPS).tobytes())
+    ff.stdin.write(fotograma(i / FPS).tobytes())
 ff.stdin.close(); ff.wait()
 print(GUION)
