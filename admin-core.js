@@ -302,7 +302,7 @@ function bloqueDifusion(st){
     +'<label class="f">Asunto<input id="difAsunto" value="'+esc(d.asunto)+'"></label>'
     +'<label class="f">Texto (va después de “Hola Ana,”)<textarea id="difTexto" rows="3">'+esc(d.texto)+'</textarea></label>'
     +'<p class="muted small" style="margin:-4px 0 10px">Abajo del texto van solos los precios de la web (cuotas y transferencia) y “Envío gratis a todo el país”.</p>'
-    +'<label class="f">Debajo de “Envío gratis” (opcional, ej. En San Luis te la llevamos en mano)<input id="difEnvio" value="'+esc(d.envio)+'"></label>'
+    +'<label class="f">Debajo de “Envío gratis” (opcional, ej. Llega en 2 a 4 días hábiles)<input id="difEnvio" value="'+esc(d.envio)+'"></label>'
     +'<label class="f">Recuadro amarillo (opcional · el primer renglón va grande)<textarea id="difRegalo" rows="2">'+esc(d.regalo)+'</textarea></label>'
     +'<label class="f">Firma<textarea id="difFirma" rows="2">'+esc(d.firma)+'</textarea></label>'
     +'<button class="btn ghost" data-a="difPrueba">Mandarme una prueba</button>'
