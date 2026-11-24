@@ -1,0 +1,45 @@
+<!-- Placa de promo (Black Friday 25-27/11/2026, 10% con BLACK): historia 1080×1920, fondo oscuro, precio de siempre tachado + precio con descuento (lo pidió el dueño).
+     Fotos: f2.jpg (doble) y f1.jpg (1 plaza), logo.png en la misma carpeta; no están en el repo. Generar con Playwright: screenshot de #h. -->
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=block" rel="stylesheet">
+<style>
+:root{--yel:#D9E15A;--cream:#F2F3EC;--olive:#4E5B3A}
+*{box-sizing:border-box;margin:0}body{font-family:"Bricolage Grotesque",sans-serif}
+.h{position:relative;width:1080px;background:#111;overflow:hidden;color:#fff;display:flex;flex-direction:column;align-items:stretch;padding:60px 50px 50px}
+.h.story{height:1920px;padding-top:80px}.h.post{height:1350px;padding-top:44px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.marca{display:flex;align-items:center;gap:18px;font-weight:700;font-size:40px;color:var(--cream)}.marca img{width:84px;height:84px;border-radius:50%}
+.fechas{background:var(--yel);color:#111;font-weight:800;font-size:34px;border-radius:999px;padding:10px 26px}
+.bf{font-weight:800;letter-spacing:-.03em;line-height:.9;margin-top:34px}
+.story .bf{font-size:150px}.post .bf{font-size:100px;margin-top:18px}
+.bf span{color:var(--yel)}
+.fotos{display:flex;gap:22px;margin-top:34px}
+.story .fotos{height:600px}.post .fotos{height:370px;margin-top:22px}
+figure{flex:1;position:relative;border-radius:34px;overflow:hidden;border:5px solid var(--yel)}
+figure img{width:100%;height:100%;object-fit:cover}figure:first-child img{object-position:50% 55%}figure:last-child img{object-position:50% 45%}
+figcaption{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:#111;color:#fff;border:3px solid var(--yel);border-radius:999px;font-weight:800;font-size:34px;padding:6px 24px;white-space:nowrap}
+.cod{margin-top:34px;background:var(--yel);color:#111;border-radius:32px;padding:26px 30px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.post .cod{margin-top:24px;padding:20px 28px}
+.cod .pct{font-size:96px;font-weight:800;line-height:.9}.post .cod .pct{font-size:80px}
+.cod .pct small{display:block;font-size:30px;font-weight:700;margin-top:6px}
+.cod .c{text-align:center}.cod .c div{font-size:30px;font-weight:700}
+.cod .c b{display:inline-block;margin-top:8px;background:#fff;border:4px dashed #111;border-radius:18px;padding:4px 30px;font-size:72px;letter-spacing:.06em}.post .cod .c b{font-size:60px}
+.pre{display:flex;gap:22px;margin-top:28px}.post .pre{margin-top:20px}
+.p{flex:1;background:#222;border:2px solid #333;border-radius:28px;padding:22px 26px}
+.p .n{font-size:32px;font-weight:700;color:var(--cream)}
+.p b{display:block;font-size:52px;font-weight:800;line-height:1.05;margin-top:6px}.post .p b{font-size:46px}
+.p .was{font-size:28px;color:#aaa;font-weight:600;margin-top:6px}.p .was s,.p .t s{color:#999;font-weight:500}
+.p .t{font-size:28px;font-weight:700;color:var(--yel);margin-top:8px}
+.pie{margin-top:auto;text-align:center;font-weight:700;font-size:36px;color:var(--cream);line-height:1.35}
+.pie b{display:inline-block;margin-top:8px;background:var(--yel);color:#111;border-radius:18px;padding:6px 28px;font-size:48px;font-weight:800}
+.post .pie{font-size:30px;display:flex;justify-content:space-between;align-items:center}.post .pie br{display:none}.post .pie b{font-size:40px;margin-top:0}
+</style></head><body>
+<div class="h story" id="h">
+<div class="top"><div class="marca"><img src="logo.png">Los Perrines</div><div class="fechas">25 al 27 de noviembre</div></div>
+<div class="bf">BLACK<br><span>FRIDAY</span></div>
+<div class="fotos"><figure><img src="f2.jpg"><figcaption>2 plazas</figcaption></figure><figure><img src="f1.jpg"><figcaption>1 plaza</figcaption></figure></div>
+<div class="cod"><div class="pct">10% OFF<small>en todos los medios de pago</small></div><div class="c"><div>con el código</div><b>BLACK</b></div></div>
+<div class="pre"><div class="p"><div class="n">Canasto 2 plazas</div><div class="was">3 cuotas de <s>$27.800</s></div><b>3 cuotas de $25.020</b><div class="t">o <s>$75.000</s> $67.500 por transferencia</div></div>
+<div class="p"><div class="n">Canasto 1 plaza</div><div class="was">3 cuotas de <s>$20.300</s></div><b>3 cuotas de $18.270</b><div class="t">o <s>$55.000</s> $49.500 por transferencia</div></div></div>
+<div class="pie">🚚 Envío gratis a todo el país<br><b>losperrines.com.ar</b></div>
+</div></body></html>
