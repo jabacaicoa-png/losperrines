@@ -1,0 +1,57 @@
+<!-- Black Friday 25-27/11/2026: 3 historias (1080×1920), una por día. Pedido del dueño: destacar envío gratis y 3 cuotas
+     sin interés, y que el cliente elija transferencia ($67.500) antes que las cuotas. Foto real: img/mail-perro.jpg.
+     Uso: black-dias.html?d=1 (miércoles), 2 (jueves), 3 (viernes). Generar: node dev/instagram/black-dias.js -->
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=block" rel="stylesheet">
+<style>
+:root{--yel:#D9E15A;--cream:#F2F3EC}
+*{box-sizing:border-box;margin:0}body{font-family:"Bricolage Grotesque",sans-serif;background:#000}
+.h{position:relative;width:1080px;height:1920px;background:#111;overflow:hidden;color:#fff;display:flex;flex-direction:column;padding:215px 56px 235px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.marca{display:flex;align-items:center;gap:18px;font-weight:700;font-size:40px;color:var(--cream)}.marca img{width:84px;height:84px;border-radius:50%}
+.dia{background:var(--yel);color:#111;font-weight:800;font-size:34px;border-radius:999px;padding:10px 26px}
+.bf{display:flex;align-items:flex-end;justify-content:space-between;margin-top:22px}
+.bf h1{font-weight:800;letter-spacing:-.03em;line-height:.88;font-size:112px}.bf h1 span{color:var(--yel)}
+.cuando{text-align:right;font-weight:800;font-size:58px;line-height:1;color:var(--yel);padding-bottom:6px}
+.cuando small{display:block;font-size:30px;color:var(--cream);font-weight:700;margin-top:10px}
+.foto{position:relative;margin-top:24px;height:410px;border-radius:36px;overflow:hidden;border:5px solid var(--yel)}
+.foto img{width:100%;height:100%;object-fit:cover;object-position:50% 45%}
+.foto .off{position:absolute;top:22px;right:22px;background:var(--yel);color:#111;border-radius:50%;width:180px;height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:64px;line-height:.9;transform:rotate(-8deg);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.foto .off small{font-size:34px}
+.precio{margin-top:24px;background:#fff;color:#111;border-radius:34px;padding:22px 34px 20px}
+.precio .n{font-size:34px;font-weight:700;color:#444}
+.precio .fila{display:flex;align-items:baseline;gap:22px;margin-top:4px}
+.precio .big{font-size:126px;font-weight:800;letter-spacing:-.035em;line-height:1}
+.precio .was{font-size:48px;font-weight:600;color:#888;text-decoration:line-through}
+.precio .tr{font-size:38px;font-weight:700;margin-top:2px}
+.precio .ah{display:inline-block;margin-top:10px;background:#111;color:var(--yel);border-radius:16px;padding:8px 22px;font-size:42px;font-weight:800}
+.precio .o{margin-top:14px;padding-top:12px;border-top:2px dashed #ccc;font-size:34px;font-weight:600;color:#333}
+.precio .o b{font-weight:800;color:#111}
+.chips{display:flex;gap:18px;margin-top:20px}
+.chip{flex:1;border:3px solid var(--yel);border-radius:26px;padding:12px 18px;text-align:center;font-weight:800;font-size:36px;line-height:1.1}
+.chip small{display:block;font-size:26px;font-weight:600;color:var(--cream);margin-top:6px}
+.una{margin-top:14px;text-align:center;font-size:30px;font-weight:600;color:#bbb}.una b{color:#fff}
+.pie{margin-top:18px;display:flex;justify-content:space-between;align-items:center}
+.pie .cod{font-size:32px;font-weight:700;color:var(--cream)}.pie .cod b{display:inline-block;margin-left:8px;background:#fff;color:#111;border:4px dashed #111;outline:3px solid var(--yel);border-radius:14px;padding:2px 20px;font-size:48px;letter-spacing:.06em}
+.pie .web{background:var(--yel);color:#111;border-radius:18px;padding:8px 26px;font-size:44px;font-weight:800}
+</style></head><body>
+<div class="h" id="h">
+<div class="top"><div class="marca"><img src="../../logo.png">Los Perrines</div><div class="dia" id="dia"></div></div>
+<div class="bf"><h1>BLACK<br><span>FRIDAY</span></h1><div class="cuando" id="cuando"></div></div>
+<div class="foto"><img src="../../img/mail-perro.jpg"><div class="off">10%<small>OFF</small></div></div>
+<div class="precio">
+ <div class="n">Funda canasto 2 plazas</div>
+ <div class="fila"><span class="big">$67.500</span><span class="was">$75.000</span></div>
+ <div class="tr">pagando por transferencia</div>
+ <div class="ah">Te ahorrás $7.500</div>
+ <div class="o">o con tarjeta: <b>3 cuotas sin interés de $25.020</b></div>
+</div>
+<div class="chips"><div class="chip">🚚 Envío gratis<small>a todo el país</small></div><div class="chip">💳 3 cuotas<small>sin interés</small></div></div>
+<div class="una">1 plaza: <b>$49.500</b> por transferencia o <b>3 de $18.270</b></div>
+<div class="pie"><div class="cod">Código<b>BLACK</b></div><div class="web">losperrines.com.ar</div></div>
+</div>
+<script>
+const D={1:["Día 1 de 3","¡ARRANCÓ!","miércoles 25 al viernes 27"],2:["Día 2 de 3","QUEDAN<br>2 DÍAS","hasta el viernes 27"],3:["Día 3 de 3","¡ÚLTIMO<br>DÍA!","termina hoy a la noche"]};
+const d=D[new URLSearchParams(location.search).get("d")||1];
+document.getElementById("dia").textContent=d[0];document.getElementById("cuando").innerHTML=d[1]+"<small>"+d[2]+"</small>";
+</script></body></html>
