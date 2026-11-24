@@ -286,6 +286,32 @@ function subirArchivos(files){
   sig();
 }
 var RC=null, RCsel={};
+/* ---------- Mail a tus contactos (24/11/2026) ---------- */
+var DIF_DEF={asunto:"🐶 Tu perro atrás, tu auto limpio: envío gratis + un regalo si respondés",
+  texto:"Te quería contar de mi proyecto nuevo: Los Perrines, la funda canasto para llevar a tu perro en el asiento de atrás.\n\nCubre el asiento, el respaldo y los costados: chau pelos, barro y uñas en el tapizado. Es impermeable, acolchada y la hacemos acá.",
+  envio:"en San Luis te la llevamos en mano",regalo:"🎁 $3.000 de descuento extra\nRespondé este mail con la palabra QUIERO y te mandamos tu código.",firma:"¡Gracias!\nLos Perrines"};
+function difGet(){ var d={}; try{ d=JSON.parse(localStorage.getItem("lp_dif")||"{}"); }catch(e){} Object.keys(DIF_DEF).forEach(function(k){ if(d[k]==null) d[k]=DIF_DEF[k]; }); return d; }
+function difLeer(){ var d={asunto:$("#difAsunto").value,texto:$("#difTexto").value,envio:$("#difEnvio").value,regalo:$("#difRegalo").value,firma:$("#difFirma").value}; try{ localStorage.setItem("lp_dif",JSON.stringify(d)); }catch(e){} return {asunto:d.asunto,texto:d.texto,extraEnvio:d.envio,regalo:d.regalo,firma:d.firma}; }
+function bloqueDifusion(st){
+  var d=difGet(), cuantos=Math.min(st.pendiente||0,st.hoy||0);
+  return '<div class="block"><h3>Mail a tus contactos</h3><p class="muted small" style="margin:-4px 0 10px">Para mandarle un mail promocional a gente que te conoce. Sale desde tu Gmail, con el nombre de cada uno, los precios de la web y un link para darse de baja (a los que se dan de baja no les llega más). Google deja unos 100 mails por día: guardamos 10 para los mails de las ventas, así que se manda de a tandas.</p>'
+    +'<div class="g2" style="margin-bottom:10px"><div class="kpi"><small>Por mandar</small><b>'+(st.pendiente||0)+'</b></div><div class="kpi"><small>Ya enviados</small><b>'+(st.enviado||0)+'</b><span class="k2">'+(st.baja||0)+' de baja'+(st.error?' · '+st.error+' con error':'')+'</span></div></div>'
+    +'<h3 style="margin-top:6px">1. Pegá los contactos</h3><label class="f">Un mail por renglón. Si ponés el nombre al lado, el mail dice “Hola Ana”.<textarea id="difLista" rows="5" placeholder="ana@gmail.com Ana&#10;juan@hotmail.com Juan"></textarea></label>'
+    +'<button class="btn ghost" data-a="difCargar">Cargar contactos</button>'+(st.pendiente?' <button class="linkb small" data-a="difVaciar" style="margin-left:8px">Borrar los pendientes</button>':'')
+    +'<h3 style="margin-top:16px">2. El mail</h3>'
+    +'<label class="f">Asunto<input id="difAsunto" value="'+esc(d.asunto)+'"></label>'
+    +'<label class="f">Texto (va después de “Hola Ana,”)<textarea id="difTexto" rows="6">'+esc(d.texto)+'</textarea></label>'
+    +'<p class="muted small" style="margin:-4px 0 10px">Abajo del texto van solos: los precios de las fundas (los de la web), las cuotas, el % OFF por transferencia y el envío gratis.</p>'
+    +'<label class="f">Al lado de “Envío gratis a todo el país” (opcional)<input id="difEnvio" value="'+esc(d.envio)+'"></label>'
+    +'<label class="f">Recuadro amarillo (opcional · el primer renglón va grande)<textarea id="difRegalo" rows="2">'+esc(d.regalo)+'</textarea></label>'
+    +'<label class="f">Firma<textarea id="difFirma" rows="2">'+esc(d.firma)+'</textarea></label>'
+    +'<button class="btn ghost" data-a="difPrueba">Mandarme una prueba</button>'
+    +'<h3 style="margin-top:16px">3. Mandar</h3>'
+    +(st.pendiente?(cuantos?'<label class="f" style="max-width:200px">¿A cuántos ahora?<input id="difCant" inputmode="numeric" value="'+cuantos+'"></label><button class="btn main" data-a="difEnviar">Enviar ahora</button><p class="muted small" style="margin:8px 0 0">Hoy podés mandar hasta '+st.hoy+'. Los que queden, mañana tocás de nuevo “Enviar ahora”.</p>'
+      :'<p class="muted small" style="margin:0">Hoy ya no quedan mails disponibles. Volvé mañana y tocá “Enviar ahora”.</p>')
+      :'<p class="muted small" style="margin:0">Primero cargá los contactos.</p>')
+    +'</div>';
+}
 function cargarRecuperar(){ api("recuperar").then(function(r){ RC=r; render(); }).catch(function(e){ toast(e.message); }); }
 function waRecuperar(x){
   var tel=String(x.cel||"").replace(/\D/g,""); if(tel.length<8) return "";
@@ -325,6 +351,7 @@ function vRecuperar(){
     +'<div class="g2"><label class="f">Empieza (opcional)<input id="cpDesde" type="date"></label><label class="f">Vence (opcional)<input id="cpVence" type="date"></label></div>'
     +'<div class="g2"><label class="check"><input type="checkbox" id="cpUnico" checked> Una vez por cliente</label><label class="check"><input type="checkbox" id="cpTarj"> También con tarjeta</label></div>'
     +'<button class="btn main" data-a="cupCrear">Crear código</button></div>';
+  h+=bloqueDifusion(RC.difusion||{});
   return h;
 }
 
@@ -388,6 +415,14 @@ document.addEventListener("click",function(e){
     if(!confirm("¿Enviar el mail a "+ems.length+" cliente"+(ems.length>1?"s":"")+"?")) return;
     t.disabled=true; api("enviarSegundo",{emails:ems,asunto:$("#rcAsunto").value,mensaje:$("#rcMsg").value,cupon:$("#rcCupon").value}).then(function(r){ toast("Mails enviados: "+r.enviados); RCsel={}; cargarRecuperar(); }).catch(function(e){ toast(e.message); t.disabled=false; });
   }
+  else if(a==="difCargar"){ difLeer(); var tx=$("#difLista").value; if(!tx.trim()){ toast("Pegá al menos un mail."); return; }
+    t.disabled=true; api("difusionCargar",{texto:tx}).then(function(r){ toast("Cargados: "+r.agregados+(r.repetidos?" · ya estaban: "+r.repetidos:"")+(r.bajas?" · dados de baja: "+r.bajas:"")+(r.invalidos?" · sin mail válido: "+r.invalidos:""),7000); RC.difusion=r.estado; render(); }).catch(function(e){ toast(e.message); t.disabled=false; }); }
+  else if(a==="difPrueba"){ var dp=difLeer(); t.disabled=true; api("difusionPrueba",dp).then(function(r){ toast("Te mandé la prueba a "+r.a+". Fijate cómo se ve en el celular.",6000); t.disabled=false; }).catch(function(e){ toast(e.message); t.disabled=false; }); }
+  else if(a==="difEnviar"){ var de=difLeer(), nn=parseInt($("#difCant").value,10)||0; if(nn<1){ toast("Poné a cuántos."); return; }
+    if(!confirm("¿Mandar el mail a "+nn+" contactos? ¿Ya te mandaste la prueba y la revisaste?")) return;
+    de.cantidad=nn; t.disabled=true; t.textContent="Enviando… (puede tardar un minuto)"; api("difusionEnviar",de).then(function(r){ toast("Enviados: "+r.enviados+(r.bajas?" · de baja: "+r.bajas:"")+(r.errores?" · con error: "+r.errores:"")+". Quedan "+r.estado.pendiente+".",8000); RC.difusion=r.estado; render(); }).catch(function(e){ toast(e.message,7000); t.disabled=false; t.textContent="Enviar ahora"; }); }
+  else if(a==="difVaciar"){ if(!confirm("¿Borrar los contactos que todavía no recibieron el mail? (los ya enviados quedan anotados para no repetirles)")) return;
+    api("difusionVaciar",{}).then(function(r){ toast("Borrados: "+r.borrados); RC.difusion=r.estado; render(); }).catch(function(e){ toast(e.message); }); }
   else if(a==="cupCrear"){ var cod=$("#cpCod").value.trim(); if(!cod){ toast("Poné el código."); return; }
     t.disabled=true; api("guardarCupon",{codigo:cod,porcentaje:$("#cpPct").value,monto:nm($("#cpMonto").value),email:$("#cpMail").value.trim(),comision:nm($("#cpCom").value),vence:$("#cpVence").value,desde:$("#cpDesde").value,unico:$("#cpUnico").checked,tarjeta:$("#cpTarj").checked}).then(function(){ toast("Código creado"); cargarRecuperar(); }).catch(function(e){ toast(e.message); t.disabled=false; }); }
   else if(a==="cupToggle"){ var c0=(RC.cupones||[]).filter(function(x){return x.codigo===t.dataset.cod;})[0]; if(!c0) return;

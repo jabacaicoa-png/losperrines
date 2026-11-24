@@ -16,7 +16,7 @@
  */
 
 var TZ = 'America/Argentina/Buenos_Aires';
-var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores', mayoristas: 'Mayoristas', mped: 'PedidosMayoristas'};
+var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores', mayoristas: 'Mayoristas', mped: 'PedidosMayoristas', difusion: 'Difusion'};
 var COLS = {
   Pedidos: ['id','fecha','estado','pago','cantidad','total','nombre','apellido','dni','email','cel_cod','cel_num',
             'entrega','calle','numero','piso','depto','prov_loc_cp','sucursal','observaciones','vence',
@@ -30,6 +30,7 @@ var COLS = {
   Cupones: ['codigo','porcentaje','vence','unico','activo','creado','monto','email','comision','tarjeta','desde'],   // monto: descuento fijo en $ por funda (manda sobre el %); email/comision: vendedor y lo que cobra por funda (16/11/2026); tarjeta: SI = vale también pagando con tarjeta; desde: empieza a valer ese día (23/11/2026)
   PagosVendedores: ['fecha','codigo','monto','fundas','pedidos','notas'],   // cada pago de comisiones (los viernes); pedidos = IDs pagados, separados por coma
   Bajas: ['fecha','email'],
+  Difusion: ['email','nombre','estado','cargado','enviado','error'],   // mail a contactos del dueño (24/11/2026): pendiente / enviado / baja / error
   Mayoristas: ['fecha','nombre','apellido','negocio','localidad','whatsapp','email','doble','individual','mensaje','estado'],   // consultas de venta por mayor desde la web (19/11/2026)
   PedidosMayoristas: ['id','fecha','estado','negocio','nombre','apellido','whatsapp','email','dni','entrega','calle','numero','piso','depto','prov_loc_cp','sucursal',
                       'items','envio','total','pagado','pedido','consulta','notas','actualizado','validez'],   // pedidos y cotizaciones por mayor cargados en el panel (20/11/2026)
@@ -95,7 +96,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '23/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '24/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -198,6 +199,10 @@ function rutear(r) {
     case 'ordenMedia': return conLock(function () { return ordenMedia(r.id, r.dir); });
     case 'principalMedia': return conLock(function () { return principalMedia(r.id); });
     case 'recuperar': return listaRecuperar();
+    case 'difusionCargar': return conLock(function () { return difusionCargar(r); });
+    case 'difusionEnviar': return conLock(function () { return difusionEnviar(r); });
+    case 'difusionPrueba': return difusionPrueba(r);
+    case 'difusionVaciar': return conLock(function () { return difusionVaciar(r); });
     case 'enviarSegundo': return enviarSegundo(r);
     case 'guardarCupon': return conLock(function () { return guardarCupon(r); });
     case 'borrarCupon': return conLock(function () { return borrarCupon(r.codigo); });
@@ -1942,7 +1947,7 @@ function listaRecuperar() {
     if (p.recordatorio) { st.recordatorios++; if (VENDIDO.indexOf(p.estado) >= 0) st.recuperadas++; }
   });
   lista.sort(function (a,b) { return b._ts - a._ts; });
-  return {lista:lista, stats:st, cupones:listaCupones()};
+  return {lista:lista, stats:st, cupones:listaCupones(), difusion:difusionDatos()};
 }
 function enviarSegundo(r) {
   var c = cfg(), d = datosRecuperacion(), emails = (r.emails || []).map(function (e) { return String(e).trim().toLowerCase(); });
@@ -1974,6 +1979,101 @@ function enviarSegundo(r) {
     n++;
   });
   return {enviados:n};
+}
+
+/* ================= MAIL A CONTACTOS (24/11/2026) =================
+   El dueño pega una lista (un mail por renglón, con el nombre si lo tiene) y manda de a tandas:
+   Google deja ~100 mails por día con una cuenta gratis, y se guardan 10 para los mails de las ventas.
+   Cada mail lleva el nombre, los precios de la web y el link para darse de baja (hoja Bajas). */
+function parseContactos(txt) {
+  var out = [];
+  String(txt || '').split(/\r?\n/).forEach(function (l) {
+    var m = l.match(/[^\s<>,;"']+@[^\s<>,;"']+\.[^\s<>,;"']+/); if (!m) return;
+    var email = m[0].toLowerCase(), nombre = l.replace(m[0], '').replace(/[<>,;"'\t]/g, ' ').replace(/\s+/g, ' ').trim();
+    out.push({email: email, nombre: limpiar(nombre.split(' ')[0], 40)});
+  });
+  return out;
+}
+function difusionDatos() {
+  hojaOk(H.difusion); var F = filas(H.difusion), st = {pendiente: 0, enviado: 0, baja: 0, error: 0, total: F.length};
+  F.forEach(function (x) { st[x.estado] = (st[x.estado] || 0) + 1; });
+  var cuota = 0; try { cuota = MailApp.getRemainingDailyQuota(); } catch (e) {}
+  st.cuota = cuota; st.hoy = Math.max(0, cuota - 10);
+  return st;
+}
+function difusionCargar(r) {
+  hojaOk(H.difusion); var ya = {}, res = {agregados: 0, repetidos: 0, bajas: 0, invalidos: 0};
+  filas(H.difusion).forEach(function (x) { ya[String(x.email).toLowerCase()] = 1; });
+  var lineas = String(r.texto || '').split(/\r?\n/).filter(function (l) { return l.trim(); });
+  var lista = parseContactos(r.texto); res.invalidos = lineas.length - lista.length;
+  lista.forEach(function (x) {
+    if (!emailOk(x.email)) { res.invalidos++; return; }
+    if (ya[x.email]) { res.repetidos++; return; }
+    ya[x.email] = 1;
+    if (dadoDeBaja(x.email)) { res.bajas++; agregar(H.difusion, {email: x.email, nombre: x.nombre, estado: 'baja', cargado: ahora()}); return; }
+    agregar(H.difusion, {email: x.email, nombre: x.nombre, estado: 'pendiente', cargado: ahora()}); res.agregados++;
+  });
+  res.estado = difusionDatos();
+  return res;
+}
+function mailDifusion(d, x, c) {
+  var nom = x.nombre ? esc(x.nombre) : '';
+  var txt = esc(String(d.texto || '').replace(/\{nombre\}/g, x.nombre || '').replace(/ ,/g, ',')).replace(/\n/g, '<br>');
+  var url = (c.url_web || '').replace(/\/$/, ''), link = url + '/?utm_source=mail&utm_medium=email&utm_campaign=contactos';
+  var prods = productos(c).filter(function (p) { return p.activo; }), n = Math.max(1, num(c.cuotas_max) || 1);
+  var celdas = prods.map(function (p, i) {
+    return '<td style="padding:14px;vertical-align:top;width:' + Math.floor(100 / prods.length) + '%' + (i < prods.length - 1 ? ';border-right:1px solid #D9DCCF' : '') + '">' +
+      '<div style="font-size:12px;letter-spacing:1px;color:#5E6656;font-weight:bold">' + esc(String(p.nombre).toUpperCase()) + '</div>' +
+      (n > 1 ? '<div style="font-size:14px;color:#5E6656;margin-top:4px">' + n + ' cuotas sin interés de</div><div style="font-size:24px;font-weight:bold">' + plata(Math.round(p.tarjeta / n)) + '</div>' : '<div style="font-size:24px;font-weight:bold">' + plata(p.tarjeta) + '</div>') +
+      (p.transferencia < p.tarjeta ? '<div style="font-size:14px;margin-top:2px">o <b style="color:#2F7A3E;font-size:18px">' + plata(p.transferencia) + '</b> por transferencia</div>' : '') + '</td>';
+  }).join('');
+  var dto = prods.length && prods[0].transferencia < prods[0].tarjeta ? Math.round((1 - prods[0].transferencia / prods[0].tarjeta) * 100) : 0;
+  return '<div style="background:#F2F3EC;padding:16px 8px;font-family:Arial,Helvetica,sans-serif;color:#1E2418">' +
+    '<div style="max-width:560px;margin:0 auto;background:#fff">' +
+    '<div style="background:#2F3822;color:#F2F3EC;text-align:center;font-size:13px;font-weight:bold;padding:9px">ENVÍO GRATIS A TODO EL PAÍS · 🇦🇷 INDUSTRIA ARGENTINA</div>' +
+    '<div style="padding:14px 20px;border-bottom:1px solid #D9DCCF;font-weight:bold;font-size:18px"><img src="' + url + '/logo.png" width="36" height="36" alt="" style="vertical-align:middle;border-radius:50%;margin-right:8px">Los Perrines</div>' +
+    '<a href="' + link + '"><img src="' + url + '/img/mail-perro.jpg" width="560" alt="Funda canasto Los Perrines" style="display:block;width:100%;height:auto;border:0"></a>' +
+    '<div style="padding:22px 22px 8px;font-size:16px;line-height:1.5">' +
+    '<p style="margin:0 0 12px">Hola' + (nom ? ' <b>' + nom + '</b>' : '') + ',</p><p style="margin:0 0 16px">' + txt + '</p>' +
+    (celdas ? '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9DCCF;border-radius:8px;margin:0 0 14px"><tr>' + celdas + '</tr></table>' : '') +
+    (n > 1 ? '<p style="margin:0 0 6px;font-size:15px">✅ <b>' + n + ' cuotas sin interés</b> con tarjeta</p>' : '') +
+    (dto ? '<p style="margin:0 0 6px;font-size:15px">✅ <b>' + dto + '% OFF</b> pagando por transferencia</p>' : '') +
+    '<p style="margin:0 0 16px;font-size:15px">✅ <b>Envío gratis a todo el país</b>' + (d.extraEnvio ? ' · ' + esc(d.extraEnvio) : '') + '</p>' +
+    (d.regalo ? '<div style="background:#D9E15A;border-radius:8px;padding:16px;text-align:center;margin:0 0 18px;font-size:15px;line-height:1.4">' + (function (l) { return '<div style="font-size:20px;font-weight:bold' + (l.length > 1 ? ';margin-bottom:6px' : '') + '">' + esc(l[0]) + '</div>' + esc(l.slice(1).join('\n')).replace(/\n/g, '<br>'); })(String(d.regalo).split(/\r?\n/)) + '</div>' : '') +
+    '<a href="' + link + '" style="display:block;background:#4E5B3A;color:#fff;text-align:center;text-decoration:none;font-weight:bold;font-size:16px;letter-spacing:1px;border-radius:6px;padding:15px">VER LA FUNDA EN LOSPERRINES.COM.AR</a>' +
+    (d.firma ? '<p style="margin:18px 0 4px;font-size:15px">' + esc(d.firma).replace(/\n/g, '<br>') + '</p>' : '') + '</div>' +
+    '<div style="padding:14px 22px 20px;font-size:12px;color:#5E6656;border-top:1px solid #D9DCCF;line-height:1.5">Si no querés recibir más mails de Los Perrines, <a href="' + linkBaja(x.email) + '" style="color:#5E6656">tocá acá para darte de baja</a>.</div>' +
+    '</div></div>';
+}
+function datosMailDifusion(r) {
+  var d = {asunto: limpiar(r.asunto, 120), texto: String(r.texto || '').slice(0, 2000), regalo: String(r.regalo || '').slice(0, 300), firma: String(r.firma || '').slice(0, 200), extraEnvio: limpiar(r.extraEnvio, 80)};
+  if (!d.asunto || !d.texto.trim()) throw new Error('Completá el asunto y el texto.');
+  return d;
+}
+function difusionPrueba(r) {
+  var c = cfg(), d = datosMailDifusion(r); if (!c.email_aviso) throw new Error('Falta tu email para avisos en Configuración.');
+  enviar(c.email_aviso, '[Prueba] ' + d.asunto, mailDifusion(d, {email: c.email_aviso, nombre: limpiar(r.nombrePrueba, 40) || 'Ana'}, c), c);
+  return {a: c.email_aviso};
+}
+function difusionEnviar(r) {
+  var c = cfg(), d = datosMailDifusion(r), st = difusionDatos(), max = Math.min(Math.max(0, Math.floor(num(r.cantidad)) || 0), st.hoy);
+  if (!st.pendiente) throw new Error('No quedan contactos pendientes. Pegá una lista nueva.');
+  if (!max) throw new Error('Hoy ya no quedan mails disponibles (Google deja unos 100 por día y guardamos 10 para las ventas). Probá mañana.');
+  var n = 0, bajas = 0, errores = 0;
+  filas(H.difusion).some(function (x) {
+    if (n >= max) return true;
+    if (x.estado !== 'pendiente') return false;
+    if (dadoDeBaja(x.email)) { setear(H.difusion, x._fila, {estado: 'baja'}); bajas++; return false; }
+    try { enviar(String(x.email), d.asunto.replace(/\{nombre\}/g, x.nombre || '').replace(/^ ,\s*/, '').trim(), mailDifusion(d, x, c), c); setear(H.difusion, x._fila, {estado: 'enviado', enviado: ahora(), error: ''}); n++; }
+    catch (e) { errores++; setear(H.difusion, x._fila, {estado: 'error', error: limpiar(e.message, 120)}); if (/límite diario/.test(e.message)) return true; }
+    return false;
+  });
+  return {enviados: n, bajas: bajas, errores: errores, estado: difusionDatos()};
+}
+function difusionVaciar(r) {   // borra solo los pendientes (los enviados quedan para no repetirles)
+  hojaOk(H.difusion); var F = filas(H.difusion).filter(function (x) { return x.estado === 'pendiente'; }).reverse();
+  F.forEach(function (x) { hoja(H.difusion).deleteRow(x._fila); });
+  return {borrados: F.length, estado: difusionDatos()};
 }
 
 /* ================= CÓDIGOS DE DESCUENTO ================= */
