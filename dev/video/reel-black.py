@@ -10,7 +10,7 @@ GUION = """
 0–3 s    ¡Arrancó el Black Friday en Los Perrines!
 3–7 s    La funda canasto: tu perro viaja cómodo y tu auto queda limpio.
 7–11 s   Hasta el viernes, diez por ciento de descuento: sesenta y siete mil quinientos por transferencia.
-11–14 s  O tres cuotas sin interés. Y el envío es gratis a todo el país.
+11–14 s  Y el envío es gratis a todo el país: te llega en 2 a 4 días hábiles.
 14–17 s  Entrá a losperrines punto com punto ar. ¡Solo hasta el viernes!
 """
 FD, OUT = sys.argv[1], sys.argv[2]
@@ -90,18 +90,16 @@ def cuadro(t):
         if e > 0:
             caja(img, (190, 1150 + dy, 890, 1300 + dy), NEG, 30, a)
             texto(img, (540, 1226 + dy), "Te ahorrás $7.500", F(int(72 * max(0.3, e))), YEL, alpha=a)
-    # ---- escena 4: cuotas y envío (11–14)
+    # ---- escena 4: envío gratis (11–14). Sin cuotas: lo pidió el dueño (24/11), quiere empujar la transferencia.
     if 11.1 < t < 14.4:
         a = 1 - pr(t, 14.1, 0.3)
-        for i, (l1, l2, t0) in enumerate([("3 cuotas", "sin interés", 11.2), ("Envío gratis", "a todo el país", 12.4)]):
-            e = back((t - t0) / 0.5)
-            if e <= 0: continue
-            x = int(-900 + 960 * e) if i == 0 else int(1080 - 1020 * e)
-            y = 640 + i * 420
-            caja(img, (x, y, x + 900, y + 340), NEG, 40, a, YEL, 8)
-            texto(img, (x + 450, y + 130), l1, F(110), YEL, alpha=a)
-            texto(img, (x + 450, y + 245), l2, F(62, 600), CREMA, alpha=a)
-        texto(img, (540, 1500), "con tarjeta: 3 de $25.020", F(50, 600), (190, 190, 190), alpha=a * pr(t, 11.8, 0.4))
+        e = back((t - 11.2) / 0.5)
+        if e > 0:
+            x = int(-900 + 990 * e); y = 720
+            caja(img, (x, y, x + 900, y + 420), NEG, 44, a, YEL, 8)
+            texto(img, (x + 450, y + 160), "Envío gratis", F(124), YEL, alpha=a)
+            texto(img, (x + 450, y + 300), "a todo el país", F(70, 600), CREMA, alpha=a)
+        texto(img, (540, 1300), "Te llega en 2 a 4 días hábiles", F(50, 600), (190, 190, 190), alpha=a * pr(t, 12.0, 0.4))
     # ---- escena 5: código y web (14–17,5)
     if t > 14.1:
         a = pr(t, 14.1, 0.35)
