@@ -135,6 +135,7 @@ function tarjetaPedido(p){
     acts+='<button class="btn main" data-a="pagado" data-id="'+esc(p.id)+'">Marcar como pagado</button><button class="btn ghost" data-a="cancelar" data-id="'+esc(p.id)+'">Cancelar</button>';
   }
   if(mano&&p.estado==="pagado") acts+='<button class="btn main" data-a="entregadoMano" data-id="'+esc(p.id)+'">Marcar como entregado</button>';
+  else if(!mano&&p.estado==="despachado") acts+='<button class="btn main" data-a="entregadoEnvio" data-id="'+esc(p.id)+'">Marcar como entregado</button>';   /* en camino → entregado también desde Ventas (24/11/2026) */
   else if(p.estado==="pagado"||p.estado==="exportado"){
     acts+='<div class="inline" style="width:100%"><input class="inp" inputmode="numeric" placeholder="N° de seguimiento Andreani" id="tr-'+esc(p.id)+'"><button class="btn main" data-a="despachar" data-id="'+esc(p.id)+'">Despachar</button></div>';
   }
@@ -397,6 +398,7 @@ document.addEventListener("click",function(e){
   else if(a==="pagado"){ if(confirm("¿Confirmás que recibiste el pago del pedido "+id+"? Le llega un mail al cliente.")) accion("pagado",{id:id},"Pedido marcado como pagado",t); }
   else if(a==="cancelar"){ if(confirm("¿Cancelar el pedido "+id+"? Se libera el stock.")) accion("cancelar",{id:id},"Pedido cancelado",t); }
   else if(a==="reenviar") accion("reenviar",{id:id},"Mail reenviado",t);
+  else if(a==="entregadoEnvio"){ if(confirm("¿Al cliente ya le llegó el pedido "+id+"? Le mandamos un mail de gracias pidiéndole una foto de su mascota con la funda.")) accion("entregado",{ids:[id]},null,t).then(function(r){ if(r) toast(r.errores&&r.errores.length?r.errores[0].error||"No se pudo":"Listo: pedido entregado"); }); }
   else if(a==="entregadoMano"){ if(confirm("¿Ya le entregaste el pedido "+id+"? A los 2 días le mandamos un mail pidiéndole una foto de su mascota con la funda.")) accion("entregado",{ids:[id]},null,t).then(function(r){ if(r) toast(r.errores&&r.errores.length?r.errores[0].error||"No se pudo":"Listo: pedido entregado"); }); }
   else if(a==="despachar"){ var v=($("#tr-"+CSS.escape(id))||{}).value||""; if(!v.trim()){ toast("Poné el número de seguimiento."); return; } accion("despachar",{id:id,tracking:v},"Despachado: le avisamos al cliente",t); }
   else if(a==="mov"){
