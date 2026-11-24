@@ -69,6 +69,15 @@ console.log('vendedores: ok');
   Q({accion:'guardarCupon',token:e2.token,codigo:'SOLOTR',porcentaje:10});
   Q(Object.assign({accion:'pedido',cupon:'SOLOTR',items:[{producto:'doble',cantidad:1}]},dt,{email:'v@x.com'}));
   assert.deepEqual(pref.items.map(i=>i.unit_price),[95000],'sin tarjeta: precio lleno');
+  // no se pueden juntar dos códigos ni inventar precios o descuentos desde afuera (24/11/2026, pedido del dueño)
+  Q({accion:'guardarCupon',token:e2.token,codigo:'VECINO',monto:3000});
+  const truco=(extra,mail)=>e2.post(Object.assign({accion:'pedido',items:[{producto:'doble',cantidad:1,precio:1}]},dt,{pago:'transferencia',email:mail,descuento:50000,total:1},extra));
+  [[{cupon:['BLACK','VECINO']},'a1'],[{cupon:'BLACK,VECINO'},'a2'],[{cupon:'BLACK VECINO'},'a3'],[{cupon:'BLACKVECINO'},'a4']].forEach(([x,m])=>{
+    const r=truco(x,m+'@x.com'); assert(!r.ok&&/no es válido/.test(r.error),'dos códigos juntos se rechazan: '+JSON.stringify(x)+' → '+JSON.stringify(r)); });
+  const uno=truco({cupon:'BLACK',cupon2:'VECINO',cupones:['VECINO']},'a5@x.com'); assert(uno.ok,uno.error);
+  assert.equal(uno.descuento,4275,'solo cuenta un código'); assert.equal(uno.total,85500-4275,'el precio sale de la tienda, no de lo que manda el navegador');
+  const sin=truco({},'a6@x.com'); assert(sin.ok); assert.equal(sin.total,85500,'sin código: precio lleno aunque mande descuento');
+  truco({cupon:'VECINO',pago:'tarjeta'},'a7@x.com'); assert.deepEqual(pref.items.map(i=>i.unit_price),[95000],'código solo-transferencia con tarjeta: precio lleno');
   e2.ctx.ahora=()=>new Date('2026-11-28T00:05:00-03:00');
   r1=e2.post({accion:'cupon',codigo:'BLACK',email:'z@x.com'}); assert(!r1.ok&&/vencido/.test(r1.error),'el 28 ya no vale');
   console.log('código con tarjeta y fecha de inicio: ok');
