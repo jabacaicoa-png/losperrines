@@ -34,6 +34,13 @@
 .pie{margin-top:18px;display:flex;justify-content:space-between;align-items:center}
 .pie .cod{font-size:32px;font-weight:700;color:var(--cream)}.pie .cod b{display:inline-block;margin-left:8px;background:#fff;color:#111;border:4px dashed #111;outline:3px solid var(--yel);border-radius:14px;padding:2px 20px;font-size:48px;letter-spacing:.06em}
 .pie .web{background:var(--yel);color:#111;border-radius:18px;padding:8px 26px;font-size:44px;font-weight:800}
+/* publicación del feed 1080×1350 (?f=post): sin zonas tapadas por Instagram */
+.h.post{height:1350px;padding:50px 50px 46px}
+.post .bf{margin-top:14px}.post .bf h1{font-size:92px}.post .cuando{font-size:50px}.post .cuando small{font-size:28px}
+.post .foto{height:330px;margin-top:18px}.post .foto .off{width:150px;height:150px;font-size:54px;top:16px;right:16px}.post .foto .off small{font-size:28px}
+.post .precio{margin-top:18px;padding:16px 30px 16px}.post .precio .big{font-size:104px}.post .precio .n{font-size:30px}.post .precio .tr{font-size:34px}.post .precio .ah{font-size:36px;margin-top:8px}.post .precio .o{font-size:31px;margin-top:10px;padding-top:10px}
+.post .chips{margin-top:16px}.post .chip{font-size:32px;padding:10px 16px}.post .chip small{font-size:24px}
+.post .una{margin-top:10px;font-size:27px}.post .pie{margin-top:14px}.post .pie .cod b{font-size:42px}.post .pie .web{font-size:38px}
 </style></head><body>
 <div class="h" id="h">
 <div class="top"><div class="marca"><img src="../../logo.png">Los Perrines</div><div class="dia" id="dia"></div></div>
@@ -52,6 +59,6 @@
 </div>
 <script>
 const D={1:["Día 1 de 3","¡ARRANCÓ!","miércoles 25 al viernes 27"],2:["Día 2 de 3","QUEDAN<br>2 DÍAS","hasta el viernes 27"],3:["Día 3 de 3","¡ÚLTIMO<br>DÍA!","termina hoy a la noche"]};
-const d=D[new URLSearchParams(location.search).get("d")||1];
+const Q=new URLSearchParams(location.search),d=D[Q.get("d")||1];if(Q.get("f")==="post")document.getElementById("h").classList.add("post");
 document.getElementById("dia").textContent=d[0];document.getElementById("cuando").innerHTML=d[1]+"<small>"+d[2]+"</small>";
 </script></body></html>
