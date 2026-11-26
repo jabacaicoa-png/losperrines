@@ -16,7 +16,7 @@
  */
 
 var TZ = 'America/Argentina/Buenos_Aires';
-var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores', mayoristas: 'Mayoristas', mped: 'PedidosMayoristas', difusion: 'Difusion'};
+var H = {pedidos: 'Pedidos', mov: 'Movimientos', avisos: 'Avisos', config: 'Config', media: 'Media', carritos: 'Carritos', cupones: 'Cupones', bajas: 'Bajas', pagosv: 'PagosVendedores', mayoristas: 'Mayoristas', mped: 'PedidosMayoristas', prosp: 'Prospectos', difusion: 'Difusion'};
 var COLS = {
   Pedidos: ['id','fecha','estado','pago','cantidad','total','nombre','apellido','dni','email','cel_cod','cel_num',
             'entrega','calle','numero','piso','depto','prov_loc_cp','sucursal','observaciones','vence',
@@ -34,6 +34,7 @@ var COLS = {
   Mayoristas: ['fecha','nombre','apellido','negocio','localidad','whatsapp','email','doble','individual','mensaje','estado'],   // consultas de venta por mayor desde la web (19/11/2026)
   PedidosMayoristas: ['id','fecha','estado','negocio','nombre','apellido','whatsapp','email','dni','entrega','calle','numero','piso','depto','prov_loc_cp','sucursal',
                       'items','envio','total','pagado','pedido','consulta','notas','actualizado','validez'],   // pedidos y cotizaciones por mayor cargados en el panel (20/11/2026)
+  Prospectos: ['id','creado','nombre','tipo','localidad','direccion','whatsapp','fuente','estado','contactado','notas','actualizado'],   // pet shops y veterinarias para ofrecerles venta por mayor (26/11/2026)
   Config: ['clave','valor','descripcion'],
   TallerProveedores: ['id','nombre','telefono','lugar','web','notas','activo'],
   TallerInsumos: ['id','nombre','descripcion','proveedor','envase','contenido','unidad','precio','minimo','activo','actualizado'],
@@ -96,7 +97,7 @@ var CONFIG_DEF = [
   ['ga_property_id','','Número de la propiedad de Google Analytics (solo números, no el G-...), para el Tablero.'],
   ['meta_test_code','','Código de "Probar eventos" de Meta (ej. TEST12345). Solo mientras probás; después dejalo vacío.']
 ];
-var SISTEMA_VERSION = '24/11/2026 · 2';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
+var SISTEMA_VERSION = '26/11/2026 · 1';   // subila en cada cambio de este archivo: el panel la compara con la de GitHub
 var REPO_GH = 'jabacaicoa-png/losperrines';   // de acá se baja la versión nueva (repositorio público, rama main)
 var VENDIDO = ['pagado','exportado','despachado','entregado'];
 var RESERVA = ['reserva','pendiente_mp'];
@@ -211,6 +212,10 @@ function rutear(r) {
     case 'mayoristaSacar': return conLock(function () { return mayoristaSacar(r); });
     case 'mayoristaCancelar': return conLock(function () { return mayoristaCancelar(r); });
     case 'mayoristaConsulta': return conLock(function () { return mayoristaConsulta(r); });
+    case 'prospectoGuardar': return conLock(function () { return prospectoGuardar(r); });
+    case 'prospectoEstado': return conLock(function () { return prospectoEstado(r); });
+    case 'prospectoBorrar': return conLock(function () { return prospectoBorrar(r); });
+    case 'prospectosImportar': return conLock(function () { return prospectosImportar(r); });
     case 'pagarVendedor': return conLock(function () { return pagarVendedor(r.codigo, r.monto); });
     case 'corte': return {corte: leerDoc('Corte')};
     case 'insumos': return {insumos: leerDoc('Insumos')};
@@ -492,7 +497,73 @@ function mayoristasDatos() {
     var o = {}; COLS.PedidosMayoristas.forEach(function (k) { o[k] = x[k] instanceof Date ? fmtFecha(x[k]) : x[k]; });
     o.id = String(x.id); o.items = itemsMay(x); o.pagado = x.pagado === 'SI'; o.total = num(x.total); o.envio = num(x.envio); o.validez = num(x.validez); return o;
   }).reverse() : [];
-  return {consultas: cons, pedidos: ped};
+  return {consultas: cons, pedidos: ped, prospectos: prospectosDatos()};
+}
+/* ---------- Prospectos (26/11/2026): pet shops y veterinarias a los que el dueño les escribe por WhatsApp desde el panel.
+   El panel abre WhatsApp con el mensaje ya escrito (no manda nada solo). Estados: a_contactar → enviado → respondio → interesado → cliente / no.
+   'contactado' = último mensaje mandado (para el recordatorio de volver a escribir). */
+var PROSP_EST = ['a_contactar', 'enviado', 'respondio', 'interesado', 'cliente', 'no'];
+function prospectosDatos() {
+  if (!hoja(H.prosp)) return [];
+  return filas(H.prosp).map(function (x) {
+    return {id: String(x.id), creado: fmtFecha(x.creado), nombre: String(x.nombre), tipo: String(x.tipo), localidad: String(x.localidad), direccion: String(x.direccion),
+      whatsapp: String(x.whatsapp), fuente: String(x.fuente), estado: PROSP_EST.indexOf(String(x.estado)) >= 0 ? String(x.estado) : 'a_contactar',
+      contactado: x.contactado instanceof Date ? x.contactado.getTime() : (x.contactado ? new Date(x.contactado).getTime() || 0 : 0), notas: String(x.notas)};
+  });
+}
+function prospectoLimpio(d) {
+  return {nombre: limpiar(d.nombre, 80), tipo: limpiar(d.tipo, 30), localidad: limpiar(d.localidad, 60), direccion: limpiar(d.direccion, 100),
+    whatsapp: limpiar(d.whatsapp, 30), fuente: limpiar(d.fuente, 120), notas: limpiar(d.notas, 300)};
+}
+function prospectoId() { return 'PR-' + Utilities.getUuid().slice(0, 8).toUpperCase(); }
+function prospectoGuardar(r) {
+  hojaOk(H.prosp);
+  var d = prospectoLimpio(r.data || {});
+  if (!d.nombre) throw new Error('Poné el nombre del negocio.');
+  var id = String((r.data || {}).id || '');
+  if (id) {
+    var x = filas(H.prosp).filter(function (y) { return String(y.id) === id; })[0];
+    if (!x) throw new Error('No encontré ese prospecto.');
+    setear(H.prosp, x._fila, Object.assign(d, {actualizado: ahora()}));
+    return {id: id};
+  }
+  id = prospectoId();
+  agregar(H.prosp, Object.assign(d, {id: id, creado: ahora(), estado: 'a_contactar', actualizado: ahora()}));
+  return {id: id};
+}
+function prospectoEstado(r) {
+  var x = filas(H.prosp).filter(function (y) { return String(y.id) === String(r.id); })[0];
+  if (!x) throw new Error('No encontré ese prospecto.');
+  var e = String(r.estado);
+  if (PROSP_EST.indexOf(e) < 0) throw new Error('Estado desconocido.');
+  var c = {estado: e, actualizado: ahora()};
+  if (r.mensaje) c.contactado = ahora();   // se le mandó un WhatsApp (primero o de seguimiento)
+  if (r.notas != null) c.notas = limpiar(r.notas, 300);
+  setear(H.prosp, x._fila, c);
+  return {};
+}
+function prospectoBorrar(r) {
+  var x = filas(H.prosp).filter(function (y) { return String(y.id) === String(r.id); })[0];
+  if (x) hoja(H.prosp).deleteRow(x._fila);
+  return {};
+}
+/* Pegar varios de una: una línea por negocio, "Nombre ; Localidad ; WhatsApp" (los datos que falten quedan vacíos).
+   No repite: si el WhatsApp (o el nombre, si no tiene WhatsApp) ya está cargado, lo saltea. */
+function prospectosImportar(r) {
+  hojaOk(H.prosp);
+  var ya = {}; filas(H.prosp).forEach(function (x) { ya[waNorm(x.whatsapp) || String(x.nombre).toLowerCase()] = 1; });
+  var nuevos = [], rep = 0;
+  String(r.texto || '').split(/\n/).forEach(function (l) {
+    var p = l.split(/[;\t|]/).map(function (v) { return v.trim(); });
+    if (!p[0]) return;
+    var d = prospectoLimpio({nombre: p[0], localidad: p[1], whatsapp: p[2], tipo: p[3], fuente: 'Pegado en el panel'});
+    var k = waNorm(d.whatsapp) || d.nombre.toLowerCase();
+    if (ya[k]) { rep++; return; }
+    ya[k] = 1;
+    nuevos.push(Object.assign(d, {id: prospectoId(), creado: ahora(), estado: 'a_contactar', actualizado: ahora()}));
+  });
+  nuevos.forEach(function (o) { agregar(H.prosp, o); });
+  return {agregados: nuevos.length, repetidos: rep};
 }
 function mayoristaGuardar(r) {
   var d = r.data || {}, prods = productos(cfg()), items = [];

@@ -3,7 +3,7 @@
  * planificación y rentabilidad. Todo sale de un único catálogo, así los números
  * no se desparejan entre una pantalla y otra.
  */
-window.PANEL_VERSION = "24/11 · 6";
+window.PANEL_VERSION = "26/11 · 1";
 (function () {
 "use strict";
 const L = window.LP, S = L.S, esc = L.esc, money = L.money, q = L.q, nd = L.nd, nm = L.nm, $ = L.$, $$ = L.$$;
@@ -713,12 +713,12 @@ function mayDatos() { return S.data && S.data.mayoristas; }
 function vMayoristas() {
   const g = guard(); if (g) return cabecera("Mayoristas") + g;
   initRS();
-  const D = mayDatos(), nuevas = D ? D.consultas.filter(x => x.estado === "nueva").length : 0, pend = D ? D.pedidos.filter(x => x.estado === "pendiente").length : 0, cots = D ? D.pedidos.filter(x => x.estado === "cotizacion").length : 0;
+  const D = mayDatos(), prPend = D && D.prospectos ? D.prospectos.filter(x => x.estado === "a_contactar" || prVolver(x)).length : 0, nuevas = D ? D.consultas.filter(x => x.estado === "nueva").length : 0, pend = D ? D.pedidos.filter(x => x.estado === "pendiente").length : 0, cots = D ? D.pedidos.filter(x => x.estado === "cotizacion").length : 0;
   let h = cabecera("Mayoristas", "Pet shops, veterinarias y revendedores: cotizá, mirá las consultas de la web y cargá los pedidos.");
   if (!D) h += '<div class="note warn">Para ver las consultas y cargar pedidos falta actualizar el sistema: <b>Configuración → Sistema → Buscar actualización → Actualizar ahora</b>. La calculadora ya funciona.</div>';
-  h += '<div class="bk-tabs" role="tablist" style="margin-bottom:12px">' + [["cotizar", "Cotizar"], ["cotizaciones", "Cotizaciones" + (cots ? " (" + cots + ")" : "")], ["consultas", "Consultas" + (nuevas ? " (" + nuevas + ")" : "")], ["pedidos", "Pedidos" + (pend ? " (" + pend + ")" : "")]]
+  h += '<div class="bk-tabs" role="tablist" style="margin-bottom:12px">' + [["cotizar", "Cotizar"], ["cotizaciones", "Cotizaciones" + (cots ? " (" + cots + ")" : "")], ["consultas", "Consultas" + (nuevas ? " (" + nuevas + ")" : "")], ["pedidos", "Pedidos" + (pend ? " (" + pend + ")" : "")], ["prospectos", "Prospectos" + (prPend ? " (" + prPend + ")" : "")]]
     .map(t => '<button data-a="myTab" data-t="' + t[0] + '" aria-pressed="' + (MY.tab === t[0]) + '">' + t[1] + "</button>").join("") + "</div>";
-  if (MY.tab === "consultas") h += myConsultas(D); else if (MY.tab === "pedidos") h += myPedidos(D); else if (MY.tab === "cotizaciones") h += myCotizaciones(D); else h += myCotizar();
+  if (MY.tab === "consultas") h += myConsultas(D); else if (MY.tab === "prospectos") h += myProspectos(D); else if (MY.tab === "pedidos") h += myPedidos(D); else if (MY.tab === "cotizaciones") h += myCotizaciones(D); else h += myCotizar();
   return h;
 }
 function myCotizar() {
@@ -829,6 +829,65 @@ function myConsultas(D) {
       + "</div></div>"; }).join("");
   if (arch) h += '<button class="linkb" data-a="myVerArch">' + (MY.verArch ? "Ocultar las archivadas" : "Ver las archivadas (" + arch + ")") + "</button>";
   return h;
+}
+/* ---------- prospectos (26/11/2026, pedido del dueño) ----------
+   Pet shops y veterinarias a los que les ofrece venta por mayor. "Enviar WhatsApp" abre WhatsApp con el mensaje ya escrito
+   (con el nombre del negocio) y lo marca como enviado: el panel no manda nada solo, así no hay riesgo de que bloqueen el número.
+   Los textos se editan acá y se recuerdan en este aparato. A los 4 días sin respuesta avisa "volver a escribir". */
+const PR_EST = {a_contactar: ["A contactar", "warn"], enviado: ["Mensaje enviado", "mute"], respondio: ["Respondió", "ok"], interesado: ["Interesado", "ok"], cliente: ["Cliente", "ok"], no: ["No le interesa", "mute"]};
+const PR = {filtro: "a_contactar", editar: null};
+const PR_DIAS = 4;
+function prNombreDueno() { return String(cfgTienda().titular || "").trim().split(/\s+/)[0] || ""; }
+function prTextos() {
+  let t = null; try { t = JSON.parse(localStorage.getItem("lp_prosp_txt") || "null"); } catch (e) {}
+  const yo = prNombreDueno();
+  return Object.assign({
+    primero: "¡Hola! ¿Hablo con [negocio]? Soy " + (yo || "[tu nombre]") + ", de Los Perrines 🐾\n\nFabricamos acá en San Luis fundas tipo canasto para llevar al perro en el asiento trasero del auto: impermeables y acolchadas, cubren el asiento, el respaldo y las puertas.\n\nEstamos sumando pet shops y veterinarias para revenderlas: precios por cantidad, envío incluido y buen margen.\n\n¿Te paso la propuesta? Fotos y medidas acá: www.losperrines.com.ar/mayorista",
+    seguimiento: "¡Hola de nuevo! Te había escrito hace unos días por las fundas canasto de Los Perrines 🐾 ¿Pudiste verlas? Si querés te paso los precios por cantidad, sin compromiso."
+  }, t || {});
+}
+function prArmar(txt, x) { return txt.replace(/\[negocio\]/gi, x.nombre); }
+function prDias(x) { return x.contactado ? Math.floor((Date.now() - x.contactado) / 864e5) : null; }
+function prVolver(x) { const d = prDias(x); return x.estado === "enviado" && d != null && d >= PR_DIAS; }
+function myProspectos(D) {
+  if (!D || !D.prospectos) return '<div class="note warn">Para usar Prospectos falta actualizar el sistema: <b>Configuración → Sistema → Buscar actualización → Actualizar ahora</b>.</div>';
+  const L0 = D.prospectos, T = prTextos(), cuenta = e => L0.filter(x => x.estado === e).length, volver = L0.filter(prVolver);
+  const filtros = [["a_contactar", "A contactar"], ["volver", "Volver a escribir"], ["enviado", "Enviados"], ["respondio", "Respondieron"], ["interesado", "Interesados"], ["cliente", "Clientes"], ["no", "No"], ["todos", "Todos"]];
+  let h = '<div class="note">Tocá <b>Enviar WhatsApp</b>: se abre WhatsApp con el mensaje ya escrito y el nombre del negocio, y vos solo tocás enviar. Mandalos <b>de a uno</b> (no por difusión): así contestan más y WhatsApp no te bloquea el número.</div>';
+  h += '<details class="block" id="prTxt"><summary><b>Textos de los mensajes</b> <span class="muted small">([negocio] se cambia por el nombre)</span></summary>'
+    + '<label class="f" style="margin-top:10px">Primer mensaje<textarea id="pr-t1" data-in="prTxt" data-k="primero" rows="8">' + esc(T.primero) + "</textarea></label>"
+    + '<label class="f">Para volver a escribir (a los ' + PR_DIAS + ' días sin respuesta)<textarea id="pr-t2" data-in="prTxt" data-k="seguimiento" rows="4">' + esc(T.seguimiento) + "</textarea></label>"
+    + '<button class="linkb small" data-a="prTxtReset">Volver a los textos de siempre</button></details>';
+  h += '<div class="acts" style="margin:12px 0"><button class="btn main" data-a="prNuevo">＋ Agregar negocio</button><button class="btn ghost" data-a="prPegar">Pegar varios</button></div>';
+  h += '<div class="filters" style="margin-bottom:10px">' + filtros.map(f => { const n = f[0] === "todos" ? L0.length : f[0] === "volver" ? volver.length : cuenta(f[0]);
+    return '<button class="chip" data-a="prFiltro" data-pf="' + f[0] + '" aria-pressed="' + (PR.filtro === f[0]) + '">' + f[1] + (n ? " (" + n + ")" : "") + "</button>"; }).join("") + "</div>";
+  const l = PR.filtro === "todos" ? L0 : PR.filtro === "volver" ? volver : L0.filter(x => x.estado === PR.filtro);
+  if (!L0.length) return h + '<p class="muted">Todavía no cargaste ningún negocio.</p>';
+  if (!l.length) return h + '<p class="muted">No hay ninguno en esta lista.</p>';
+  h += l.map(x => { const e = PR_EST[x.estado], d = prDias(x), vol = prVolver(x), tieneWa = !!waLink(x.whatsapp);
+    const btnWa = !tieneWa ? '<span class="muted small">Sin WhatsApp: tocá Editar y cargalo</span>'
+      : x.estado === "a_contactar" ? '<button class="btn main sm" data-a="prWa" data-id="' + esc(x.id) + '" data-m="primero">📲 Enviar WhatsApp</button>'
+      : vol ? '<button class="btn main sm" data-a="prWa" data-id="' + esc(x.id) + '" data-m="seguimiento">📲 Volver a escribir</button>'
+      : '<a class="btn ghost sm" target="_blank" rel="noopener" href="' + esc(waLink(x.whatsapp)) + '">Abrir chat</a>';
+    return '<div class="block" style="margin-top:0;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>' + esc(x.nombre) + '</b><span class="pill ' + e[1] + '">' + e[0] + "</span></div>"
+      + '<div class="muted small">' + [x.tipo, x.localidad, x.direccion].filter(Boolean).map(esc).join(" · ") + "</div>"
+      + '<div class="small" style="margin:4px 0">' + (x.whatsapp ? "WhatsApp " + esc(x.whatsapp) : '<span class="muted">Sin WhatsApp</span>')
+      + (d != null ? ' · <span class="' + (vol ? "neg" : "muted") + '">' + (d === 0 ? "le escribiste hoy" : "le escribiste hace " + d + " día" + (d === 1 ? "" : "s")) + "</span>" : "") + "</div>"
+      + (x.notas ? '<div class="small">📝 ' + esc(x.notas) + "</div>" : "")
+      + '<div class="acts" style="margin-top:8px;align-items:center">' + btnWa
+      + '<select class="inp" id="pr-e-' + esc(x.id) + '" data-ch="prEst" data-id="' + esc(x.id) + '" aria-label="Estado" style="width:auto">' + Object.keys(PR_EST).map(k => '<option value="' + k + '"' + (k === x.estado ? " selected" : "") + ">" + PR_EST[k][0] + "</option>").join("") + "</select>"
+      + '<button class="btn ghost sm" data-a="prEditar" data-id="' + esc(x.id) + '">Editar</button></div></div>'; }).join("");
+  return h;
+}
+function prDlg(x) {
+  x = x || {id: "", nombre: "", tipo: "Pet shop", localidad: "", direccion: "", whatsapp: "", notas: ""};
+  L.dlg('<div class="row"><h3>' + (x.id ? "Editar negocio" : "Agregar negocio") + '</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
+    + '<label class="f">Nombre del negocio<input id="pr-n" value="' + esc(x.nombre) + '" placeholder="Ej. CatDog"></label>'
+    + '<div class="g2"><label class="f">Tipo<select id="pr-ti">' + ["Pet shop", "Veterinaria", "Forrajería", "Peluquería canina", "Otro"].map(t => "<option" + (t === x.tipo ? " selected" : "") + ">" + t + "</option>").join("") + '</select></label><label class="f">Localidad<input id="pr-lo" value="' + esc(x.localidad) + '" placeholder="Ej. San Luis"></label></div>'
+    + '<div class="g2"><label class="f">WhatsApp<input id="pr-w" inputmode="tel" value="' + esc(x.whatsapp) + '" placeholder="Ej. 2664 588783"></label><label class="f">Dirección<input id="pr-d" value="' + esc(x.direccion) + '"></label></div>'
+    + '<label class="f">Notas<input id="pr-no" value="' + esc(x.notas) + '" placeholder="Ej. Hablé con Laura, vuelve el lunes"></label>'
+    + '<p class="err" id="prErr"></p><div class="acts">' + (x.id ? '<button class="btn danger" data-a="prBorrar" data-id="' + esc(x.id) + '" style="margin-right:auto">Borrar</button>' : "")
+    + '<button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="prGuardar" data-id="' + esc(x.id) + '">Guardar</button></div>');
 }
 /* ---------- pedidos mayoristas ---------- */
 function itemsTxt(items) { return (items || []).map(it => it.cantidad + " " + (it.producto === "individual" ? "de 1 plaza" : "de 2 plazas") + " a " + money(it.precio)).join(" + "); }
@@ -1223,6 +1282,25 @@ I.mayR = myM((m, t) => { m.rent[t.dataset.p] = t.value; m.modo[t.dataset.p] = "r
 C.mayImprimir = () => { initRS(); mayImprimir(); };
 C.myTab = b => { MY.tab = b.dataset.t; soloMain(); };
 C.myVerArch = () => { MY.verArch = !MY.verArch; soloMain(); };
+// prospectos
+const prDe = id => ((mayDatos() || {}).prospectos || []).find(x => x.id === id);
+C.prFiltro = b => { PR.filtro = b.dataset.pf;   /* data-pf: los .chip con data-f los toma el núcleo (filtro de pedidos) */ soloMain(); };
+C.prNuevo = () => prDlg();
+C.prEditar = b => prDlg(prDe(b.dataset.id));
+C.prGuardar = b => { const n = $("#pr-n").value.trim(); if (!n) { errEn("prErr", "Poné el nombre del negocio."); return; }
+  pedir("prospectoGuardar", {data: {id: b.dataset.id, nombre: n, tipo: $("#pr-ti").value, localidad: $("#pr-lo").value, whatsapp: $("#pr-w").value, direccion: $("#pr-d").value, notas: $("#pr-no").value}}, "Guardado", b).then(r => { if (r) L.cerrarDlg(); }); };
+C.prBorrar = b => { if (confirm("¿Borrar este negocio de la lista?")) pedir("prospectoBorrar", {id: b.dataset.id}, "Borrado", b).then(r => { if (r) L.cerrarDlg(); }); };
+C.prWa = b => { const x = prDe(b.dataset.id); if (!x) return; const url = waLink(x.whatsapp, prArmar(prTextos()[b.dataset.m], x)); if (!url) { L.toast("Ese WhatsApp no parece válido: tocá Editar."); return; }
+  window.open(url, "_blank"); pedir("prospectoEstado", {id: x.id, estado: "enviado", mensaje: true}, null, b); };
+C.prPegar = () => L.dlg('<div class="row"><h3>Pegar varios negocios</h3><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>'
+  + '<p class="muted small" style="margin:0 0 8px">Uno por renglón: <b>Nombre ; Localidad ; WhatsApp</b>. Ejemplo:<br>CatDog ; San Luis ; 2664 588783<br>Si alguno ya está en la lista (mismo WhatsApp), no se repite.</p>'
+  + '<textarea id="pr-pg" rows="8" class="inp" style="width:100%"></textarea><p class="err" id="prPgErr"></p>'
+  + '<div class="acts"><button class="btn ghost" data-a="cerrar">Cancelar</button><button class="btn main" data-a="prPegarOk">Agregar</button></div>');
+C.prPegarOk = b => { const t = $("#pr-pg").value; if (!t.trim()) { errEn("prPgErr", "Pegá al menos un negocio."); return; }
+  pedir("prospectosImportar", {texto: t}, null, b).then(r => { if (r) { L.cerrarDlg(); L.toast("Agregados: " + r.agregados + (r.repetidos ? " · ya estaban: " + r.repetidos : ""), 5000); } }); };
+C.prTxtReset = () => { try { localStorage.removeItem("lp_prosp_txt"); } catch (e) {} soloMain(); };
+I["prEst:change"] = t => pedir("prospectoEstado", {id: t.dataset.id, estado: t.value}, "Listo");
+I.prTxt = t => { const T = prTextos(); T[t.dataset.k] = t.value; try { localStorage.setItem("lp_prosp_txt", JSON.stringify(T)); } catch (e) {} };
 C.myLimpiar = () => { const m = mayLeer(); m.cant = {}; m.para = ""; m.consulta = ""; m.cotId = ""; mayGuardar(m); soloMain(); };
 const cotDe = id => (mayDatos() || {pedidos: []}).pedidos.find(p => p.id === id);
 C.myGuardarCoti = b => { initRS(); const m = mayLeer(), items = PRODS.filter(p => !fichaGuardada(p)._nueva).map(p => { const r = mayCalc(p, m); return {producto: p, cantidad: r.n, precio: r.pm}; }).filter(x => x.cantidad > 0);

@@ -1,0 +1,21 @@
+// Prospectos de venta por mayor (26/11/2026): node dev/test-prospectos.js
+process.env.TZ='America/Argentina/Buenos_Aires';
+const {makeEnv}=require('./gas-emu'); const assert=require('assert');
+const env=makeEnv({file:require('path').join(__dirname,'..','Codigo.gs')}); env.ctx.instalar(); require('./seed-store.js')(env);
+const tok=env.token; const P=b=>{const r=env.post(Object.assign({token:tok},b)); if(!r.ok) throw new Error(b.accion+': '+r.error); return r;};
+const lista=()=>P({accion:'resumen'}).mayoristas.prospectos;
+assert.deepEqual(lista(),[],'arranca vacío');
+assert(!env.post({accion:'prospectoGuardar',token:tok,data:{nombre:''}}).ok,'sin nombre no');
+const a=P({accion:'prospectoGuardar',data:{nombre:'Pet Uno',localidad:'San Luis',whatsapp:'2664 111111',tipo:'Pet shop'}});
+let L=lista(); assert.equal(L.length,1); assert.equal(L[0].estado,'a_contactar'); assert.equal(L[0].contactado,0);
+P({accion:'prospectoGuardar',data:{id:a.id,nombre:'Pet Uno SRL',localidad:'San Luis',whatsapp:'2664 111111'}});
+assert.equal(lista()[0].nombre,'Pet Uno SRL','edita');
+P({accion:'prospectoEstado',id:a.id,estado:'enviado',mensaje:true});
+L=lista(); assert.equal(L[0].estado,'enviado'); assert(L[0].contactado>0,'anota cuándo le escribió');
+assert(!env.post({accion:'prospectoEstado',token:tok,id:a.id,estado:'cualquiera'}).ok,'estado inválido');
+const im=P({accion:'prospectosImportar',texto:'Pet Dos ; Villa Mercedes ; 2657 222222\nPet Uno otra vez ; San Luis ; 0266 15 411-1111\n\nSin Wa ; La Punta\nSin Wa ; La Punta'});
+assert.equal(im.agregados,2); assert.equal(im.repetidos,2,'no repite por WhatsApp (aunque esté escrito distinto) ni por nombre');
+assert.equal(lista().length,3);
+P({accion:'prospectoBorrar',id:a.id}); assert.equal(lista().length,2,'borra');
+assert(!env.post({accion:'prospectoGuardar',data:{nombre:'X'}}).ok,'sin contraseña no');
+console.log('prospectos: ok');
