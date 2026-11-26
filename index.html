@@ -584,6 +584,7 @@ h3{font-weight:600}
 .p-trust b{display:block;font-weight:600}
 .p-trust small{color:var(--muted);font-size:.86rem}
 .p-auto{margin:14px 0 0;font-size:.9rem}
+.cart-wa{margin:14px 0 2px;text-align:center;font-size:.92rem;color:var(--muted,#5E6656);line-height:1.5}.cart-wa a{color:var(--ok);font-weight:700;text-decoration:none}
 .p-desc{margin-top:22px;border-top:1px solid var(--line)}
 .p-desc details{border-bottom:1px solid var(--line)}
 .p-desc summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:600;display:flex;justify-content:space-between}
@@ -1269,7 +1270,9 @@ function render(){
       +'<div class="r"><span>Por transferencia</span><span style="color:var(--ok);font-weight:700">'+money(sumX())+'</span></div>'
       +'<div class="r"><span>Hasta '+C.cuotas+' cuotas sin interés</span><span>'+C.cuotas+' × '+money(sumT()/C.cuotas)+'</span></div>'
       +'<div class="r"><span>Envío</span><span>'+(C.valor_envio?'<span class="tachado">'+money(C.valor_envio)+'</span>':'')+'<span class="gratis">GRATIS</span></span></div>'
-      +'<div class="r"><span>🚚 '+llegaTxt()+'</span><span>por Andreani</span></div></div>';
+      +'<div class="r"><span>🚚 '+llegaTxt()+'</span><span>por Andreani</span></div></div>'
+      /* 26/11/2026, pedido del dueño: el que duda en el carrito puede preguntar en vez de irse */
+      +(C.whatsapp&&C.whatsapp.length>6?'<p class="cart-wa">¿Tenés alguna duda antes de comprar?<br><a target="_blank" rel="noopener" data-wacart href="https://wa.me/'+C.whatsapp+'?text='+encodeURIComponent("¡Hola! Estoy por comprar: "+PRODS().filter(function(p){return Q[p.id]>0;}).map(function(p){return (Q[p.id]>1?Q[p.id]+" × ":"")+p.nombre;}).join(" y ")+". Tengo una duda: ")+'">💬 Escribinos por WhatsApp</a></p>':'');
     dFoot.innerHTML='<button class="btn btn-main" data-go="datos">Continuar</button>';
   } else if(step==="datos"){
     var g=store("lp_datos")||{};
