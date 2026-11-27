@@ -1,0 +1,12 @@
+# Los Perrines: Google puede leer la tienda; el panel y las herramientas internas no.
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /admin-viejo.html
+Disallow: /costos.html
+Disallow: /insumos.html
+Disallow: /pagos.html
+Disallow: /corte.html
+Disallow: /dev/
+
+Sitemap: https://www.losperrines.com.ar/sitemap.xml
